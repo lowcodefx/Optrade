@@ -48,19 +48,24 @@ app.http('kite', {
       return { status: 204, headers: CORS_HEADERS, body: '' }
     }
 
-    const url = new URL(request.url)
-    const kitePath = url.searchParams.get('kite_path')
+    // Use request.query (URLSearchParams) — more reliable than parsing request.url in SWA
+    const query = request.query
+    const kitePath = query.get('kite_path')
     if (!kitePath) {
+      context.log('kite_path missing. request.url:', request.url)
       return {
         status: 400,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Missing kite_path query param' }),
+        body: JSON.stringify({ error: 'Missing kite_path query param', url: request.url }),
       }
     }
 
-    // Remove kite_path from forwarded params, keep the rest
-    url.searchParams.delete('kite_path')
-    const kiteQuery = url.searchParams.toString()
+    // Forward all params except kite_path to Kite
+    const kiteParams = new URLSearchParams()
+    for (const [key, value] of query.entries()) {
+      if (key !== 'kite_path') kiteParams.append(key, value)
+    }
+    const kiteQuery = kiteParams.toString()
 
     const authHeader = request.headers.get('authorization') || request.headers.get('Authorization') || ''
     context.log(`Proxying ${request.method} ${kitePath} query=${kiteQuery}`)
