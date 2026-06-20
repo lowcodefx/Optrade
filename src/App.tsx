@@ -64,15 +64,19 @@ function ZerodhaCallback() {
     const status = params.get('status')
 
     if (requestToken && status === 'success') {
-      // Clear query params from URL immediately
       window.history.replaceState({}, '', window.location.pathname)
-
       exchangeRequestToken(requestToken)
         .then(accessToken => {
           setAccessToken(accessToken)
           activateLiveService()
         })
         .catch(err => console.error('Zerodha token exchange failed:', err))
+    } else {
+      // Auto-activate live service on every page load if credentials are stored
+      const { apiKey, accessToken } = useSettingsStore.getState()
+      if (apiKey && accessToken && accessToken.length > 10) {
+        activateLiveService()
+      }
     }
   }, [setAccessToken])
 

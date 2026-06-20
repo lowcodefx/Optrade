@@ -1,6 +1,17 @@
 import type { NiftyQuote, OptionChain, Candle, Position } from '@/core/types'
 import type { OrderRequest, OrderResponse } from '@/core/types'
 import { getMockNiftyQuote, getMockOptionChain, getMockCandles, getMockPositions } from './mockData'
+import { create } from 'zustand'
+
+interface LiveModeStore {
+  isLive: boolean
+  setLive: (v: boolean) => void
+}
+
+export const useLiveModeStore = create<LiveModeStore>(set => ({
+  isLive: false,
+  setLive: (v) => set({ isLive: v }),
+}))
 
 export interface ITradingService {
   getNiftyQuote(): Promise<NiftyQuote>
@@ -74,13 +85,15 @@ export const tradingService: ITradingService = new Proxy({} as ITradingService, 
 export function activateLiveService(): void {
   import('./zerodhaService').then(({ ZerodhaService }) => {
     _service = new ZerodhaService()
+    useLiveModeStore.getState().setLive(true)
   })
 }
 
 export function activateMockService(): void {
   _service = new MockTradingService()
+  useLiveModeStore.getState().setLive(false)
 }
 
 export function isLiveMode(): boolean {
-  return _service.constructor.name === 'ZerodhaService'
+  return useLiveModeStore.getState().isLive
 }

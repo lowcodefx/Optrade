@@ -5,7 +5,7 @@ import { formatNumber, isMarketOpen } from '@/lib/utils'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { Settings, Plug, PlugZap } from 'lucide-react'
 import { getLoginURL, isTokenValid } from '@/core/services/zerodhaAuth'
-import { activateLiveService, activateMockService } from '@/core/services/tradingService'
+import { activateLiveService, activateMockService, useLiveModeStore } from '@/core/services/tradingService'
 
 const niftyTooltip = {
   title: 'NIFTY 50 Index',
@@ -23,7 +23,7 @@ interface Props {
 export function Header({ onSettingsClick }: Props) {
   const quote = useMarketStore(s => s.quote)
   const [time, setTime] = useState(new Date())
-  const [live, setLive] = useState(false)
+  const live = useLiveModeStore(s => s.isLive)
   const marketOpen = isMarketOpen()
   const apiKey = useSettingsStore(s => s.apiKey)
 
@@ -36,10 +36,8 @@ export function Header({ onSettingsClick }: Props) {
     if (!apiKey) { onSettingsClick(); return }
     if (live) {
       activateMockService()
-      setLive(false)
     } else if (isTokenValid()) {
       activateLiveService()
-      setLive(true)
     } else {
       window.location.href = getLoginURL()
     }
