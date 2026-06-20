@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useMarketStore } from '@/core/store'
+import { useSettingsStore } from '@/core/store'
 import { formatNumber, isMarketOpen } from '@/lib/utils'
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { Settings } from 'lucide-react'
+import { Settings, Plug, PlugZap } from 'lucide-react'
+import { getLoginURL, isTokenValid } from '@/core/services/zerodhaAuth'
+import { activateLiveService, activateMockService } from '@/core/services/tradingService'
 
 const niftyTooltip = {
   title: 'NIFTY 50 Index',
@@ -20,12 +23,27 @@ interface Props {
 export function Header({ onSettingsClick }: Props) {
   const quote = useMarketStore(s => s.quote)
   const [time, setTime] = useState(new Date())
+  const [live, setLive] = useState(false)
   const marketOpen = isMarketOpen()
+  const apiKey = useSettingsStore(s => s.apiKey)
 
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
+
+  function handleConnect() {
+    if (!apiKey) { onSettingsClick(); return }
+    if (live) {
+      activateMockService()
+      setLive(false)
+    } else if (isTokenValid()) {
+      activateLiveService()
+      setLive(true)
+    } else {
+      window.location.href = getLoginURL()
+    }
+  }
 
   const isPositive = (quote?.change ?? 0) >= 0
 
@@ -74,6 +92,18 @@ export function Header({ onSettingsClick }: Props) {
         <span className="text-[#cbd5e1] text-sm font-mono font-semibold tracking-wide">
           {time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
         </span>
+
+        {/* Zerodha connect toggle */}
+        <button onClick={handleConnect}
+          className={`flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded border transition-colors ${
+            live
+              ? 'bg-[#22c55e]/10 border-[#22c55e]/40 text-[#22c55e] hover:bg-[#22c55e]/20'
+              : 'bg-[#0f1f35] border-[#1e3a5f] text-[#475569] hover:text-[#38bdf8] hover:border-[#38bdf8]/40'
+          }`}>
+          {live ? <PlugZap size={11} /> : <Plug size={11} />}
+          {live ? 'Live' : 'Connect Zerodha'}
+        </button>
+
         <button onClick={onSettingsClick} className="text-[#475569] hover:text-[#38bdf8] transition-colors">
           <Settings size={14} />
         </button>

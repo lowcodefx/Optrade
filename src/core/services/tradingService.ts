@@ -64,8 +64,23 @@ function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-const USE_MOCK = true // Toggle to false for live Zerodha
+// Mutable service instance — swapped at runtime when user connects Zerodha
+let _service: ITradingService = new MockTradingService()
 
-export const tradingService: ITradingService = USE_MOCK
-  ? new MockTradingService()
-  : new MockTradingService() // Replace with ZerodhaService when ready
+export const tradingService: ITradingService = new Proxy({} as ITradingService, {
+  get: (_t, prop) => (_service as unknown as Record<string | symbol, unknown>)[prop],
+})
+
+export function activateLiveService(): void {
+  import('./zerodhaService').then(({ ZerodhaService }) => {
+    _service = new ZerodhaService()
+  })
+}
+
+export function activateMockService(): void {
+  _service = new MockTradingService()
+}
+
+export function isLiveMode(): boolean {
+  return _service.constructor.name === 'ZerodhaService'
+}
