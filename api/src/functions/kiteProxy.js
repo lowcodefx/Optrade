@@ -52,12 +52,21 @@ app.http('kite', {
       return { status: 204, headers: CORS_HEADERS, body: '' }
     }
 
-    const rawKitePath = request.params.kitePath || ''
+    // Debug: log everything we receive
+    const debugInfo = {
+      url: request.url,
+      method: request.method,
+      params: request.params,
+      query: Object.fromEntries(request.query.entries()),
+    }
+    context.log('kite proxy hit:', JSON.stringify(debugInfo))
+
+    const rawKitePath = request.params?.kitePath || ''
     if (!rawKitePath) {
       return {
         status: 400,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Missing Kite path in URL' }),
+        body: JSON.stringify({ error: 'Missing Kite path', debug: debugInfo }),
       }
     }
 
