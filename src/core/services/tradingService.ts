@@ -1,6 +1,8 @@
 import type { NiftyQuote, OptionChain, Candle, Position } from '@/core/types'
 import type { OrderRequest, OrderResponse } from '@/core/types'
 import { getMockNiftyQuote, getMockOptionChain, getMockCandles, getMockPositions } from './mockData'
+import { ZerodhaService } from './zerodhaService'
+import { useSettingsStore } from '@/core/store'
 import { create } from 'zustand'
 
 interface LiveModeStore {
@@ -39,7 +41,6 @@ class MockTradingService implements ITradingService {
 
   async getCandles(_timeframe = '5m', count = 30): Promise<Candle[]> {
     await delay(80)
-    // Append one updated candle to simulate live feed
     this.candles = getMockCandles(count)
     return this.candles
   }
@@ -75,18 +76,29 @@ function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-// Mutable service instance — swapped at runtime when user connects Zerodha
-let _service: ITradingService = new MockTradingService()
+// Zustand persist hydrates synchronously from localStorage, so getState() here
+// returns the stored credentials before any React component renders.
+function hasStoredCredentials(): boolean {
+  const { apiKey, accessToken } = useSettingsStore.getState()
+  return !!(apiKey && accessToken && accessToken.length > 10)
+}
+
+let _service: ITradingService = hasStoredCredentials()
+  ? new ZerodhaService()
+  : new MockTradingService()
+
+// Sync initial live state after stores are fully initialized
+queueMicrotask(() => {
+  useLiveModeStore.getState().setLive(_service instanceof ZerodhaService)
+})
 
 export const tradingService: ITradingService = new Proxy({} as ITradingService, {
   get: (_t, prop) => (_service as unknown as Record<string | symbol, unknown>)[prop],
 })
 
 export function activateLiveService(): void {
-  import('./zerodhaService').then(({ ZerodhaService }) => {
-    _service = new ZerodhaService()
-    useLiveModeStore.getState().setLive(true)
-  })
+  _service = new ZerodhaService()
+  useLiveModeStore.getState().setLive(true)
 }
 
 export function activateMockService(): void {

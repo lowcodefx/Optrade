@@ -71,12 +71,6 @@ function ZerodhaCallback() {
           activateLiveService()
         })
         .catch(err => console.error('Zerodha token exchange failed:', err))
-    } else {
-      // Auto-activate live service on every page load if credentials are stored
-      const { apiKey, accessToken } = useSettingsStore.getState()
-      if (apiKey && accessToken && accessToken.length > 10) {
-        activateLiveService()
-      }
     }
   }, [setAccessToken])
 
