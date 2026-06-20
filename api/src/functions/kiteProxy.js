@@ -20,7 +20,7 @@ function kiteRequest(method, kitePath, kiteQuery, authHeader, body, contentType)
     const options = {
       hostname: 'api.kite.trade',
       path: pathWithQuery,
-      method: method,
+      method,
       headers: reqHeaders,
     }
 
@@ -39,35 +39,38 @@ function kiteRequest(method, kitePath, kiteQuery, authHeader, body, contentType)
   })
 }
 
+// Route: /api/kite/{*kitePath}
+// e.g.  /api/kite/quote?i=NSE:NIFTY+50
+//        /api/kite/portfolio/positions
+//        /api/kite/instruments/historical/256265/5minute?from=...
 app.http('kite', {
   methods: ['GET', 'POST', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'kite',
+  route: 'kite/{*kitePath}',
   handler: async (request, context) => {
     if (request.method === 'OPTIONS') {
       return { status: 204, headers: CORS_HEADERS, body: '' }
     }
 
-    // Use request.query (URLSearchParams) — more reliable than parsing request.url in SWA
-    const query = request.query
-    const kitePath = query.get('kite_path')
-    if (!kitePath) {
-      context.log('kite_path missing. request.url:', request.url)
+    const rawKitePath = request.params.kitePath || ''
+    if (!rawKitePath) {
       return {
         status: 400,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Missing kite_path query param', url: request.url }),
+        body: JSON.stringify({ error: 'Missing Kite path in URL' }),
       }
     }
 
-    // Forward all params except kite_path to Kite
+    const kitePath = '/' + rawKitePath
+
+    // Forward all query params to Kite
     const kiteParams = new URLSearchParams()
-    for (const [key, value] of query.entries()) {
-      if (key !== 'kite_path') kiteParams.append(key, value)
+    for (const [key, value] of request.query.entries()) {
+      kiteParams.append(key, value)
     }
     const kiteQuery = kiteParams.toString()
 
-    const authHeader = request.headers.get('authorization') || request.headers.get('Authorization') || ''
+    const authHeader = request.headers.get('authorization') || ''
     context.log(`Proxying ${request.method} ${kitePath} query=${kiteQuery}`)
 
     try {

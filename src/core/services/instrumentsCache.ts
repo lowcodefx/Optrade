@@ -18,9 +18,7 @@ export async function getNiftyOptions(): Promise<NFOInstrument[]> {
   if (cache && cacheDate === today) return cache
 
   const { apiKey, accessToken } = useSettingsStore.getState()
-  const url = new URL('/api/kite', window.location.origin)
-  url.searchParams.set('kite_path', '/instruments/NFO')
-  const res = await fetch(url.toString(), {
+  const res = await fetch('/api/kite/instruments/NFO', {
     headers: { 'Authorization': `token ${apiKey}:${accessToken}`, 'X-Kite-Version': '3' },
   })
   if (!res.ok) throw new Error('Failed to fetch instruments')

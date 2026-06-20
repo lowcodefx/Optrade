@@ -13,10 +13,10 @@ function authHeader() {
   return `token ${apiKey}:${accessToken}`
 }
 
-// All Kite API calls go through the Azure Function proxy to avoid CORS
+// All Kite API calls go through /api/kite/{path} Azure Function proxy to avoid CORS
 async function kiteGet<T>(path: string, params?: Record<string, string | string[]>): Promise<T> {
-  const url = new URL('/api/kite', window.location.origin)
-  url.searchParams.set('kite_path', path)
+  // path starts with '/' e.g. '/quote' → URL becomes '/api/kite/quote'
+  const url = new URL(`/api/kite${path}`, window.location.origin)
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
       if (Array.isArray(v)) v.forEach(val => url.searchParams.append(k, val))
@@ -35,8 +35,7 @@ async function kiteGet<T>(path: string, params?: Record<string, string | string[
 }
 
 async function kitePost(path: string, body: Record<string, string>): Promise<unknown> {
-  const url = new URL('/api/kite', window.location.origin)
-  url.searchParams.set('kite_path', path)
+  const url = new URL(`/api/kite${path}`, window.location.origin)
   const res = await fetch(url.toString(), {
     method: 'POST',
     headers: {
