@@ -1,11 +1,14 @@
 {
   "name": "optrade-api",
   "version": "1.0.0",
-  "description": "Azure Functions API for Optrade — Zerodha proxy",
-  "main": "src/functions/*.js",
+  "description": "Azure Functions v4 API for Optrade",
+  "main": "index.js",
   "scripts": {
-    "start": "func start",
-    "build": "echo 'No build required'"
+    "build": "echo no build",
+    "start": "func start"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
