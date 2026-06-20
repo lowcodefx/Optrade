@@ -5,33 +5,53 @@ import { useSettingsStore } from '@/core/store'
 import { calculateEMA, calculateVWAP } from '@/core/utils/indicators'
 import { getNearestExpiry, getStrikesAroundATM } from './instrumentsCache'
 
-const BASE = 'https://api.kite.trade'
-const NIFTY_TOKEN = 256265 // NSE:NIFTY 50 instrument token
+const NIFTY_TOKEN = 256265
 const LOT_SIZE = 75
 
-function headers() {
+function authHeader() {
   const { apiKey, accessToken } = useSettingsStore.getState()
-  return {
-    'X-Kite-Version': '3',
-    'Authorization': `token ${apiKey}:${accessToken}`,
-  }
+  return `token ${apiKey}:${accessToken}`
 }
 
+// All Kite API calls go through the Azure Function proxy to avoid CORS
 async function kiteGet<T>(path: string, params?: Record<string, string | string[]>): Promise<T> {
-  const url = new URL(`${BASE}${path}`)
+  const url = new URL('/api/kite', window.location.origin)
+  url.searchParams.set('kite_path', path)
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
       if (Array.isArray(v)) v.forEach(val => url.searchParams.append(k, val))
       else url.searchParams.set(k, v)
     })
   }
-  const res = await fetch(url.toString(), { headers: headers() })
+  const res = await fetch(url.toString(), {
+    headers: { 'Authorization': authHeader(), 'X-Kite-Version': '3' },
+  })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new Error(err.message ?? `Kite API error ${res.status}`)
+    throw new Error((err as { message?: string }).message ?? `Kite API error ${res.status}`)
   }
   const json = await res.json()
-  return json.data as T
+  return (json as { data: T }).data
+}
+
+async function kitePost(path: string, body: Record<string, string>): Promise<unknown> {
+  const url = new URL('/api/kite', window.location.origin)
+  url.searchParams.set('kite_path', path)
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: {
+      'Authorization': authHeader(),
+      'X-Kite-Version': '3',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams(body).toString(),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error((err as { message?: string }).message ?? `Kite POST error ${res.status}`)
+  }
+  const json = await res.json()
+  return (json as { data: unknown }).data
 }
 
 interface KiteQuote {
@@ -56,9 +76,6 @@ export class ZerodhaService implements ITradingService {
 
     this.spotCache = nifty.last_price
 
-    // PCR requires option chain data — use cached or default
-    const pcr = 1.05 // updated when getOptionChain is called
-
     return {
       spot: nifty.last_price,
       change: nifty.change,
@@ -68,8 +85,8 @@ export class ZerodhaService implements ITradingService {
       low: nifty.ohlc.low,
       prevClose: nifty.ohlc.close,
       vix: vix?.last_price ?? 14,
-      pcr,
-      breadth: 55, // Requires individual stock data — kept as neutral
+      pcr: 1.05,
+      breadth: 55,
       vwap: (nifty.ohlc.high + nifty.ohlc.low + nifty.last_price) / 3,
       timestamp: new Date(),
     }
@@ -82,7 +99,6 @@ export class ZerodhaService implements ITradingService {
 
     if (instruments.length === 0) throw new Error('No option instruments found')
 
-    // Build instrument symbols for quote call
     const symbols = instruments.map(i => `NFO:${i.tradingsymbol}`)
     const data = await kiteGet<Record<string, KiteQuote>>('/quote', { i: symbols })
 
@@ -101,9 +117,9 @@ export class ZerodhaService implements ITradingService {
         oi: q.oi ?? 0,
         oiChange: q.oi_day_change ?? 0,
         volume: q.volume,
-        iv: 0, // Black-Scholes not computed — needs Phase 3 backend
+        iv: 0,
         ltp: q.last_price,
-        delta: inst.instrument_type === 'CE' ? 0.5 : -0.5, // approximation near ATM
+        delta: inst.instrument_type === 'CE' ? 0.5 : -0.5,
         gamma: 0.002,
         theta: -2.5,
         vega: 8,
@@ -125,24 +141,14 @@ export class ZerodhaService implements ITradingService {
     const totalPEOI = strikes.reduce((s, r) => s + r.pe.oi, 0)
     const maxPainStrike = calcMaxPain(strikes)
 
-    // Update PCR on the NiftyQuote
     const pcr = totalCEOI > 0 ? totalPEOI / totalCEOI : 1
-
-    // Patch last quote's PCR (best-effort)
     try {
       const { useMarketStore } = await import('@/core/store')
       const q = useMarketStore.getState().quote
       if (q) useMarketStore.getState().setQuote({ ...q, pcr })
     } catch (_) { /* ignore */ }
 
-    return {
-      expiry,
-      atmStrike: atm,
-      strikes,
-      totalCEOI,
-      totalPEOI,
-      maxPainStrike,
-    }
+    return { expiry, atmStrike: atm, strikes, totalCEOI, totalPEOI, maxPainStrike }
   }
 
   async getCandles(timeframe = '5minute', count = 30): Promise<Candle[]> {
@@ -150,12 +156,9 @@ export class ZerodhaService implements ITradingService {
     const now = new Date()
     const from = new Date(now.getTime() - count * intervalMs(timeframe) * 2)
 
-    const fromStr = formatKiteDate(from)
-    const toStr = formatKiteDate(now)
-
     const data = await kiteGet<{ candles: Array<[string, number, number, number, number, number]> }>(
       `/instruments/historical/${NIFTY_TOKEN}/${interval}`,
-      { from: fromStr, to: toStr, continuous: '0', oi: '0' }
+      { from: formatKiteDate(from), to: formatKiteDate(now), continuous: '0', oi: '0' }
     )
 
     const candles = data.candles.slice(-count).map(([time, open, high, low, close, volume]) => ({
@@ -163,20 +166,13 @@ export class ZerodhaService implements ITradingService {
       open, high, low, close, volume,
     }))
 
-    // Compute EMAs + VWAP
     const closes = candles.map(c => c.close)
     const ema9 = calculateEMA(closes, 9)
     const ema20 = calculateEMA(closes, 20)
     const ema50 = calculateEMA(closes, 50)
     const vwap = calculateVWAP(candles as Candle[])
 
-    return candles.map((c, i) => ({
-      ...c,
-      ema9: ema9[i],
-      ema20: ema20[i],
-      ema50: ema50[i],
-      vwap: vwap[i],
-    }))
+    return candles.map((c, i) => ({ ...c, ema9: ema9[i], ema20: ema20[i], ema50: ema50[i], vwap: vwap[i] }))
   }
 
   async getPositions(): Promise<Position[]> {
@@ -200,8 +196,7 @@ export class ZerodhaService implements ITradingService {
   }
 
   async placeOrder(order: OrderRequest): Promise<OrderResponse> {
-    const variety = 'regular'
-    const body = new URLSearchParams({
+    const data = await kitePost('/orders/regular', {
       tradingsymbol: `NIFTY${order.expiry}${order.strike}${order.optionType}`,
       exchange: 'NFO',
       transaction_type: 'BUY',
@@ -211,22 +206,10 @@ export class ZerodhaService implements ITradingService {
       ...(order.price ? { price: String(order.price) } : {}),
       ...(order.stopLoss ? { trigger_price: String(order.stopLoss) } : {}),
       validity: 'DAY',
-    })
+    }) as { order_id: string }
 
-    const res = await fetch(`${BASE}/orders/${variety}`, {
-      method: 'POST',
-      headers: { ...headers(), 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
-    })
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err.message ?? 'Order placement failed')
-    }
-
-    const json = await res.json()
     return {
-      orderId: json.data.order_id,
+      orderId: data.order_id,
       status: 'COMPLETE',
       message: `Order placed: BUY ${order.quantity} lots NIFTY ${order.strike} ${order.optionType}`,
       timestamp: new Date(),
@@ -238,7 +221,7 @@ export class ZerodhaService implements ITradingService {
     const pos = positions.find(p => p.positionId === positionId)
     if (!pos) return
 
-    const body = new URLSearchParams({
+    await kitePost('/orders/regular', {
       tradingsymbol: positionId,
       exchange: 'NFO',
       transaction_type: 'SELL',
@@ -246,12 +229,6 @@ export class ZerodhaService implements ITradingService {
       product: pos.productType,
       quantity: String(pos.quantity),
       validity: 'DAY',
-    })
-
-    await fetch(`${BASE}/orders/regular`, {
-      method: 'POST',
-      headers: { ...headers(), 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
     })
   }
 
@@ -315,7 +292,6 @@ function parseStrike(tradingsymbol: string): number {
 }
 
 function parseExpiry(tradingsymbol: string): string {
-  // e.g. NIFTY26JUN24750CE → extract 26JUN = Jun 2026
   const match = tradingsymbol.match(/NIFTY(\d{2})([A-Z]{3})(\d+)(CE|PE)$/)
   if (match) return `20${match[1]}-${monthIndex(match[2])}-01`
   return new Date().toISOString().slice(0, 10)

@@ -13,16 +13,16 @@ export interface NFOInstrument {
 let cache: NFOInstrument[] | null = null
 let cacheDate = ''
 
-function kiteHeaders() {
-  const { apiKey, accessToken } = useSettingsStore.getState()
-  return { 'X-Kite-Version': '3', 'Authorization': `token ${apiKey}:${accessToken}` }
-}
-
 export async function getNiftyOptions(): Promise<NFOInstrument[]> {
   const today = new Date().toISOString().slice(0, 10)
   if (cache && cacheDate === today) return cache
 
-  const res = await fetch('https://api.kite.trade/instruments/NFO', { headers: kiteHeaders() })
+  const { apiKey, accessToken } = useSettingsStore.getState()
+  const url = new URL('/api/kite', window.location.origin)
+  url.searchParams.set('kite_path', '/instruments/NFO')
+  const res = await fetch(url.toString(), {
+    headers: { 'Authorization': `token ${apiKey}:${accessToken}`, 'X-Kite-Version': '3' },
+  })
   if (!res.ok) throw new Error('Failed to fetch instruments')
 
   const text = await res.text()
