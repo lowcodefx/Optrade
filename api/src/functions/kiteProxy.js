@@ -74,8 +74,10 @@ app.http('kite', {
     }
     const kiteQuery = kiteParams.toString()
 
-    const authHeader = request.headers.get('authorization') || ''
-    context.log(`Proxying ${request.method} ${kitePath} query=${kiteQuery}`)
+    // SWA strips the Authorization header before reaching functions.
+    // We use X-Kite-Auth as a passthrough, then re-map it here.
+    const authHeader = request.headers.get('x-kite-auth') || ''
+    context.log(`Proxying ${request.method} ${kitePath} query=${kiteQuery} auth=${authHeader ? 'present' : 'MISSING'}`)
 
     try {
       let body = ''

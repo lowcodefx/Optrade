@@ -20,7 +20,7 @@ export async function getNiftyOptions(): Promise<NFOInstrument[]> {
   const { apiKey, accessToken } = useSettingsStore.getState()
   // kite_path=instruments/NFO — slashes unencoded so the proxy receives the full path
   const res = await fetch('/api/kite?kite_path=instruments/NFO', {
-    headers: { 'Authorization': `token ${apiKey}:${accessToken}`, 'X-Kite-Version': '3' },
+    headers: { 'X-Kite-Auth': `token ${apiKey}:${accessToken}`, 'X-Kite-Version': '3' },
   })
   if (!res.ok) throw new Error('Failed to fetch instruments')
 

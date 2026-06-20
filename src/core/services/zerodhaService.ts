@@ -30,7 +30,7 @@ function buildKiteUrl(path: string, params?: Record<string, string | string[]>):
 
 async function kiteGet<T>(path: string, params?: Record<string, string | string[]>): Promise<T> {
   const res = await fetch(buildKiteUrl(path, params), {
-    headers: { 'Authorization': authHeader(), 'X-Kite-Version': '3' },
+    headers: { 'X-Kite-Auth': authHeader(), 'X-Kite-Version': '3' },
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
@@ -44,8 +44,7 @@ async function kitePost(path: string, body: Record<string, string>): Promise<unk
   const res = await fetch(buildKiteUrl(path), {
     method: 'POST',
     headers: {
-      'Authorization': authHeader(),
-      'X-Kite-Version': '3',
+      'X-Kite-Auth': authHeader(),
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams(body).toString(),
