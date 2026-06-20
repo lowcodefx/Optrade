@@ -19,7 +19,7 @@ export function ChartPanel() {
   return (
     <div className="border-b border-[#1e293b]">
       {/* Toolbar */}
-      <div className="flex items-center gap-2 px-3 py-2 bg-[#0a1628] border-b border-[#1e293b]">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-3 py-2 bg-[#0a1628] border-b border-[#1e293b]">
         {/* Timeframes */}
         <div className="flex gap-1">
           {TIMEFRAMES.map(tf => (
@@ -29,10 +29,8 @@ export function ChartPanel() {
           ))}
         </div>
 
-        <div className="h-4 w-px bg-[#1e293b] mx-1" />
-
-        {/* Legend */}
-        <div className="flex items-center gap-2 text-[9px]">
+        {/* Legend — hidden on mobile to save toolbar space */}
+        <div className="hidden sm:flex items-center gap-2 text-[9px]">
           {[['EMA9', '#22c55e'], ['EMA20', '#38bdf8'], ['EMA50', '#f59e0b'], ['VWAP', '#a855f7']].map(([name, color]) => (
             <span key={name} className="flex items-center gap-1">
               <span className="w-3 h-0.5 inline-block rounded" style={{ background: color }} />
@@ -45,7 +43,7 @@ export function ChartPanel() {
           {/* PA Analyser toggle */}
           <button
             onClick={() => setPAEnabled(!paEnabled)}
-            className={cn('flex items-center gap-1.5 text-[10px] font-semibold px-3 py-1 rounded border transition-all',
+            className={cn('flex items-center gap-1.5 text-[10px] font-semibold px-2 sm:px-3 py-1 rounded border transition-all',
               paEnabled
                 ? 'bg-[#1a1035] border-[#7c3aed] text-[#a78bfa]'
                 : 'bg-transparent border-[#334155] text-[#64748b] hover:text-[#94a3b8]'
@@ -53,13 +51,14 @@ export function ChartPanel() {
           >
             <span className={cn('w-1.5 h-1.5 rounded-full', paEnabled ? 'bg-[#7c3aed]' : 'bg-[#334155]')} />
             <TrendingUp size={11} />
-            Price Action Analyser
+            <span className="hidden sm:inline">Price Action Analyser</span>
+            <span className="sm:hidden">PA</span>
           </button>
 
-          {/* Fullscreen */}
+          {/* Fullscreen — hidden on mobile (no room) */}
           <button
             onClick={() => setChartFullscreen(!chartFullscreen)}
-            className="text-[#475569] hover:text-[#38bdf8] transition-colors p-1"
+            className="hidden sm:block text-[#475569] hover:text-[#38bdf8] transition-colors p-1"
             title="Toggle fullscreen"
           >
             {chartFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
@@ -74,7 +73,7 @@ export function ChartPanel() {
           entry={setup?.entry}
           sl={setup?.sl}
           target={setup?.target}
-          height={220}
+          height={typeof window !== 'undefined' && window.innerWidth < 768 ? 280 : 220}
         />
       </div>
 
