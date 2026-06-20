@@ -13,17 +13,23 @@ function authHeader() {
   return `token ${apiKey}:${accessToken}`
 }
 
-// All Kite API calls go through /api/kite/{path} Azure Function proxy to avoid CORS
-async function kiteGet<T>(path: string, params?: Record<string, string | string[]>): Promise<T> {
-  // path starts with '/' e.g. '/quote' → URL becomes '/api/kite/quote'
-  const url = new URL(`/api/kite${path}`, window.location.origin)
+// All Kite API calls go through /api/kite Azure Function proxy to avoid CORS.
+// kite_path is built manually (not via URLSearchParams) so slashes in paths
+// like /instruments/historical/256265/5minute stay unencoded.
+function buildKiteUrl(path: string, params?: Record<string, string | string[]>): string {
+  // path = '/quote' → kite_path=quote (no leading slash, no %2F encoding)
+  let qs = `kite_path=${path.replace(/^\//, '')}`
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
-      if (Array.isArray(v)) v.forEach(val => url.searchParams.append(k, val))
-      else url.searchParams.set(k, v)
+      if (Array.isArray(v)) v.forEach(val => { qs += `&${encodeURIComponent(k)}=${encodeURIComponent(val)}` })
+      else qs += `&${encodeURIComponent(k)}=${encodeURIComponent(v)}`
     })
   }
-  const res = await fetch(url.toString(), {
+  return `/api/kite?${qs}`
+}
+
+async function kiteGet<T>(path: string, params?: Record<string, string | string[]>): Promise<T> {
+  const res = await fetch(buildKiteUrl(path, params), {
     headers: { 'Authorization': authHeader(), 'X-Kite-Version': '3' },
   })
   if (!res.ok) {
@@ -35,8 +41,7 @@ async function kiteGet<T>(path: string, params?: Record<string, string | string[
 }
 
 async function kitePost(path: string, body: Record<string, string>): Promise<unknown> {
-  const url = new URL(`/api/kite${path}`, window.location.origin)
-  const res = await fetch(url.toString(), {
+  const res = await fetch(buildKiteUrl(path), {
     method: 'POST',
     headers: {
       'Authorization': authHeader(),

@@ -39,43 +39,38 @@ function kiteRequest(method, kitePath, kiteQuery, authHeader, body, contentType)
   })
 }
 
-// Route: /api/kite/{*kitePath}
-// e.g.  /api/kite/quote?i=NSE:NIFTY+50
-//        /api/kite/portfolio/positions
-//        /api/kite/instruments/historical/256265/5minute?from=...
+// Route: /api/kite?kite_path=quote&i=NSE:NIFTY+50
+// kite_path is the Kite API path WITHOUT leading slash (slashes are preserved unencoded)
 app.http('kite', {
   methods: ['GET', 'POST', 'OPTIONS'],
   authLevel: 'anonymous',
-  route: 'kite/{*kitePath}',
+  route: 'kite',
   handler: async (request, context) => {
     if (request.method === 'OPTIONS') {
       return { status: 204, headers: CORS_HEADERS, body: '' }
     }
 
-    // Debug: log everything we receive
-    const debugInfo = {
-      url: request.url,
-      method: request.method,
-      params: request.params,
-      query: Object.fromEntries(request.query.entries()),
-    }
-    context.log('kite proxy hit:', JSON.stringify(debugInfo))
+    const kitePathSuffix = request.query.get('kite_path')
+    context.log('kite_path param:', kitePathSuffix, '| url:', request.url)
 
-    const rawKitePath = request.params?.kitePath || ''
-    if (!rawKitePath) {
+    if (!kitePathSuffix) {
       return {
         status: 400,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Missing Kite path', debug: debugInfo }),
+        body: JSON.stringify({
+          error: 'Missing kite_path',
+          url: request.url,
+          allParams: Object.fromEntries(request.query.entries()),
+        }),
       }
     }
 
-    const kitePath = '/' + rawKitePath
+    const kitePath = '/' + kitePathSuffix
 
-    // Forward all query params to Kite
+    // Forward all query params except kite_path to Kite
     const kiteParams = new URLSearchParams()
     for (const [key, value] of request.query.entries()) {
-      kiteParams.append(key, value)
+      if (key !== 'kite_path') kiteParams.append(key, value)
     }
     const kiteQuery = kiteParams.toString()
 
