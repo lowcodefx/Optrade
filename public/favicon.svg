@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Dark background matching the logo -->
+  <rect width="100" height="100" rx="18" fill="#1c1c1e"/>
+
+  <!-- "o": complete circle, left -->
+  <circle cx="30" cy="40" r="20" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- "p": stem going down + large clockwise arc (¾ circle) forming the bowl -->
+  <!-- Bowl center: (70, 40), r=20  -->
+  <!-- Left of bowl (= stem junction): (50, 40)  -->
+  <!-- Bottom of bowl: (70, 60)                  -->
+  <path
+    d="M 50,74 L 50,40 A 20,20 0 1,1 70,60"
+    fill="none"
+    stroke="white"
+    stroke-width="7"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
