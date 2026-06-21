@@ -64,6 +64,7 @@ export function Header({ onSettingsClick }: Props) {
       {/* Left: Brand + NIFTY + Market status */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
         <img src="/favicon.svg" alt="Optrade" className="h-6 w-auto shrink-0" />
+        <span className="text-white font-bold text-sm tracking-wide shrink-0">Optrade</span>
 
         <div className="flex items-center gap-1 sm:gap-2 min-w-0">
           <span className="text-[#64748b] text-[9px] sm:text-[10px] shrink-0">NIFTY</span>
