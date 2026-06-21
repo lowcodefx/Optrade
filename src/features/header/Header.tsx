@@ -3,7 +3,7 @@ import { useMarketStore } from '@/core/store'
 import { useSettingsStore } from '@/core/store'
 import { formatNumber, isMarketOpen } from '@/lib/utils'
 import { InfoTooltip } from '@/components/InfoTooltip'
-import { Settings, Plug, PlugZap, User } from 'lucide-react'
+import { Settings, Plug, PlugZap, User, BookOpen } from 'lucide-react'
 import { getLoginURL, isTokenValid } from '@/core/services/zerodhaAuth'
 import { activateLiveService, activateMockService, useLiveModeStore } from '@/core/services/tradingService'
 
@@ -25,9 +25,10 @@ const predictionColors = {
 
 interface Props {
   onSettingsClick: () => void
+  onPlaybookClick: () => void
 }
 
-export function Header({ onSettingsClick }: Props) {
+export function Header({ onSettingsClick, onPlaybookClick }: Props) {
   const quote = useMarketStore(s => s.quote)
   const ceScore = useMarketStore(s => s.ceScore)
   const peScore = useMarketStore(s => s.peScore)
@@ -162,6 +163,10 @@ export function Header({ onSettingsClick }: Props) {
         >
           {live ? <PlugZap size={12} /> : <Plug size={12} />}
           <span className="hidden sm:inline">{live ? 'Live' : 'Connect Zerodha'}</span>
+        </button>
+
+        <button onClick={onPlaybookClick} title="Trading Playbook" className="text-[#475569] hover:text-[#f59e0b] transition-colors p-0.5">
+          <BookOpen size={15} />
         </button>
 
         <button onClick={onSettingsClick} className="text-[#475569] hover:text-[#38bdf8] transition-colors p-0.5">

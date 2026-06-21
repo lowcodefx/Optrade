@@ -14,6 +14,7 @@ import { OrderEntry } from '@/features/order-entry/OrderEntry'
 import { RiskManagement } from '@/features/risk-management/RiskManagement'
 import { Settings } from '@/features/settings/Settings'
 import { QuickDecisionPopup } from '@/features/quick-popup/QuickDecisionPopup'
+import { TradingPlaybook } from '@/features/playbook/TradingPlaybook'
 import { useNiftyQuote, useOptionChain, useCandles, useNifty50Breadth } from '@/core/hooks/useMarketData'
 import { ShieldCheck, Activity, TrendingUp } from 'lucide-react'
 
@@ -136,6 +137,7 @@ function ZerodhaCallback() {
 export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showQuickPopup, setShowQuickPopup] = useState(false)
+  const [showPlaybook, setShowPlaybook] = useState(false)
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -143,7 +145,7 @@ export default function App() {
       <DataBootstrap />
       <KeyboardShortcuts onQuickPopup={() => setShowQuickPopup(true)} />
       <DashboardLayout
-        header={<Header onSettingsClick={() => setShowSettings(true)} />}
+        header={<Header onSettingsClick={() => setShowSettings(true)} onPlaybookClick={() => setShowPlaybook(true)} />}
         leftDock={<LeftDockTabs />}
         center={<CenterPanel />}
         rightDock={
@@ -155,6 +157,7 @@ export default function App() {
       />
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
       {showQuickPopup && <QuickDecisionPopup onClose={() => setShowQuickPopup(false)} />}
+      {showPlaybook && <TradingPlaybook onClose={() => setShowPlaybook(false)} />}
     </QueryClientProvider>
   )
 }
