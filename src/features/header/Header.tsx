@@ -33,6 +33,7 @@ export function Header({ onSettingsClick }: Props) {
   const peScore = useMarketStore(s => s.peScore)
   const prediction1h = useMarketStore(s => s.prediction1h)
   const userName = useMarketStore(s => s.userName)
+  const availableMargin = useMarketStore(s => s.availableMargin)
   const [time, setTime] = useState(new Date())
   const live = useLiveModeStore(s => s.isLive)
   const marketOpen = isMarketOpen()
@@ -126,11 +127,27 @@ export function Header({ onSettingsClick }: Props) {
           {time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
         </span>
 
-        {/* Username — show if logged in */}
-        {userName && (
-          <div className="hidden sm:flex items-center gap-1 text-[10px] text-[#64748b]">
-            <User size={10} className="text-[#38bdf8]" />
-            <span className="text-[#38bdf8] font-semibold">{userName}</span>
+        {/* Balance + Username — show if logged in live */}
+        {live && (
+          <div className="hidden sm:flex items-center gap-2">
+            {availableMargin > 0 && (
+              <div className="flex items-center gap-1 bg-[#0d2b0d] border border-[#22c55e]/30 rounded px-2 py-0.5">
+                <span className="text-[#64748b] text-[9px]">Bal</span>
+                <span className="text-[#22c55e] text-[10px] font-bold">
+                  ₹{availableMargin >= 100000
+                    ? `${(availableMargin / 100000).toFixed(1)}L`
+                    : availableMargin >= 1000
+                    ? `${(availableMargin / 1000).toFixed(1)}K`
+                    : availableMargin.toFixed(0)}
+                </span>
+              </div>
+            )}
+            {userName && (
+              <div className="flex items-center gap-1 text-[10px]">
+                <User size={10} className="text-[#38bdf8]" />
+                <span className="text-[#38bdf8] font-semibold">{userName}</span>
+              </div>
+            )}
           </div>
         )}
 
