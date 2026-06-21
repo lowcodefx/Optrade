@@ -1,12 +1,15 @@
 const { app } = require('@azure/functions')
-const nodemailer = require('nodemailer')
+const { EmailClient } = require('@azure/communication-email')
 
-// Credentials come from Azure App Settings (env vars), never from the request body.
-// Set GMAIL_USER, GMAIL_APP_PASS, and NOTIFICATION_EMAIL in Azure → Function App → Configuration.
-// For local dev: add them to api/local.settings.json under "Values".
-const GMAIL_USER = process.env.GMAIL_USER ?? ''
-const GMAIL_PASS = process.env.GMAIL_APP_PASS ?? ''
-const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL ?? ''
+// Azure Communication Services setup (set these in Azure Portal → Function App → Configuration):
+//
+//   AZURE_COMMUNICATION_CONNECTION_STRING  ← from your Azure Email Communication Service resource
+//   SENDER_ADDRESS                         ← e.g. DoNotReply@<guid>.azurecomm.net
+//   NOTIFICATION_EMAIL                     ← lowcodefx@gmail.com  (or any recipient)
+//
+const ACS_CONN_STR        = process.env.AZURE_COMMUNICATION_CONNECTION_STRING ?? ''
+const SENDER_ADDRESS      = process.env.SENDER_ADDRESS ?? ''
+const NOTIFICATION_EMAIL  = process.env.NOTIFICATION_EMAIL ?? 'lowcodefx@gmail.com'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -32,9 +35,9 @@ app.http('emailAlert', {
       return { status: 204, headers: CORS_HEADERS, body: '' }
     }
 
-    // If credentials not configured server-side, fail silently
-    if (!GMAIL_USER || !GMAIL_PASS || !NOTIFICATION_EMAIL) {
-      context.log.warn('Email alert skipped: server-side credentials not configured (GMAIL_USER / GMAIL_APP_PASS / NOTIFICATION_EMAIL)')
+    // Silently skip if Azure Communication Services not configured
+    if (!ACS_CONN_STR || !SENDER_ADDRESS) {
+      context.log.warn('Email alert skipped: AZURE_COMMUNICATION_CONNECTION_STRING or SENDER_ADDRESS not set')
       return {
         status: 200,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
@@ -59,29 +62,30 @@ app.http('emailAlert', {
       }
     }
 
-    // Sanitise: strip CR/LF from subject to prevent header injection
+    // Sanitise inputs
     const safeSubject = String(subject).replace(/[\r\n]/g, ' ').slice(0, 200)
-    const safeBody = String(body).slice(0, 5000)
-    // Safe HTML: escape then replace newlines with <br>
-    const safeHtml = escapeHtml(safeBody).replace(/\n/g, '<br>')
+    const safeBody    = String(body).slice(0, 5000)
+    const safeHtml    = escapeHtml(safeBody).replace(/\n/g, '<br>')
 
     try {
-      const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
-        auth: { user: GMAIL_USER, pass: GMAIL_PASS },
-      })
+      const client = new EmailClient(ACS_CONN_STR)
 
-      await transporter.sendMail({
-        from: `"Optrade Alerts" <${GMAIL_USER}>`,
-        to: NOTIFICATION_EMAIL,
-        subject: safeSubject,
-        text: safeBody,
-        html: safeHtml,
-      })
+      const message = {
+        senderAddress: SENDER_ADDRESS,
+        recipients: {
+          to: [{ address: NOTIFICATION_EMAIL }],
+        },
+        content: {
+          subject: safeSubject,
+          plainText: safeBody,
+          html: `<pre style="font-family:sans-serif;font-size:13px;line-height:1.6">${safeHtml}</pre>`,
+        },
+      }
 
-      context.log(`Email alert sent: ${safeSubject}`)
+      const poller = await client.beginSend(message)
+      const result = await poller.pollUntilDone()
+
+      context.log(`Email sent to ${NOTIFICATION_EMAIL}, id=${result.id}, status=${result.status}`)
 
       return {
         status: 200,
@@ -89,11 +93,11 @@ app.http('emailAlert', {
         body: JSON.stringify({ success: true }),
       }
     } catch (err) {
-      context.log.error('Email send error:', err.message) // logged server-side only
+      context.log.error('Azure email send error:', err.message) // server-side only
       return {
         status: 502,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ error: 'Failed to send email' }), // no detail exposed to caller
+        body: JSON.stringify({ error: 'Failed to send email' }),
       }
     }
   },

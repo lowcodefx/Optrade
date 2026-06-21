@@ -88,14 +88,15 @@ export function Settings({ onClose }: Props) {
                     ))}
                   </div>
                   <div className="bg-[#060d1a] border border-[#1e293b] rounded p-2.5 text-[9px] text-[#475569] space-y-1.5">
-                    <p className="text-[#64748b] font-semibold">Azure App Settings required (one-time setup):</p>
-                    <p>In Azure Portal → your Function App → Configuration → Application Settings, add:</p>
+                    <p className="text-[#64748b] font-semibold">Azure Communication Services setup (one-time):</p>
+                    <p>1. Create an <strong className="text-[#94a3b8]">Azure Email Communication Service</strong> resource in Azure Portal and provision a domain (free Azure-managed domain is fine).</p>
+                    <p>2. In your Function App → Configuration → Application Settings, add:</p>
                     <div className="font-mono bg-[#0a1628] rounded p-1.5 space-y-0.5 text-[8px] text-[#94a3b8]">
-                      <div>GMAIL_USER = your@gmail.com</div>
-                      <div>GMAIL_APP_PASS = xxxx-xxxx-xxxx-xxxx</div>
-                      <div>NOTIFICATION_EMAIL = your@gmail.com</div>
+                      <div>AZURE_COMMUNICATION_CONNECTION_STRING = endpoint=https://...;accesskey=...</div>
+                      <div>SENDER_ADDRESS = DoNotReply@&lt;guid&gt;.azurecomm.net</div>
+                      <div>NOTIFICATION_EMAIL = lowcodefx@gmail.com</div>
                     </div>
-                    <p>Get the app password from Google Account → Security → 2-Step Verification → App Passwords. Credentials stay server-side and are never sent to the browser.</p>
+                    <p>Connection string comes from your ACS resource → Keys. Sender address comes from the provisioned domain. Emails will be sent to lowcodefx@gmail.com.</p>
                   </div>
                 </>
               )}
