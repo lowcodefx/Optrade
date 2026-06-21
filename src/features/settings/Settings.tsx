@@ -58,9 +58,9 @@ export function Settings({ onClose }: Props) {
             <p className="text-[#475569] text-[9px] mt-2">Credentials saved in browser localStorage. Never shared externally.</p>
           </section>
 
-          {/* Gmail Alerts */}
+          {/* Email Alerts */}
           <section>
-            <h3 className="text-[#64748b] text-[10px] uppercase tracking-widest mb-3">Email Alerts (Gmail)</h3>
+            <h3 className="text-[#64748b] text-[10px] uppercase tracking-widest mb-3">Email Alerts</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-[#94a3b8] text-[10px]">Enable Email Alerts</label>
@@ -74,22 +74,10 @@ export function Settings({ onClose }: Props) {
 
               {s.enableEmailAlerts && (
                 <>
-                  <div>
-                    <label className="text-[#64748b] text-[10px] block mb-1">Gmail Address</label>
-                    <input type="email" value={s.notificationEmail} onChange={e => s.setNotificationEmail(e.target.value)}
-                      className="w-full bg-[#060d1a] border border-[#1e3a5f] rounded px-3 py-1.5 text-white text-xs"
-                      placeholder="your@gmail.com" />
-                  </div>
-                  <div>
-                    <label className="text-[#64748b] text-[10px] block mb-1">Gmail App Password</label>
-                    <input type="password" value={s.gmailAppPassword} onChange={e => s.setGmailAppPassword(e.target.value)}
-                      className="w-full bg-[#060d1a] border border-[#1e3a5f] rounded px-3 py-1.5 text-white text-xs font-mono"
-                      placeholder="16-char app password from Google Account" />
-                  </div>
                   <div className="space-y-1.5">
                     {[
                       { label: 'Alert on Buy Opportunity (score > 700)', val: s.emailAlertOnOpportunity, set: s.setEmailAlertOnOpportunity },
-                      { label: 'Alert on SL Warning (position -10%)', val: s.emailAlertOnSLHit, set: s.setEmailAlertOnSLHit },
+                      { label: 'Alert on SL Warning (position −10%)', val: s.emailAlertOnSLHit, set: s.setEmailAlertOnSLHit },
                       { label: 'Alert on Profit > 20%', val: s.emailAlertOnProfit, set: s.setEmailAlertOnProfit },
                     ].map(({ label, val, set }) => (
                       <label key={label} className="flex items-center gap-2 text-[10px] text-[#94a3b8] cursor-pointer">
@@ -99,8 +87,15 @@ export function Settings({ onClose }: Props) {
                       </label>
                     ))}
                   </div>
-                  <div className="bg-[#060d1a] border border-[#1e293b] rounded p-2 text-[9px] text-[#475569]">
-                    <strong className="text-[#64748b]">Setup:</strong> Go to Google Account → Security → 2-Step Verification → App Passwords. Generate a 16-char password for "Mail". Stored in browser only — never sent externally.
+                  <div className="bg-[#060d1a] border border-[#1e293b] rounded p-2.5 text-[9px] text-[#475569] space-y-1.5">
+                    <p className="text-[#64748b] font-semibold">Azure App Settings required (one-time setup):</p>
+                    <p>In Azure Portal → your Function App → Configuration → Application Settings, add:</p>
+                    <div className="font-mono bg-[#0a1628] rounded p-1.5 space-y-0.5 text-[8px] text-[#94a3b8]">
+                      <div>GMAIL_USER = your@gmail.com</div>
+                      <div>GMAIL_APP_PASS = xxxx-xxxx-xxxx-xxxx</div>
+                      <div>NOTIFICATION_EMAIL = your@gmail.com</div>
+                    </div>
+                    <p>Get the app password from Google Account → Security → 2-Step Verification → App Passwords. Credentials stay server-side and are never sent to the browser.</p>
                   </div>
                 </>
               )}

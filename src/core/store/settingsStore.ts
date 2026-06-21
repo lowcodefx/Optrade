@@ -12,9 +12,7 @@ interface SettingsState {
   accessToken: string
   minTradeScore: number
 
-  // Email alert settings
-  notificationEmail: string
-  gmailAppPassword: string
+  // Email alert settings (credentials stored in Azure App Settings, not here)
   enableEmailAlerts: boolean
   emailAlertOnOpportunity: boolean
   emailAlertOnSLHit: boolean
@@ -29,8 +27,6 @@ interface SettingsState {
   setApiSecret: (v: string) => void
   setAccessToken: (v: string) => void
   setMinTradeScore: (v: number) => void
-  setNotificationEmail: (v: string) => void
-  setGmailAppPassword: (v: string) => void
   setEnableEmailAlerts: (v: boolean) => void
   setEmailAlertOnOpportunity: (v: boolean) => void
   setEmailAlertOnSLHit: (v: boolean) => void
@@ -49,8 +45,6 @@ export const useSettingsStore = create<SettingsState>()(
       apiSecret: '',
       accessToken: '',
       minTradeScore: 60,
-      notificationEmail: '',
-      gmailAppPassword: '',
       enableEmailAlerts: false,
       emailAlertOnOpportunity: true,
       emailAlertOnSLHit: true,
@@ -65,8 +59,6 @@ export const useSettingsStore = create<SettingsState>()(
       setApiSecret: (apiSecret) => set({ apiSecret }),
       setAccessToken: (accessToken) => set({ accessToken }),
       setMinTradeScore: (minTradeScore) => set({ minTradeScore }),
-      setNotificationEmail: (notificationEmail) => set({ notificationEmail }),
-      setGmailAppPassword: (gmailAppPassword) => set({ gmailAppPassword }),
       setEnableEmailAlerts: (enableEmailAlerts) => set({ enableEmailAlerts }),
       setEmailAlertOnOpportunity: (emailAlertOnOpportunity) => set({ emailAlertOnOpportunity }),
       setEmailAlertOnSLHit: (emailAlertOnSLHit) => set({ emailAlertOnSLHit }),
