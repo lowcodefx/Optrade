@@ -4,6 +4,7 @@ import type { ITradingService } from './tradingService'
 import { useSettingsStore } from '@/core/store'
 import { calculateEMA, calculateVWAP } from '@/core/utils/indicators'
 import { getNearestExpiry, getStrikesAroundATM } from './instrumentsCache'
+import { NIFTY50_KITE_INSTRUMENTS, type Nifty50BreadthResult } from '@/core/utils/nifty50Symbols'
 
 const NIFTY_TOKEN = 256265
 const LOT_SIZE = 75
@@ -68,6 +69,41 @@ interface KiteQuote {
 
 export class ZerodhaService implements ITradingService {
   private spotCache = 0
+  private breadthCache = 50 // updated by getNifty50Breadth
+
+  async getNifty50Breadth(): Promise<Nifty50BreadthResult> {
+    const data = await kiteGet<Record<string, KiteQuote>>('/quote', {
+      i: NIFTY50_KITE_INSTRUMENTS as unknown as string[],
+    })
+
+    const stocks = NIFTY50_KITE_INSTRUMENTS.map(sym => {
+      const q = data[sym]
+      if (!q) return null
+      const prevClose = q.ohlc.close
+      const bullish = q.last_price > prevClose
+      const greenCandle = q.last_price > q.ohlc.open
+      const changePct = prevClose > 0 ? ((q.last_price - prevClose) / prevClose) * 100 : 0
+      return { symbol: sym.replace('NSE:', ''), bullish, greenCandle, changePct }
+    }).filter(Boolean) as Nifty50BreadthResult['stocks']
+
+    const bullishCount = stocks.filter(s => s.bullish).length
+    const bearishCount = stocks.filter(s => !s.bullish).length
+    const strongBullCount = stocks.filter(s => s.bullish && s.greenCandle).length
+    const strongBearCount = stocks.filter(s => !s.bullish && !s.greenCandle).length
+    const breadthPct = stocks.length > 0 ? (bullishCount / stocks.length) * 100 : 50
+
+    this.breadthCache = breadthPct
+
+    const result: Nifty50BreadthResult = { bullishCount, bearishCount, strongBullCount, strongBearCount, breadthPct, stocks }
+
+    // push into store so score engine and UI can use it
+    try {
+      const { useMarketStore } = await import('@/core/store')
+      useMarketStore.getState().setNifty50Breadth(result)
+    } catch (_) { /* ignore */ }
+
+    return result
+  }
 
   async getNiftyQuote(): Promise<NiftyQuote> {
     const data = await kiteGet<Record<string, KiteQuote>>('/quote', {
@@ -89,7 +125,7 @@ export class ZerodhaService implements ITradingService {
       prevClose: nifty.ohlc.close,
       vix: vix?.last_price ?? 14,
       pcr: 1.05,
-      breadth: 55,
+      breadth: this.breadthCache, // updated by getNifty50Breadth
       vwap: (nifty.ohlc.high + nifty.ohlc.low + nifty.last_price) / 3,
       timestamp: new Date(),
     }

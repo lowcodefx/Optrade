@@ -22,10 +22,15 @@ interface ScoreParams {
   rsi: number
   adx: number
   pcr: number
-  breadth: number
+  breadth: number   // fallback 0-100 pct
   vix: number
   lastCandleGreen: boolean
   volumeAboveAvg: boolean
+  // NIFTY 50 constituent data (optional — enriches breadth factor when available)
+  nifty50Bullish?: number   // stocks above prev close
+  nifty50Bearish?: number   // stocks below prev close
+  strongBullCount?: number  // bullish + green candle
+  strongBearCount?: number  // bearish + red candle
 }
 
 export function calculateMarketScore(p: ScoreParams): MarketScore {
@@ -74,10 +79,23 @@ export function calculateMarketScore(p: ScoreParams): MarketScore {
   bd.push({ factor: 'VIX', cePoints: Math.round(cVIX), pePoints: Math.round(pVIX), maxPoints: 80 })
   ce += cVIX; pe += pVIX
 
-  // 7. Market Breadth — 80 pts
-  const cBreadth = p.breadth > 50 ? Math.min((p.breadth - 50) / 20, 1) * 80 : 0
-  const pBreadth = p.breadth < 50 ? Math.min((50 - p.breadth) / 20, 1) * 80 : 0
-  bd.push({ factor: 'Breadth', cePoints: Math.round(cBreadth), pePoints: Math.round(pBreadth), maxPoints: 80 })
+  // 7. Market Breadth (NIFTY 50 stocks) — 80 pts
+  // If we have actual per-stock data, use strong bull/bear counts for higher precision
+  let cBreadth: number, pBreadth: number
+  if (p.nifty50Bullish !== undefined && p.nifty50Bearish !== undefined) {
+    const total = p.nifty50Bullish + p.nifty50Bearish || 50
+    const bullPct = (p.nifty50Bullish / total) * 100
+    const bearPct = (p.nifty50Bearish / total) * 100
+    // Weight strongly-trending stocks more
+    const strongBullBonus = p.strongBullCount ? (p.strongBullCount / total) * 20 : 0
+    const strongBearBonus = p.strongBearCount ? (p.strongBearCount / total) * 20 : 0
+    cBreadth = bullPct > 50 ? Math.min((bullPct - 50) / 20, 1) * 60 + strongBullBonus : 0
+    pBreadth = bearPct > 50 ? Math.min((bearPct - 50) / 20, 1) * 60 + strongBearBonus : 0
+  } else {
+    cBreadth = p.breadth > 50 ? Math.min((p.breadth - 50) / 20, 1) * 80 : 0
+    pBreadth = p.breadth < 50 ? Math.min((50 - p.breadth) / 20, 1) * 80 : 0
+  }
+  bd.push({ factor: 'N50 Breadth', cePoints: Math.round(cBreadth), pePoints: Math.round(pBreadth), maxPoints: 80 })
   ce += cBreadth; pe += pBreadth
 
   // 8. Volume — 50 pts

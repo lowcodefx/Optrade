@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { NiftyQuote, OptionChain, Candle, TrendAnalysis, TradeStrengthResult, PriceActionSetup } from '@/core/types'
 import type { MarketScore, ScoreBreakdown } from '@/core/utils/scoreEngine'
+import type { Nifty50BreadthResult } from '@/core/utils/nifty50Symbols'
 import { calculateEMA, calculateRSI, calculateADX } from '@/core/utils/indicators'
 import { calculateTradeStrength } from '@/core/utils/tradeStrength'
 import { calculateMarketScore } from '@/core/utils/scoreEngine'
@@ -25,6 +26,9 @@ interface MarketState {
   predictionDetail: string
   scoreBreakdown: ScoreBreakdown[]
 
+  // NIFTY 50 constituent breadth
+  nifty50Breadth: Nifty50BreadthResult | null
+
   // Authenticated user
   userName: string
   availableMargin: number
@@ -38,6 +42,7 @@ interface MarketState {
   setCenterTab: (t: 'chart' | 'chain') => void
   setChartFullscreen: (v: boolean) => void
   setActiveTimeframe: (tf: string) => void
+  setNifty50Breadth: (b: Nifty50BreadthResult) => void
   setUserName: (name: string) => void
   setMargins: (available: number, used: number, net: number) => void
 }
@@ -58,6 +63,7 @@ export const useMarketStore = create<MarketState>((set, get) => ({
   prediction1h: 'NEUTRAL',
   predictionDetail: 'Waiting for data…',
   scoreBreakdown: [],
+  nifty50Breadth: null,
   userName: '',
   availableMargin: 0,
   usedMargin: 0,
@@ -90,12 +96,19 @@ export const useMarketStore = create<MarketState>((set, get) => ({
       })
 
       const lastCandle = candles[candles.length - 1]
+      const n50 = get().nifty50Breadth
+      // Use live NIFTY 50 breadth if available, else fall back to quote.breadth
+      const breadth = n50 ? n50.breadthPct : quote.breadth
       const ms = calculateMarketScore({
         spot: quote.spot, vwap: quote.vwap,
         ema9, ema20, ema50, rsi, adx,
-        pcr: quote.pcr, breadth: quote.breadth, vix: quote.vix,
+        pcr: quote.pcr, breadth, vix: quote.vix,
         lastCandleGreen: lastCandle ? lastCandle.close >= lastCandle.open : true,
         volumeAboveAvg: lastCandle ? lastCandle.volume > 70000 : false,
+        nifty50Bullish: n50?.bullishCount,
+        nifty50Bearish: n50?.bearishCount,
+        strongBullCount: n50?.strongBullCount,
+        strongBearCount: n50?.strongBearCount,
       })
 
       set({
@@ -135,6 +148,7 @@ export const useMarketStore = create<MarketState>((set, get) => ({
     }
   },
 
+  setNifty50Breadth: (nifty50Breadth) => set({ nifty50Breadth }),
   setCenterTab: (centerTab) => set({ centerTab }),
   setChartFullscreen: (chartFullscreen) => set({ chartFullscreen }),
   setActiveTimeframe: (activeTimeframe) => set({ activeTimeframe }),

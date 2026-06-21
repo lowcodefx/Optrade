@@ -47,3 +47,13 @@ export function usePositions() {
     staleTime: 2000,
   })
 }
+
+export function useNifty50Breadth() {
+  return useQuery({
+    queryKey: ['nifty50-breadth'],
+    queryFn: () => tradingService.getNifty50Breadth(),
+    refetchInterval: 60000, // every 60s — 50-stock quote fetch is heavier
+    staleTime: 55000,
+    retry: 1,
+  })
+}

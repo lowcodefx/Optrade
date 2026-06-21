@@ -14,7 +14,7 @@ import { OrderEntry } from '@/features/order-entry/OrderEntry'
 import { RiskManagement } from '@/features/risk-management/RiskManagement'
 import { Settings } from '@/features/settings/Settings'
 import { QuickDecisionPopup } from '@/features/quick-popup/QuickDecisionPopup'
-import { useNiftyQuote, useOptionChain, useCandles } from '@/core/hooks/useMarketData'
+import { useNiftyQuote, useOptionChain, useCandles, useNifty50Breadth } from '@/core/hooks/useMarketData'
 import { ShieldCheck, Activity, TrendingUp } from 'lucide-react'
 
 type LeftTab = 'discipline' | 'market' | 'analysis'
@@ -26,7 +26,7 @@ const LEFT_TABS: Array<{ id: LeftTab; label: string; Icon: typeof ShieldCheck }>
 ]
 
 function LeftDockTabs() {
-  const [tab, setTab] = useState<LeftTab>('discipline')
+  const [tab, setTab] = useState<LeftTab>('analysis')
   return (
     <div className="flex flex-col h-full">
       {/* Tab bar */}
@@ -66,6 +66,7 @@ function DataBootstrap() {
   useNiftyQuote()
   useOptionChain()
   useCandles(tf, countMap[tf] ?? 30)
+  useNifty50Breadth()
   return null
 }
 

@@ -1,5 +1,6 @@
 import type { NiftyQuote, OptionChain, Candle, Position } from '@/core/types'
 import type { OrderRequest, OrderResponse } from '@/core/types'
+import type { Nifty50BreadthResult } from '@/core/utils/nifty50Symbols'
 import { getMockNiftyQuote, getMockOptionChain, getMockCandles, getMockPositions } from './mockData'
 import { ZerodhaService } from './zerodhaService'
 import { useSettingsStore } from '@/core/store'
@@ -20,6 +21,7 @@ export interface ITradingService {
   getOptionChain(expiry?: string): Promise<OptionChain>
   getCandles(timeframe?: string, count?: number): Promise<Candle[]>
   getPositions(): Promise<Position[]>
+  getNifty50Breadth(): Promise<Nifty50BreadthResult>
   placeOrder(order: OrderRequest): Promise<OrderResponse>
   exitPosition(positionId: string): Promise<void>
   exitAllPositions(): Promise<void>
@@ -48,6 +50,21 @@ class MockTradingService implements ITradingService {
   async getPositions(): Promise<Position[]> {
     await delay(100)
     return getMockPositions()
+  }
+
+  async getNifty50Breadth(): Promise<Nifty50BreadthResult> {
+    await delay(80)
+    // Mock: simulate 30-35 bullish out of 50
+    const bullishCount = Math.round(25 + Math.random() * 20)
+    const bearishCount = 50 - bullishCount
+    return {
+      bullishCount,
+      bearishCount,
+      strongBullCount: Math.round(bullishCount * 0.6),
+      strongBearCount: Math.round(bearishCount * 0.6),
+      breadthPct: (bullishCount / 50) * 100,
+      stocks: [],
+    }
   }
 
   async placeOrder(order: OrderRequest): Promise<OrderResponse> {
