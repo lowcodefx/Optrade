@@ -68,7 +68,7 @@ export function OptionSelection() {
   if (all.length === 0) return null
 
   return (
-    <SectionCard title="Smart Option Selection" tooltip={tooltip}>
+    <SectionCard title="Smart Option Selection" tooltip={tooltip} collapsible defaultOpen={true}>
       <div className="text-[9px] text-[#475569] mb-2">Showing options closest to ₹{TARGET} LTP (ideal ₹{IDEAL_LOW}–{IDEAL_HIGH})</div>
       <div className="grid grid-cols-2 gap-2">
         {all.map(c => (

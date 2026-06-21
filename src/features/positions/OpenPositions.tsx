@@ -30,8 +30,12 @@ export function OpenPositions() {
   const totalPnL = positions.reduce((a, p) => a + p.pnl, 0)
   const totalExposure = positions.reduce((a, p) => a + p.entryPrice * p.quantity, 0)
 
+  const posLabel = positions.length > 0
+    ? <span className="text-[9px] font-bold text-[#22c55e] bg-[#0d2b0d] px-1.5 py-0.5 rounded">{positions.length}</span>
+    : undefined
+
   return (
-    <SectionCard title="Open Positions" tooltip={tooltip} noPadding>
+    <SectionCard title="Open Positions" tooltip={tooltip} noPadding collapsible defaultOpen={true} badge={posLabel}>
       {positions.length === 0 ? (
         <div className="px-3 py-4 text-center text-[#475569] text-xs">No open positions</div>
       ) : (
