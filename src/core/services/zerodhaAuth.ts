@@ -30,3 +30,18 @@ export function isTokenValid(): boolean {
   const { accessToken } = useSettingsStore.getState()
   return !!accessToken && accessToken.length > 10
 }
+
+export async function fetchUserProfile(): Promise<string> {
+  const { apiKey, accessToken } = useSettingsStore.getState()
+  if (!apiKey || !accessToken) return ''
+  try {
+    const res = await fetch('/api/kite?kite_path=user/profile', {
+      headers: { 'X-Kite-Auth': `token ${apiKey}:${accessToken}` },
+    })
+    if (!res.ok) return ''
+    const json = await res.json()
+    return json.data?.user_name ?? json.data?.user_id ?? ''
+  } catch {
+    return ''
+  }
+}

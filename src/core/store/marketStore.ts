@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 import type { NiftyQuote, OptionChain, Candle, TrendAnalysis, TradeStrengthResult, PriceActionSetup } from '@/core/types'
+import type { MarketScore, ScoreBreakdown } from '@/core/utils/scoreEngine'
 import { calculateEMA, calculateRSI, calculateADX } from '@/core/utils/indicators'
 import { calculateTradeStrength } from '@/core/utils/tradeStrength'
+import { calculateMarketScore } from '@/core/utils/scoreEngine'
 import { detectPatterns, buildPriceActionSetup } from '@/core/utils/patternDetector'
 
 interface MarketState {
@@ -15,12 +17,23 @@ interface MarketState {
   centerTab: 'chart' | 'chain'
   chartFullscreen: boolean
 
+  // 1000-pt scoring
+  ceScore: number
+  peScore: number
+  prediction1h: MarketScore['prediction1h']
+  predictionDetail: string
+  scoreBreakdown: ScoreBreakdown[]
+
+  // Authenticated user
+  userName: string
+
   setQuote: (q: NiftyQuote) => void
   setOptionChain: (c: OptionChain) => void
   setCandles: (c: Candle[]) => void
   setPAEnabled: (v: boolean) => void
   setCenterTab: (t: 'chart' | 'chain') => void
   setChartFullscreen: (v: boolean) => void
+  setUserName: (name: string) => void
 }
 
 export const useMarketStore = create<MarketState>((set, get) => ({
@@ -33,10 +46,15 @@ export const useMarketStore = create<MarketState>((set, get) => ({
   paEnabled: false,
   centerTab: 'chart',
   chartFullscreen: false,
+  ceScore: 0,
+  peScore: 0,
+  prediction1h: 'NEUTRAL',
+  predictionDetail: 'Waiting for data…',
+  scoreBreakdown: [],
+  userName: '',
 
   setQuote: (quote) => {
     set({ quote })
-    // Recompute derived state when quote updates
     const { candles } = get()
     if (candles.length > 0 && quote) {
       const closes = candles.map(c => c.close)
@@ -61,7 +79,21 @@ export const useMarketStore = create<MarketState>((set, get) => ({
         putWritingDetected: quote.pcr > 1.2,
       })
 
-      set({ trendAnalysis, tradeStrength })
+      const lastCandle = candles[candles.length - 1]
+      const ms = calculateMarketScore({
+        spot: quote.spot, vwap: quote.vwap,
+        ema9, ema20, ema50, rsi, adx,
+        pcr: quote.pcr, breadth: quote.breadth, vix: quote.vix,
+        lastCandleGreen: lastCandle ? lastCandle.close >= lastCandle.open : true,
+        volumeAboveAvg: lastCandle ? lastCandle.volume > 70000 : false,
+      })
+
+      set({
+        trendAnalysis, tradeStrength,
+        ceScore: ms.ceScore, peScore: ms.peScore,
+        prediction1h: ms.prediction1h, predictionDetail: ms.predictionDetail,
+        scoreBreakdown: ms.breakdown,
+      })
     }
   },
 
@@ -95,4 +127,5 @@ export const useMarketStore = create<MarketState>((set, get) => ({
 
   setCenterTab: (centerTab) => set({ centerTab }),
   setChartFullscreen: (chartFullscreen) => set({ chartFullscreen }),
+  setUserName: (userName) => set({ userName }),
 }))

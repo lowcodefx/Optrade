@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { exchangeRequestToken } from '@/core/services/zerodhaAuth'
-import { activateLiveService } from '@/core/services/tradingService'
-import { useSettingsStore } from '@/core/store'
+import { exchangeRequestToken, fetchUserProfile } from '@/core/services/zerodhaAuth'
+import { activateLiveService, useLiveModeStore } from '@/core/services/tradingService'
+import { useSettingsStore, useMarketStore } from '@/core/store'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { Header } from '@/features/header/Header'
 import { MarketContext } from '@/features/market-context/MarketContext'
@@ -15,7 +15,6 @@ import { RiskManagement } from '@/features/risk-management/RiskManagement'
 import { Settings } from '@/features/settings/Settings'
 import { QuickDecisionPopup } from '@/features/quick-popup/QuickDecisionPopup'
 import { useNiftyQuote, useOptionChain, useCandles } from '@/core/hooks/useMarketData'
-import { useMarketStore } from '@/core/store'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -57,6 +56,15 @@ function KeyboardShortcuts({ onQuickPopup }: { onQuickPopup: () => void }) {
 
 function ZerodhaCallback() {
   const setAccessToken = useSettingsStore(s => s.setAccessToken)
+  const setUserName = useMarketStore(s => s.setUserName)
+  const isLive = useLiveModeStore(s => s.isLive)
+
+  // Fetch profile once on mount if already live (stored credentials)
+  useEffect(() => {
+    if (isLive) {
+      fetchUserProfile().then(name => { if (name) setUserName(name) })
+    }
+  }, [isLive, setUserName])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -69,10 +77,11 @@ function ZerodhaCallback() {
         .then(accessToken => {
           setAccessToken(accessToken)
           activateLiveService()
+          fetchUserProfile().then(name => { if (name) setUserName(name) })
         })
         .catch(err => console.error('Zerodha token exchange failed:', err))
     }
-  }, [setAccessToken])
+  }, [setAccessToken, setUserName])
 
   return null
 }
