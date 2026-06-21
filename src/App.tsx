@@ -17,6 +17,7 @@ import { QuickDecisionPopup } from '@/features/quick-popup/QuickDecisionPopup'
 import { TradingPlaybook } from '@/features/playbook/TradingPlaybook'
 import { useNiftyQuote, useOptionChain, useCandles, useNifty50Breadth } from '@/core/hooks/useMarketData'
 import { ShieldCheck, Activity, TrendingUp } from 'lucide-react'
+import { NewsTimeline } from '@/features/news/NewsTimeline'
 
 type LeftTab = 'discipline' | 'market' | 'analysis'
 
@@ -49,7 +50,7 @@ function LeftDockTabs() {
       </div>
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto">
-        {tab === 'discipline' && <DisciplinePanel />}
+        {tab === 'discipline' && <><DisciplinePanel /><NewsTimeline /></>}
         {tab === 'market'     && <><MarketContext /><TradeStrength /></>}
         {tab === 'analysis'   && <TrendAnalysis />}
       </div>
