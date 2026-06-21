@@ -120,14 +120,6 @@ export function Header({ onSettingsClick }: Props) {
       {/* Right: VIX + PCR + clock + user + connect + settings */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
 
-        {/* VIX + PCR — hidden on mobile */}
-        {quote && (
-          <div className="hidden sm:flex items-center gap-3 text-[10px]">
-            <span className="text-[#64748b]">VIX <span className="text-[#f59e0b] font-semibold">{quote.vix.toFixed(2)}</span></span>
-            <span className="text-[#64748b]">PCR <span className={`font-semibold ${quote.pcr > 1 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>{quote.pcr.toFixed(2)}</span></span>
-          </div>
-        )}
-
         {/* Clock — hidden on mobile */}
         <span className="hidden sm:block text-[#cbd5e1] text-sm font-mono font-semibold tracking-wide">
           {time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
