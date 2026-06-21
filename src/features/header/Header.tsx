@@ -34,8 +34,7 @@ export function Header({ onSettingsClick, onPlaybookClick }: Props) {
   const peScore = useMarketStore(s => s.peScore)
   const prediction1h = useMarketStore(s => s.prediction1h)
   const userName = useMarketStore(s => s.userName)
-  const availableMargin = useMarketStore(s => s.availableMargin)
-  const [time, setTime] = useState(new Date())
+const [time, setTime] = useState(new Date())
   const live = useLiveModeStore(s => s.isLive)
   const marketOpen = isMarketOpen()
   const apiKey = useSettingsStore(s => s.apiKey)
@@ -74,18 +73,7 @@ export function Header({ onSettingsClick, onPlaybookClick }: Props) {
             {time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </span>
 
-          {live && availableMargin > 0 && (
-            <div className="flex items-center gap-1 bg-[#0d2b0d] border border-[#22c55e]/30 rounded px-2 py-0.5">
-              <span className="text-[#64748b] text-[9px]">Bal</span>
-              <span className="text-[#22c55e] text-[10px] font-bold">
-                ₹{availableMargin >= 100000
-                  ? `${(availableMargin / 100000).toFixed(1)}L`
-                  : `${(availableMargin / 1000).toFixed(1)}K`}
-              </span>
-            </div>
-          )}
-
-          {userName && (
+{userName && (
             <div className="hidden sm:flex items-center gap-1">
               <User size={11} className="text-[#38bdf8]" />
               <span className="text-[#38bdf8] text-[10px] font-semibold">{userName}</span>
