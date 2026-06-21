@@ -15,6 +15,46 @@ import { RiskManagement } from '@/features/risk-management/RiskManagement'
 import { Settings } from '@/features/settings/Settings'
 import { QuickDecisionPopup } from '@/features/quick-popup/QuickDecisionPopup'
 import { useNiftyQuote, useOptionChain, useCandles } from '@/core/hooks/useMarketData'
+import { ShieldCheck, Activity, TrendingUp } from 'lucide-react'
+
+type LeftTab = 'discipline' | 'market' | 'analysis'
+
+const LEFT_TABS: Array<{ id: LeftTab; label: string; Icon: typeof ShieldCheck }> = [
+  { id: 'discipline', label: 'Discipline', Icon: ShieldCheck },
+  { id: 'market',     label: 'Market',     Icon: Activity },
+  { id: 'analysis',  label: 'Analysis',   Icon: TrendingUp },
+]
+
+function LeftDockTabs() {
+  const [tab, setTab] = useState<LeftTab>('discipline')
+  return (
+    <div className="flex flex-col h-full">
+      {/* Tab bar */}
+      <div className="flex border-b border-[#1e293b] shrink-0">
+        {LEFT_TABS.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={`flex-1 flex items-center justify-center gap-1 py-2 text-[9px] font-semibold uppercase tracking-widest transition-colors ${
+              tab === id
+                ? 'text-[#38bdf8] border-b-2 border-[#38bdf8]'
+                : 'text-[#475569] border-b-2 border-transparent hover:text-[#94a3b8]'
+            }`}
+          >
+            <Icon size={11} />
+            {label}
+          </button>
+        ))}
+      </div>
+      {/* Tab content */}
+      <div className="flex-1 overflow-y-auto">
+        {tab === 'discipline' && <DisciplinePanel />}
+        {tab === 'market'     && <><MarketContext /><TradeStrength /></>}
+        {tab === 'analysis'   && <TrendAnalysis />}
+      </div>
+    </div>
+  )
+}
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -97,14 +137,7 @@ export default function App() {
       <KeyboardShortcuts onQuickPopup={() => setShowQuickPopup(true)} />
       <DashboardLayout
         header={<Header onSettingsClick={() => setShowSettings(true)} />}
-        leftDock={
-          <>
-            <DisciplinePanel />
-            <MarketContext />
-            <TradeStrength />
-            <TrendAnalysis />
-          </>
-        }
+        leftDock={<LeftDockTabs />}
         center={<CenterPanel />}
         rightDock={
           <>
