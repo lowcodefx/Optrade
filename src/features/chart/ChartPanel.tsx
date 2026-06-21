@@ -11,8 +11,10 @@ export function ChartPanel() {
   const paEnabled = useMarketStore(s => s.paEnabled)
   const paSetup = useMarketStore(s => s.paSetup)
   const chartFullscreen = useMarketStore(s => s.chartFullscreen)
+  const activeTimeframe = useMarketStore(s => s.activeTimeframe)
   const setPAEnabled = useMarketStore(s => s.setPAEnabled)
   const setChartFullscreen = useMarketStore(s => s.setChartFullscreen)
+  const setActiveTimeframe = useMarketStore(s => s.setActiveTimeframe)
 
   const setup = paEnabled ? paSetup : null
 
@@ -23,9 +25,15 @@ export function ChartPanel() {
         {/* Timeframes */}
         <div className="flex gap-1">
           {TIMEFRAMES.map(tf => (
-            <button key={tf} className={cn('text-[9px] px-2 py-0.5 rounded border transition-colors',
-              tf === '5m' ? 'bg-[#1e3a5f] text-[#38bdf8] border-[#1e3a5f]' : 'text-[#475569] border-transparent hover:text-[#94a3b8]'
-            )}>{tf}</button>
+            <button
+              key={tf}
+              onClick={() => setActiveTimeframe(tf)}
+              className={cn('text-[9px] px-2 py-0.5 rounded border transition-colors',
+                tf === activeTimeframe
+                  ? 'bg-[#1e3a5f] text-[#38bdf8] border-[#1e3a5f]'
+                  : 'text-[#475569] border-transparent hover:text-[#94a3b8]'
+              )}
+            >{tf}</button>
           ))}
         </div>
 

@@ -31,6 +31,26 @@ export function isTokenValid(): boolean {
   return !!accessToken && accessToken.length > 10
 }
 
+export async function fetchUserMargins(): Promise<{ available: number; used: number; net: number }> {
+  const { apiKey, accessToken } = useSettingsStore.getState()
+  if (!apiKey || !accessToken) return { available: 0, used: 0, net: 0 }
+  try {
+    const res = await fetch('/api/kite?kite_path=user/margins', {
+      headers: { 'X-Kite-Auth': `token ${apiKey}:${accessToken}` },
+    })
+    if (!res.ok) return { available: 0, used: 0, net: 0 }
+    const json = await res.json()
+    const eq = json.data?.equity ?? {}
+    return {
+      available: eq.available?.live_balance ?? eq.available?.cash ?? 0,
+      used: eq.utilised?.debits ?? 0,
+      net: eq.net ?? 0,
+    }
+  } catch {
+    return { available: 0, used: 0, net: 0 }
+  }
+}
+
 export async function fetchUserProfile(): Promise<string> {
   const { apiKey, accessToken } = useSettingsStore.getState()
   if (!apiKey || !accessToken) return ''

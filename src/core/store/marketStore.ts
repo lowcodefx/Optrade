@@ -16,6 +16,7 @@ interface MarketState {
   paEnabled: boolean
   centerTab: 'chart' | 'chain'
   chartFullscreen: boolean
+  activeTimeframe: string
 
   // 1000-pt scoring
   ceScore: number
@@ -26,6 +27,9 @@ interface MarketState {
 
   // Authenticated user
   userName: string
+  availableMargin: number
+  usedMargin: number
+  netMargin: number
 
   setQuote: (q: NiftyQuote) => void
   setOptionChain: (c: OptionChain) => void
@@ -33,7 +37,9 @@ interface MarketState {
   setPAEnabled: (v: boolean) => void
   setCenterTab: (t: 'chart' | 'chain') => void
   setChartFullscreen: (v: boolean) => void
+  setActiveTimeframe: (tf: string) => void
   setUserName: (name: string) => void
+  setMargins: (available: number, used: number, net: number) => void
 }
 
 export const useMarketStore = create<MarketState>((set, get) => ({
@@ -46,12 +52,16 @@ export const useMarketStore = create<MarketState>((set, get) => ({
   paEnabled: false,
   centerTab: 'chart',
   chartFullscreen: false,
+  activeTimeframe: '5m',
   ceScore: 0,
   peScore: 0,
   prediction1h: 'NEUTRAL',
   predictionDetail: 'Waiting for data…',
   scoreBreakdown: [],
   userName: '',
+  availableMargin: 0,
+  usedMargin: 0,
+  netMargin: 0,
 
   setQuote: (quote) => {
     set({ quote })
@@ -127,5 +137,7 @@ export const useMarketStore = create<MarketState>((set, get) => ({
 
   setCenterTab: (centerTab) => set({ centerTab }),
   setChartFullscreen: (chartFullscreen) => set({ chartFullscreen }),
+  setActiveTimeframe: (activeTimeframe) => set({ activeTimeframe }),
   setUserName: (userName) => set({ userName }),
+  setMargins: (availableMargin, usedMargin, netMargin) => set({ availableMargin, usedMargin, netMargin }),
 }))

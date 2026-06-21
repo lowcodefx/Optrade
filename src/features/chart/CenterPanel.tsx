@@ -4,13 +4,15 @@ import { OptionsChain } from '@/features/options-chain/OptionsChain'
 import { OptionSelection } from '@/features/option-selection/OptionSelection'
 import { OpenPositions } from '@/features/positions/OpenPositions'
 import { TradeJournal } from '@/features/journal/TradeJournal'
+import { AnalyticsDashboard } from '@/features/analytics/AnalyticsDashboard'
 import { cn } from '@/lib/utils'
 
-type TabId = 'chart' | 'chain' | 'journal'
+type TabId = 'chart' | 'chain' | 'journal' | 'analytics'
 const TABS: Array<{ id: TabId; label: string }> = [
-  { id: 'chart', label: '📈 Chart' },
-  { id: 'chain', label: '📊 Options Chain' },
-  { id: 'journal', label: '📓 Journal' },
+  { id: 'chart',     label: '📈 Chart' },
+  { id: 'chain',     label: '📊 Chain' },
+  { id: 'journal',   label: '📓 Journal' },
+  { id: 'analytics', label: '📉 Analytics' },
 ]
 
 export function CenterPanel() {
@@ -37,9 +39,9 @@ export function CenterPanel() {
         </div>
       </div>
 
-      {centerTab === 'journal' ? (
-        <TradeJournal />
-      ) : (
+      {centerTab === 'journal'   && <TradeJournal />}
+      {centerTab === 'analytics' && <AnalyticsDashboard />}
+      {(centerTab === 'chart' || centerTab === 'chain') && (
         <>
           {centerTab === 'chart' ? <ChartPanel /> : <OptionsChain />}
           <OptionSelection />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { exchangeRequestToken, fetchUserProfile } from '@/core/services/zerodhaAuth'
+import { exchangeRequestToken, fetchUserProfile, fetchUserMargins } from '@/core/services/zerodhaAuth'
 import { activateLiveService, useLiveModeStore } from '@/core/services/tradingService'
 import { useSettingsStore, useMarketStore } from '@/core/store'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
@@ -61,9 +61,11 @@ const queryClient = new QueryClient({
 })
 
 function DataBootstrap() {
+  const tf = useMarketStore(s => s.activeTimeframe)
+  const countMap: Record<string, number> = { '1m': 60, '5m': 40, '15m': 30, '1h': 20 }
   useNiftyQuote()
   useOptionChain()
-  useCandles('5m', 30)
+  useCandles(tf, countMap[tf] ?? 30)
   return null
 }
 
@@ -97,14 +99,18 @@ function KeyboardShortcuts({ onQuickPopup }: { onQuickPopup: () => void }) {
 function ZerodhaCallback() {
   const setAccessToken = useSettingsStore(s => s.setAccessToken)
   const setUserName = useMarketStore(s => s.setUserName)
+  const setMargins = useMarketStore(s => s.setMargins)
   const isLive = useLiveModeStore(s => s.isLive)
 
-  // Fetch profile once on mount if already live (stored credentials)
+  function loadLiveData() {
+    fetchUserProfile().then(name => { if (name) setUserName(name) })
+    fetchUserMargins().then(m => setMargins(m.available, m.used, m.net))
+  }
+
+  // Load on mount if already live
   useEffect(() => {
-    if (isLive) {
-      fetchUserProfile().then(name => { if (name) setUserName(name) })
-    }
-  }, [isLive, setUserName])
+    if (isLive) loadLiveData()
+  }, [isLive]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -117,11 +123,11 @@ function ZerodhaCallback() {
         .then(accessToken => {
           setAccessToken(accessToken)
           activateLiveService()
-          fetchUserProfile().then(name => { if (name) setUserName(name) })
+          loadLiveData()
         })
         .catch(err => console.error('Zerodha token exchange failed:', err))
     }
-  }, [setAccessToken, setUserName])
+  }, [setAccessToken]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return null
 }
