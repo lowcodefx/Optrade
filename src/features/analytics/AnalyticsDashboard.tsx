@@ -1,5 +1,8 @@
 import { useMemo } from 'react'
 import { useJournalStore } from '@/core/store/journalStore'
+import { useMarketStore } from '@/core/store'
+import { useLiveModeStore } from '@/core/services/tradingService'
+import { usePositions } from '@/core/hooks/useMarketData'
 import type { TradeEntry } from '@/core/types/discipline'
 
 function formatCur(n: number) {
@@ -144,7 +147,15 @@ function TradeRow({ e }: { e: TradeEntry }) {
 
 export function AnalyticsDashboard() {
   const entries = useJournalStore(s => s.entries)
-  const allEntries = entries // full history
+  const allEntries = entries
+  const availableMargin = useMarketStore(s => s.availableMargin)
+  const usedMargin = useMarketStore(s => s.usedMargin)
+  const isLive = useLiveModeStore(s => s.isLive)
+  const { data: positions = [] } = usePositions()
+  const openPnL = positions.reduce((s, p) => s + p.pnl, 0)
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayEntries = allEntries.filter(e => e.date === todayStr)
+  const todayPnL = todayEntries.reduce((s, e) => s + e.pnl, 0)
 
   const stats = useMemo(() => {
     if (allEntries.length === 0) return null
@@ -187,6 +198,50 @@ export function AnalyticsDashboard() {
 
   return (
     <div className="p-3 space-y-4">
+
+      {/* Account snapshot */}
+      {isLive && availableMargin > 0 && (
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-[#0a1628] border border-[#22c55e]/30 rounded p-3 text-center">
+            <div className="text-[9px] text-[#64748b] uppercase mb-1">Available</div>
+            <div className="text-[#22c55e] font-bold text-base">
+              ₹{availableMargin >= 100000
+                ? `${(availableMargin / 100000).toFixed(2)}L`
+                : `${(availableMargin / 1000).toFixed(1)}K`}
+            </div>
+          </div>
+          <div className="bg-[#0a1628] border border-[#f59e0b]/30 rounded p-3 text-center">
+            <div className="text-[9px] text-[#64748b] uppercase mb-1">Used Margin</div>
+            <div className="text-[#f59e0b] font-bold text-base">
+              ₹{usedMargin >= 100000
+                ? `${(usedMargin / 100000).toFixed(2)}L`
+                : `${(usedMargin / 1000).toFixed(1)}K`}
+            </div>
+          </div>
+          <div className={`bg-[#0a1628] border rounded p-3 text-center ${openPnL >= 0 ? 'border-[#22c55e]/30' : 'border-[#ef4444]/30'}`}>
+            <div className="text-[9px] text-[#64748b] uppercase mb-1">Open P&L</div>
+            <div className={`font-bold text-base ${openPnL >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+              {openPnL >= 0 ? '+' : ''}₹{Math.abs(openPnL).toFixed(0)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Today snapshot */}
+      <div className={`bg-[#0a1628] border rounded p-3 flex items-center justify-between ${todayPnL >= 0 ? 'border-[#22c55e]/30' : 'border-[#ef4444]/30'}`}>
+        <div>
+          <div className="text-[9px] text-[#64748b] uppercase mb-0.5">Today's Realised P&L</div>
+          <div className={`text-xl font-bold ${todayPnL >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+            {todayPnL >= 0 ? '+' : ''}₹{Math.abs(todayPnL).toLocaleString('en-IN')}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-[9px] text-[#64748b] mb-0.5">{todayEntries.length} trades today</div>
+          <div className="text-[9px] text-[#64748b]">
+            {todayEntries.filter(e => e.result === 'WIN').length}W · {todayEntries.filter(e => e.result === 'LOSS').length}L
+          </div>
+        </div>
+      </div>
 
       {/* Summary grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

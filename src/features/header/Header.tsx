@@ -36,6 +36,7 @@ export function Header({ onSettingsClick, onPlaybookClick }: Props) {
   const userName = useMarketStore(s => s.userName)
 const [time, setTime] = useState(new Date())
   const live = useLiveModeStore(s => s.isLive)
+  const availableMargin = useMarketStore(s => s.availableMargin)
   const marketOpen = isMarketOpen()
   const apiKey = useSettingsStore(s => s.apiKey)
 
@@ -151,13 +152,27 @@ const [time, setTime] = useState(new Date())
           </div>
         )}
 
-        {/* VIX + PCR — desktop only, far right */}
-        {quote && (
-          <div className="hidden sm:flex items-center gap-3 ml-auto text-[10px]">
-            <span className="text-[#64748b]">VIX <span className="text-[#f59e0b] font-semibold">{quote.vix.toFixed(2)}</span></span>
-            <span className="text-[#64748b]">PCR <span className={`font-semibold ${quote.pcr > 1 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>{quote.pcr.toFixed(2)}</span></span>
-          </div>
-        )}
+        {/* VIX + PCR + Balance — desktop only, far right */}
+        <div className="hidden sm:flex items-center gap-3 ml-auto text-[10px]">
+          {quote && (
+            <>
+              <span className="text-[#64748b]">VIX <span className="text-[#f59e0b] font-semibold">{quote.vix.toFixed(2)}</span></span>
+              <span className="text-[#64748b]">PCR <span className={`font-semibold ${quote.pcr > 1 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>{quote.pcr.toFixed(2)}</span></span>
+            </>
+          )}
+          {live && availableMargin > 0 && (
+            <>
+              <span className="w-px h-3 bg-[#1e293b]" />
+              <span className="text-[#64748b]">
+                Bal <span className="text-[#22c55e] font-bold">
+                  ₹{availableMargin >= 100000
+                    ? `${(availableMargin / 100000).toFixed(1)}L`
+                    : `${(availableMargin / 1000).toFixed(1)}K`}
+                </span>
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
     </div>
