@@ -147,10 +147,11 @@ export function NewsTimeline() {
           const sentiment = getSentiment(item.title + item.description)
           const cfg = sentimentConfig[sentiment]
           const { Icon } = cfg
+          const safeHref = (() => { try { const u = new URL(item.link); return (u.protocol === 'http:' || u.protocol === 'https:') ? u.toString() : '#' } catch { return '#' } })()
           return (
             <a
               key={i}
-              href={item.link}
+              href={safeHref}
               target="_blank"
               rel="noopener noreferrer"
               className={`flex gap-2 p-2 rounded border ${cfg.border} bg-[#060d1a] hover:bg-[#0f1f35] transition-colors block`}
