@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import type { NiftyQuote, OptionChain, Candle, TrendAnalysis, TradeStrengthResult, PriceActionSetup } from '@/core/types'
+import type { NiftyQuote, OptionChain, Candle, TrendAnalysis, TradeStrengthResult, PriceActionSetup, PivotPoints, GlobalMarket, FiiDiiData } from '@/core/types'
 import type { MarketScore, ScoreBreakdown } from '@/core/utils/scoreEngine'
 import type { Nifty50BreadthResult } from '@/core/utils/nifty50Symbols'
+import type { KiteOrder } from '@/core/types'
 import { calculateEMA, calculateRSI, calculateADX } from '@/core/utils/indicators'
 import { calculateTradeStrength } from '@/core/utils/tradeStrength'
 import { calculateMarketScore } from '@/core/utils/scoreEngine'
@@ -35,6 +36,19 @@ interface MarketState {
   usedMargin: number
   netMargin: number
 
+  // Pivot points (previous day S1/S2/R1/R2)
+  pivotPoints: PivotPoints | null
+  showPivots: boolean
+
+  // Order history
+  orders: KiteOrder[]
+
+  // Global markets (Dow, Nasdaq, S&P)
+  globalMarkets: GlobalMarket[]
+
+  // FII/DII data
+  fiiDii: FiiDiiData | null
+
   setQuote: (q: NiftyQuote) => void
   setOptionChain: (c: OptionChain) => void
   setCandles: (c: Candle[]) => void
@@ -45,6 +59,11 @@ interface MarketState {
   setNifty50Breadth: (b: Nifty50BreadthResult) => void
   setUserName: (name: string) => void
   setMargins: (available: number, used: number, net: number) => void
+  setPivotPoints: (p: PivotPoints) => void
+  setShowPivots: (v: boolean) => void
+  setOrders: (o: KiteOrder[]) => void
+  setGlobalMarkets: (m: GlobalMarket[]) => void
+  setFiiDii: (d: FiiDiiData) => void
 }
 
 export const useMarketStore = create<MarketState>((set, get) => ({
@@ -68,6 +87,11 @@ export const useMarketStore = create<MarketState>((set, get) => ({
   availableMargin: 0,
   usedMargin: 0,
   netMargin: 0,
+  pivotPoints: null,
+  showPivots: true,
+  orders: [],
+  globalMarkets: [],
+  fiiDii: null,
 
   setQuote: (quote) => {
     set({ quote })
@@ -154,4 +178,9 @@ export const useMarketStore = create<MarketState>((set, get) => ({
   setActiveTimeframe: (activeTimeframe) => set({ activeTimeframe }),
   setUserName: (userName) => set({ userName }),
   setMargins: (availableMargin, usedMargin, netMargin) => set({ availableMargin, usedMargin, netMargin }),
+  setPivotPoints: (pivotPoints) => set({ pivotPoints }),
+  setShowPivots: (showPivots) => set({ showPivots }),
+  setOrders: (orders) => set({ orders }),
+  setGlobalMarkets: (globalMarkets) => set({ globalMarkets }),
+  setFiiDii: (fiiDii) => set({ fiiDii }),
 }))

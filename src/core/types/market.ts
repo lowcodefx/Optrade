@@ -113,3 +113,32 @@ export interface PriceActionSetup {
   supportLevel: number
   resistanceLevel: number
 }
+
+export interface PivotPoints {
+  pp: number
+  r1: number
+  r2: number
+  s1: number
+  s2: number
+  prevHigh: number
+  prevLow: number
+  prevClose: number
+}
+
+export interface GlobalMarket {
+  symbol: string
+  name: string
+  price: number
+  change: number
+  changePct: number
+}
+
+export interface FiiDiiData {
+  date: string
+  fiiNet: number
+  diiNet: number
+  fiiBuy: number
+  fiiSell: number
+  diiBuy: number
+  diiSell: number
+}

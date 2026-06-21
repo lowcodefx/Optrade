@@ -15,9 +15,12 @@ import { RiskManagement } from '@/features/risk-management/RiskManagement'
 import { Settings } from '@/features/settings/Settings'
 import { QuickDecisionPopup } from '@/features/quick-popup/QuickDecisionPopup'
 import { TradingPlaybook } from '@/features/playbook/TradingPlaybook'
-import { useNiftyQuote, useOptionChain, useCandles, useNifty50Breadth } from '@/core/hooks/useMarketData'
+import { useNiftyQuote, useOptionChain, useCandles, useNifty50Breadth, usePivotPoints, useOrders, useGlobalMarkets, useFiiDii } from '@/core/hooks/useMarketData'
 import { ShieldCheck, Activity, TrendingUp } from 'lucide-react'
 import { NewsTimeline } from '@/features/news/NewsTimeline'
+import { AlertMonitor } from '@/features/alerts/AlertMonitor'
+import { SquareOffReminder } from '@/features/square-off/SquareOffReminder'
+import { AlertsPanel } from '@/features/alerts/AlertsPanel'
 
 type LeftTab = 'discipline' | 'market' | 'analysis'
 
@@ -50,7 +53,7 @@ function LeftDockTabs() {
       </div>
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto">
-        {tab === 'discipline' && <><DisciplinePanel /><NewsTimeline /></>}
+        {tab === 'discipline' && <><DisciplinePanel /><AlertsPanel /><NewsTimeline /></>}
         {tab === 'market'     && <><MarketContext /><TradeStrength /></>}
         {tab === 'analysis'   && <TrendAnalysis />}
       </div>
@@ -69,6 +72,10 @@ function DataBootstrap() {
   useOptionChain()
   useCandles(tf, countMap[tf] ?? 30)
   useNifty50Breadth()
+  usePivotPoints()
+  useOrders()
+  useGlobalMarkets()
+  useFiiDii()
   return null
 }
 
@@ -144,6 +151,8 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <ZerodhaCallback />
       <DataBootstrap />
+      <AlertMonitor />
+      <SquareOffReminder />
       <KeyboardShortcuts onQuickPopup={() => setShowQuickPopup(true)} />
       <DashboardLayout
         header={<Header onSettingsClick={() => setShowSettings(true)} onPlaybookClick={() => setShowPlaybook(true)} />}

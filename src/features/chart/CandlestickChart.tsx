@@ -1,8 +1,7 @@
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer, Customized } from 'recharts'
-import type { Candle } from '@/core/types'
+import type { Candle, PivotPoints } from '@/core/types'
 import { formatNumber } from '@/lib/utils'
 
-// Custom candlestick renderer using Recharts Customized
 function Candles({ xAxisMap, yAxisMap, data }: { xAxisMap?: Record<string, { scale: (v: number) => number; bandwidth: () => number }>, yAxisMap?: Record<string, { scale: (v: number) => number }>, data?: Candle[] }) {
   if (!xAxisMap || !yAxisMap || !data) return null
   const xScale = Object.values(xAxisMap)[0]?.scale
@@ -39,10 +38,19 @@ interface Props {
   entry?: number
   sl?: number
   target?: number
+  pivotPoints?: PivotPoints | null
   height?: number
 }
 
-export function CandlestickChart({ candles, entry, sl, target, height = 220 }: Props) {
+const PIVOT_LINES = [
+  { key: 'r2' as keyof PivotPoints, label: 'R2', color: '#22c55e', dash: '3 4' },
+  { key: 'r1' as keyof PivotPoints, label: 'R1', color: '#86efac', dash: '3 4' },
+  { key: 'pp' as keyof PivotPoints, label: 'PP', color: '#f59e0b', dash: '5 3' },
+  { key: 's1' as keyof PivotPoints, label: 'S1', color: '#fca5a5', dash: '3 4' },
+  { key: 's2' as keyof PivotPoints, label: 'S2', color: '#ef4444', dash: '3 4' },
+]
+
+export function CandlestickChart({ candles, entry, sl, target, pivotPoints, height = 220 }: Props) {
   if (candles.length === 0) return null
 
   const data = candles.map((c, i) => ({ ...c, index: i }))
@@ -65,18 +73,32 @@ export function CandlestickChart({ candles, entry, sl, target, height = 220 }: P
             formatter={(value: number, name: string) => [formatNumber(value, 2), name]}
           />
 
-          {/* EMAs */}
           <Line dataKey="ema9" stroke="#22c55e" strokeWidth={1.5} dot={false} isAnimationActive={false} name="EMA 9" />
           <Line dataKey="ema20" stroke="#38bdf8" strokeWidth={1.5} dot={false} isAnimationActive={false} name="EMA 20" />
           <Line dataKey="ema50" stroke="#f59e0b" strokeWidth={1.5} dot={false} isAnimationActive={false} name="EMA 50" />
           <Line dataKey="vwap" stroke="#a855f7" strokeWidth={1.2} strokeDasharray="4 3" dot={false} isAnimationActive={false} name="VWAP" />
+
+          {/* Pivot point lines */}
+          {pivotPoints && PIVOT_LINES.map(({ key, label, color, dash }) => {
+            const val = pivotPoints[key] as number
+            if (val < priceMin || val > priceMax) return null
+            return (
+              <ReferenceLine
+                key={key}
+                y={val}
+                stroke={color}
+                strokeDasharray={dash}
+                strokeWidth={1}
+                label={{ value: `${label} ${formatNumber(val, 0)}`, fill: color, fontSize: 8, position: 'right' }}
+              />
+            )
+          })}
 
           {/* PA Setup lines */}
           {entry && <ReferenceLine y={entry} stroke="#22c55e" strokeDasharray="5 3" strokeWidth={1.5} label={{ value: `ENTRY ${formatNumber(entry, 0)}`, fill: '#22c55e', fontSize: 9, position: 'right' }} />}
           {sl && <ReferenceLine y={sl} stroke="#ef4444" strokeDasharray="5 3" strokeWidth={1.2} label={{ value: `SL ${formatNumber(sl, 0)}`, fill: '#ef4444', fontSize: 9, position: 'right' }} />}
           {target && <ReferenceLine y={target} stroke="#38bdf8" strokeDasharray="5 3" strokeWidth={1.5} label={{ value: `TGT ${formatNumber(target, 0)}`, fill: '#38bdf8', fontSize: 9, position: 'right' }} />}
 
-          {/* Candlesticks rendered on top */}
           <Customized component={(props: Record<string, unknown>) => <Candles {...props as Parameters<typeof Candles>[0]} data={candles} />} />
         </ComposedChart>
       </ResponsiveContainer>

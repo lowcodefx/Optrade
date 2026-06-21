@@ -127,6 +127,63 @@ function SideBreakdown({ entries }: { entries: TradeEntry[] }) {
   )
 }
 
+const HOUR_LABELS = ['9-10', '10-11', '11-12', '12-1', '1-2', '2-3']
+const HOUR_KEYS = [9, 10, 11, 12, 13, 14]
+
+function TimeOfDayChart({ entries }: { entries: TradeEntry[] }) {
+  const hourData = useMemo(() => {
+    return HOUR_KEYS.map(h => {
+      const hourEntries = entries.filter(e => {
+        const hr = parseInt(e.time?.split(':')[0] ?? '0', 10)
+        return hr === h
+      })
+      const wins = hourEntries.filter(e => e.result === 'WIN').length
+      const total = hourEntries.length
+      const winRate = total > 0 ? Math.round((wins / total) * 100) : null
+      const pnl = hourEntries.reduce((s, e) => s + e.pnl, 0)
+      return { label: HOUR_LABELS[HOUR_KEYS.indexOf(h)], wins, total, winRate, pnl }
+    })
+  }, [entries])
+
+  const hasData = hourData.some(h => h.total > 0)
+  if (!hasData) return null
+
+  return (
+    <div className="bg-[#0a1628] border border-[#1e293b] rounded p-3">
+      <div className="text-[9px] text-[#64748b] uppercase tracking-widest mb-3">Win Rate by Hour</div>
+      <div className="flex gap-1.5 items-end" style={{ height: 72 }}>
+        {hourData.map(({ label, winRate, total, pnl }) => {
+          const barH = winRate !== null ? Math.round((winRate / 100) * 60) : 0
+          const isGood = winRate !== null && winRate >= 50
+          return (
+            <div key={label} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
+              {winRate !== null && (
+                <div className="text-[7px] text-center leading-none font-semibold" style={{ color: isGood ? '#22c55e' : '#ef4444' }}>
+                  {winRate}%
+                </div>
+              )}
+              <div className="w-full flex justify-center">
+                {winRate !== null ? (
+                  <div
+                    className={`w-full rounded-t ${pnl >= 0 ? 'bg-[#22c55e]/70' : 'bg-[#ef4444]/70'}`}
+                    style={{ height: Math.max(barH, 2) }}
+                    title={`${label}: ${winRate}% win rate (${total} trades)`}
+                  />
+                ) : (
+                  <div className="w-full rounded bg-[#1e293b]" style={{ height: 2 }} />
+                )}
+              </div>
+              <div className="text-[7px] text-[#475569] text-center leading-none">{label}</div>
+              {total > 0 && <div className="text-[7px] text-[#334155] text-center leading-none">{total}t</div>}
+            </div>
+          )
+        })}
+      </div>
+      <div className="text-[8px] text-[#334155] mt-1 text-center">Best hours = green bars above 50%</div>
+    </div>
+  )
+}
+
 function TradeRow({ e }: { e: TradeEntry }) {
   const pnlColor = e.pnl > 0 ? 'text-[#22c55e]' : e.pnl < 0 ? 'text-[#ef4444]' : 'text-[#f59e0b]'
   return (
@@ -293,6 +350,9 @@ export function AnalyticsDashboard() {
         <div className="text-[9px] text-[#64748b] uppercase tracking-widest mb-2">Daily P&L (last 14 days)</div>
         <DailyPnLChart entries={allEntries} />
       </div>
+
+      {/* Time-of-day breakdown */}
+      <TimeOfDayChart entries={allEntries} />
 
       {/* Recent trades */}
       <div className="bg-[#0a1628] border border-[#1e293b] rounded overflow-hidden">

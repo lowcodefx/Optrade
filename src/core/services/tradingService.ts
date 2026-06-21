@@ -1,5 +1,5 @@
-import type { NiftyQuote, OptionChain, Candle, Position } from '@/core/types'
-import type { OrderRequest, OrderResponse } from '@/core/types'
+import type { NiftyQuote, OptionChain, Candle, Position, PivotPoints } from '@/core/types'
+import type { OrderRequest, OrderResponse, KiteOrder } from '@/core/types'
 import type { Nifty50BreadthResult } from '@/core/utils/nifty50Symbols'
 import { getMockNiftyQuote, getMockOptionChain, getMockCandles, getMockPositions } from './mockData'
 import { ZerodhaService } from './zerodhaService'
@@ -22,6 +22,8 @@ export interface ITradingService {
   getCandles(timeframe?: string, count?: number): Promise<Candle[]>
   getPositions(): Promise<Position[]>
   getNifty50Breadth(): Promise<Nifty50BreadthResult>
+  getPivotPoints(): Promise<PivotPoints>
+  getOrders(): Promise<KiteOrder[]>
   placeOrder(order: OrderRequest): Promise<OrderResponse>
   exitPosition(positionId: string): Promise<void>
   exitAllPositions(): Promise<void>
@@ -54,7 +56,6 @@ class MockTradingService implements ITradingService {
 
   async getNifty50Breadth(): Promise<Nifty50BreadthResult> {
     await delay(80)
-    // Mock: simulate 30-35 bullish out of 50
     const bullishCount = Math.round(25 + Math.random() * 20)
     const bearishCount = 50 - bullishCount
     return {
@@ -65,6 +66,27 @@ class MockTradingService implements ITradingService {
       breadthPct: (bullishCount / 50) * 100,
       stocks: [],
     }
+  }
+
+  async getPivotPoints(): Promise<PivotPoints> {
+    await delay(80)
+    const prevHigh = 24620
+    const prevLow = 24280
+    const prevClose = 24450
+    const pp = (prevHigh + prevLow + prevClose) / 3
+    const r1 = 2 * pp - prevLow
+    const r2 = pp + (prevHigh - prevLow)
+    const s1 = 2 * pp - prevHigh
+    const s2 = pp - (prevHigh - prevLow)
+    return { pp, r1, r2, s1, s2, prevHigh, prevLow, prevClose }
+  }
+
+  async getOrders(): Promise<KiteOrder[]> {
+    await delay(100)
+    return [
+      { orderId: 'MOCK001', tradingsymbol: 'NIFTY24JUN24500CE', exchange: 'NFO', transactionType: 'BUY', orderType: 'LIMIT', product: 'MIS', quantity: 75, price: 192.5, averagePrice: 191.75, status: 'COMPLETE', orderTimestamp: `${new Date().toISOString().slice(0, 10)} 10:32:00` },
+      { orderId: 'MOCK002', tradingsymbol: 'NIFTY24JUN24400PE', exchange: 'NFO', transactionType: 'BUY', orderType: 'LIMIT', product: 'MIS', quantity: 75, price: 185.0, averagePrice: 185.0, status: 'CANCELLED', orderTimestamp: `${new Date().toISOString().slice(0, 10)} 11:15:00` },
+    ]
   }
 
   async placeOrder(order: OrderRequest): Promise<OrderResponse> {

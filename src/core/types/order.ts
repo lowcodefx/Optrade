@@ -39,3 +39,18 @@ export interface Position {
   stopLoss?: number
   target?: number
 }
+
+export interface KiteOrder {
+  orderId: string
+  tradingsymbol: string
+  exchange: string
+  transactionType: 'BUY' | 'SELL'
+  orderType: 'MARKET' | 'LIMIT'
+  product: 'MIS' | 'NRML'
+  quantity: number
+  price: number
+  averagePrice: number
+  status: 'COMPLETE' | 'OPEN' | 'CANCELLED' | 'REJECTED' | 'TRIGGER PENDING' | string
+  orderTimestamp: string
+  statusMessage?: string
+}

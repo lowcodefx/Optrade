@@ -1,5 +1,5 @@
-import type { NiftyQuote, OptionChain, OptionStrike, OptionData, Candle, Position } from '@/core/types'
-import type { OrderRequest, OrderResponse } from '@/core/types'
+import type { NiftyQuote, OptionChain, OptionStrike, OptionData, Candle, Position, PivotPoints } from '@/core/types'
+import type { OrderRequest, OrderResponse, KiteOrder } from '@/core/types'
 import type { ITradingService } from './tradingService'
 import { useSettingsStore } from '@/core/store'
 import { calculateEMA, calculateVWAP } from '@/core/utils/indicators'
@@ -275,9 +275,71 @@ export class ZerodhaService implements ITradingService {
     const positions = await this.getPositions()
     await Promise.all(positions.map(p => this.exitPosition(p.positionId)))
   }
+
+  async getPivotPoints(): Promise<PivotPoints> {
+    const to = new Date()
+    const from = new Date()
+    from.setDate(from.getDate() - 7) // go back 7 days to skip weekends/holidays
+
+    const data = await kiteGet<{ candles: Array<[string, number, number, number, number, number]> }>(
+      `/instruments/historical/${NIFTY_TOKEN}/day`,
+      { from: formatKiteDate(from), to: formatKiteDate(to), continuous: '0', oi: '0' }
+    )
+
+    const candles = data.candles
+    if (candles.length < 2) throw new Error('Insufficient daily candles for pivot')
+
+    // Use the last completed day (skip the ongoing today row)
+    const prev = candles[candles.length - 2]
+    const [, , prevHigh, prevLow, prevClose] = prev
+
+    const pp = (prevHigh + prevLow + prevClose) / 3
+    const r1 = 2 * pp - prevLow
+    const r2 = pp + (prevHigh - prevLow)
+    const s1 = 2 * pp - prevHigh
+    const s2 = pp - (prevHigh - prevLow)
+
+    return { pp, r1, r2, s1, s2, prevHigh, prevLow, prevClose }
+  }
+
+  async getOrders(): Promise<KiteOrder[]> {
+    const data = await kiteGet<KiteRawOrder[]>('/orders')
+    return data
+      .filter(o => o.tradingsymbol?.startsWith('NIFTY'))
+      .map(o => ({
+        orderId: o.order_id,
+        tradingsymbol: o.tradingsymbol,
+        exchange: o.exchange,
+        transactionType: o.transaction_type as 'BUY' | 'SELL',
+        orderType: o.order_type as 'MARKET' | 'LIMIT',
+        product: o.product as 'MIS' | 'NRML',
+        quantity: o.quantity,
+        price: o.price,
+        averagePrice: o.average_price,
+        status: o.status,
+        orderTimestamp: o.order_timestamp,
+        statusMessage: o.status_message,
+      }))
+      .reverse() // newest first
+  }
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
+
+interface KiteRawOrder {
+  order_id: string
+  tradingsymbol: string
+  exchange: string
+  transaction_type: string
+  order_type: string
+  product: string
+  quantity: number
+  price: number
+  average_price: number
+  status: string
+  order_timestamp: string
+  status_message?: string
+}
 
 interface KitePosition {
   tradingsymbol: string
