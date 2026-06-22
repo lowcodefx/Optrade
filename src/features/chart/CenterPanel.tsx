@@ -7,15 +7,17 @@ import { TradeJournal } from '@/features/journal/TradeJournal'
 import { AnalyticsDashboard } from '@/features/analytics/AnalyticsDashboard'
 import { OIBuildup } from '@/features/oi-chart/OIBuildup'
 import { OrderHistory } from '@/features/order-history/OrderHistory'
+import { MayBacktest } from '@/features/backtest/MayBacktest'
 import { cn } from '@/lib/utils'
 
-type TabId = 'chart' | 'chain' | 'journal' | 'analytics' | 'orders'
+type TabId = 'chart' | 'chain' | 'journal' | 'analytics' | 'orders' | 'backtest'
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'chart',     label: '📈 Chart' },
   { id: 'chain',     label: '📊 Chain' },
   { id: 'journal',   label: '📓 Journal' },
   { id: 'analytics', label: '📉 Analytics' },
   { id: 'orders',    label: '📋 Orders' },
+  { id: 'backtest',  label: '🔬 Backtest' },
 ]
 
 export function CenterPanel() {
@@ -45,6 +47,7 @@ export function CenterPanel() {
       {centerTab === 'journal'   && <TradeJournal />}
       {centerTab === 'analytics' && <AnalyticsDashboard />}
       {centerTab === 'orders'    && <OrderHistory />}
+      {centerTab === 'backtest'  && <MayBacktest />}
       {centerTab === 'chart' && (
         <>
           <ChartPanel />
