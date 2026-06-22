@@ -201,9 +201,10 @@ export function MayBacktest() {
                   tickFormatter={v => `${v >= 0 ? '+' : ''}${(v / 1000).toFixed(1)}k`} />
                 <Tooltip
                   contentStyle={{ background: '#0a1628', border: '1px solid #1e3a5f', borderRadius: 4, fontSize: 10 }}
-                  formatter={(v: number, _: string, props: { payload: DayResult }) => [
-                    `₹${sign(v)}  (${props.payload.signal})`,
-                    props.payload.outcome,
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  formatter={(v: number, _: string, item: any) => [
+                    `₹${sign(v as number)}  (${item?.payload?.signal ?? ''})`,
+                    item?.payload?.outcome ?? '',
                   ]}
                 />
                 <ReferenceLine y={0} stroke="#334155" />
