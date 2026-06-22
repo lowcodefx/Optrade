@@ -161,6 +161,13 @@ function ZerodhaCallback() {
           setAccessToken(accessToken)
           activateLiveService()
           loadLiveData()
+          // Push session to background monitor (fire-and-forget)
+          const { apiKey } = useSettingsStore.getState()
+          fetch('/api/set-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiKey, accessToken }),
+          }).catch(() => { /* non-critical */ })
         })
         .catch(err => console.error('Zerodha token exchange failed:', err))
     }
