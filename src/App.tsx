@@ -106,6 +106,33 @@ function KeyboardShortcuts({ onQuickPopup }: { onQuickPopup: () => void }) {
   return null
 }
 
+// Handles /login?api_key=xxx&v=3 — saves api_key then bounces to Zerodha.
+// After login Zerodha redirects back with ?request_token=xxx&status=success
+// which ZerodhaCallback picks up automatically.
+function LoginRedirect() {
+  const apiKey = useSettingsStore(s => s.apiKey)
+  const setApiKey = useSettingsStore(s => s.setApiKey)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const urlKey = params.get('api_key')
+    const key = urlKey || apiKey
+    if (urlKey && urlKey !== apiKey) setApiKey(urlKey)
+    if (key) {
+      window.location.href = `https://kite.zerodha.com/connect/login?api_key=${key}&v=3`
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="min-h-screen bg-[#060d1a] flex items-center justify-center">
+      <div className="text-center space-y-3">
+        <div className="w-8 h-8 border-2 border-[#38bdf8] border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-[#64748b] text-sm">Connecting to Zerodha…</p>
+      </div>
+    </div>
+  )
+}
+
 function ZerodhaCallback() {
   const setAccessToken = useSettingsStore(s => s.setAccessToken)
   const setUserName = useMarketStore(s => s.setUserName)
@@ -146,6 +173,14 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showQuickPopup, setShowQuickPopup] = useState(false)
   const [showPlaybook, setShowPlaybook] = useState(false)
+
+  if (window.location.pathname === '/login') {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <LoginRedirect />
+      </QueryClientProvider>
+    )
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
