@@ -1,0 +1,14 @@
+{
+  "routes": [
+    {
+      "route": "/login",
+      "rewrite": "/index.html"
+    }
+  ],
+  "mimeTypes": {
+    ".js": "text/javascript",
+    ".mjs": "text/javascript",
+    ".css": "text/css",
+    ".svg": "image/svg+xml"
+  }
+}
