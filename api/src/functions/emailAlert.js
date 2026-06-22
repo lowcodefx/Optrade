@@ -9,7 +9,7 @@ const { EmailClient } = require('@azure/communication-email')
 //
 const ACS_CONN_STR        = process.env.AZURE_COMMUNICATION_CONNECTION_STRING ?? ''
 const SENDER_ADDRESS      = process.env.SENDER_ADDRESS ?? ''
-const NOTIFICATION_EMAIL  = process.env.NOTIFICATION_EMAIL ?? 'lowcodefx@gmail.com'
+const NOTIFICATION_EMAIL  = process.env.NOTIFICATION_EMAIL ?? ''
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -36,8 +36,8 @@ app.http('emailAlert', {
     }
 
     // Silently skip if Azure Communication Services not configured
-    if (!ACS_CONN_STR || !SENDER_ADDRESS) {
-      context.log.warn('Email alert skipped: AZURE_COMMUNICATION_CONNECTION_STRING or SENDER_ADDRESS not set')
+    if (!ACS_CONN_STR || !SENDER_ADDRESS || !NOTIFICATION_EMAIL) {
+      context.log.warn('Email alert skipped: AZURE_COMMUNICATION_CONNECTION_STRING, SENDER_ADDRESS, or NOTIFICATION_EMAIL not set')
       return {
         status: 200,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
