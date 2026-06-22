@@ -165,7 +165,7 @@ function ZerodhaCallback() {
           const { apiKey } = useSettingsStore.getState()
           fetch('/api/set-token', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'Optrade' },
             body: JSON.stringify({ apiKey, accessToken }),
           }).catch(() => { /* non-critical */ })
         })
