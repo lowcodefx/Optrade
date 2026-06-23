@@ -34,12 +34,6 @@ interface RssItem {
   author?: string
 }
 
-interface RssResponse {
-  status: string
-  items: RssItem[]
-  feed?: { title: string }
-}
-
 // Fetch from two ET RSS feeds via our Azure Function proxy (avoids CORS + rss2json issues)
 async function fetchNews(): Promise<RssItem[]> {
   const sources = ['markets', 'economy']
