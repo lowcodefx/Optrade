@@ -13,9 +13,38 @@ export interface NFOInstrument {
 let cache: NFOInstrument[] | null = null
 let cacheDate = ''
 
+const LS_KEY = 'optrade_nfo_v1'
+
+function loadFromStorage(today: string): NFOInstrument[] | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { date: string; data: NFOInstrument[] }
+    return parsed.date === today ? parsed.data : null
+  } catch {
+    return null
+  }
+}
+
+function saveToStorage(today: string, data: NFOInstrument[]) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ date: today, data }))
+  } catch {
+    // localStorage quota exceeded — memory cache still works for this session
+  }
+}
+
 export async function getNiftyOptions(): Promise<NFOInstrument[]> {
   const today = new Date().toISOString().slice(0, 10)
   if (cache && cacheDate === today) return cache
+
+  // Fast path: instruments cached in localStorage from a previous load today
+  const stored = loadFromStorage(today)
+  if (stored && stored.length > 0) {
+    cache = stored
+    cacheDate = today
+    return cache
+  }
 
   const { apiKey, accessToken } = useSettingsStore.getState()
   // kite_path=instruments/NFO — slashes unencoded so the proxy receives the full path
@@ -48,6 +77,7 @@ export async function getNiftyOptions(): Promise<NFOInstrument[]> {
     .filter(i => i.name === 'NIFTY' && (i.instrument_type === 'CE' || i.instrument_type === 'PE'))
 
   cacheDate = today
+  saveToStorage(today, cache)
   return cache
 }
 

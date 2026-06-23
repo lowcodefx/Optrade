@@ -4,7 +4,7 @@ const https = require('https')
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Kite-Version',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Kite-Auth, X-Kite-Version',
 }
 
 function kiteRequest(method, kitePath, kiteQuery, authHeader, body, contentType) {

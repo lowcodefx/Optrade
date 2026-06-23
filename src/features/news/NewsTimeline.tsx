@@ -40,17 +40,14 @@ interface RssResponse {
   feed?: { title: string }
 }
 
-// Fetch from two ET RSS feeds and merge
+// Fetch from two ET RSS feeds via our Azure Function proxy (avoids CORS + rss2json issues)
 async function fetchNews(): Promise<RssItem[]> {
-  const feeds = [
-    'https://economictimes.indiatimes.com/markets/rss.cms',
-    'https://economictimes.indiatimes.com/news/economy/rss.cms',
-  ]
+  const sources = ['markets', 'economy']
   const results = await Promise.allSettled(
-    feeds.map(url =>
-      fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=15`)
-        .then(r => r.json() as Promise<RssResponse>)
-        .then(d => (d.status === 'ok' ? d.items : []))
+    sources.map(source =>
+      fetch(`/api/news?source=${source}`)
+        .then(r => r.json() as Promise<{ items: RssItem[] }>)
+        .then(d => d.items ?? [])
     )
   )
   const all = results.flatMap(r => (r.status === 'fulfilled' ? r.value : []))

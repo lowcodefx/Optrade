@@ -111,6 +111,11 @@ export class ZerodhaService implements ITradingService {
     })
 
     const nifty = data['NSE:NIFTY 50']
+    if (!nifty) {
+      console.error('[ZerodhaService] getNiftyQuote: NIFTY 50 key missing. Response keys:', Object.keys(data ?? {}))
+      throw new Error('NIFTY 50 not found in quote response')
+    }
+
     const vix = data['NSE:INDIA VIX']
 
     this.spotCache = nifty.last_price
