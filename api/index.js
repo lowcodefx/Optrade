@@ -1,5 +1,6 @@
 require('./src/functions/exchangeToken')
 require('./src/functions/kiteProxy')
+require('./src/functions/niftyQuote')
 require('./src/functions/test')
 require('./src/functions/globalMarkets')
 require('./src/functions/fiiDii')
