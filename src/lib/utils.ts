@@ -11,7 +11,8 @@ export function formatCurrency(value: number): string {
   return `₹${value.toFixed(0)}`
 }
 
-export function formatNumber(value: number, decimals = 2): string {
+export function formatNumber(value: number | undefined | null, decimals = 2): string {
+  if (value == null || isNaN(value as number)) return '—'
   return value.toLocaleString('en-IN', { maximumFractionDigits: decimals })
 }
 

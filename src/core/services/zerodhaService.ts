@@ -61,10 +61,10 @@ async function kitePost(path: string, body: Record<string, string>): Promise<unk
 interface KiteQuote {
   last_price: number
   ohlc: { open: number; high: number; low: number; close: number }
-  change: number
+  net_change: number      // Zerodha's actual field name (not 'change')
   volume: number
   oi?: number
-  oi_day_change?: number
+  oi_day_change?: number  // optional; not all instruments include it
 }
 
 export class ZerodhaService implements ITradingService {
@@ -125,8 +125,8 @@ export class ZerodhaService implements ITradingService {
 
     return {
       spot: nifty.last_price,
-      change: nifty.change,
-      changePct: nifty.ohlc.close > 0 ? (nifty.change / nifty.ohlc.close) * 100 : 0,
+      change: nifty.net_change ?? 0,
+      changePct: nifty.ohlc.close > 0 ? ((nifty.net_change ?? 0) / nifty.ohlc.close) * 100 : 0,
       open: nifty.ohlc.open,
       high: nifty.ohlc.high,
       low: nifty.ohlc.low,
