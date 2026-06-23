@@ -67,12 +67,15 @@ app.http('kite', {
 
     const kitePath = '/' + kitePathSuffix
 
-    // Forward all query params except kite_path to Kite
+    // Forward all query params except kite_path to Kite.
+    // URLSearchParams.toString() encodes spaces as '+' (x-www-form-urlencoded).
+    // Zerodha uses strict URI decoding so '+' is treated as a literal '+', not a space.
+    // Replace '+' with '%20' so 'NSE:NIFTY 50' round-trips correctly.
     const kiteParams = new URLSearchParams()
     for (const [key, value] of request.query.entries()) {
       if (key !== 'kite_path') kiteParams.append(key, value)
     }
-    const kiteQuery = kiteParams.toString()
+    const kiteQuery = kiteParams.toString().replace(/\+/g, '%20')
 
     // SWA strips the Authorization header before reaching functions.
     // We use X-Kite-Auth as a passthrough, then re-map it here.
