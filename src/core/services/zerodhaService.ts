@@ -106,17 +106,30 @@ export class ZerodhaService implements ITradingService {
   }
 
   async getNiftyQuote(): Promise<NiftyQuote> {
-    const data = await kiteGet<Record<string, KiteQuote>>('/quote', {
-      i: ['NSE:NIFTY 50', 'NSE:INDIA VIX'],
+    // Use instrument tokens (256265 = NIFTY 50, 264969 = INDIA VIX) so the
+    // query string never contains spaces or colons — avoids all encoding issues.
+    // Fetch raw so we can log the exact response for debugging.
+    const url = buildKiteUrl('/quote', { i: ['256265', '264969'] })
+    const res = await fetch(url, {
+      headers: { 'X-Kite-Auth': authHeader(), 'X-Kite-Version': '3' },
     })
+    const text = await res.text()
+    console.log('[quote] url:', url, '| status:', res.status, '| body:', text.slice(0, 400))
 
-    const nifty = data['NSE:NIFTY 50']
+    if (!res.ok) throw new Error(`Kite quote ${res.status}: ${text.slice(0, 200)}`)
+
+    const json = JSON.parse(text) as { data: Record<string, KiteQuote> }
+    const data = json.data ?? {}
+
+    // Kite keys response by token string when token is used as input;
+    // fall back to exchange:tradingsymbol in case behaviour differs.
+    const nifty = data['256265'] ?? data['NSE:NIFTY 50']
     if (!nifty) {
-      console.error('[ZerodhaService] getNiftyQuote: NIFTY 50 key missing. Response keys:', Object.keys(data ?? {}))
+      console.error('[quote] no NIFTY data. Keys:', Object.keys(data))
       throw new Error('NIFTY 50 not found in quote response')
     }
 
-    const vix = data['NSE:INDIA VIX']
+    const vix = data['264969'] ?? data['NSE:INDIA VIX']
 
     this.spotCache = nifty.last_price
 
