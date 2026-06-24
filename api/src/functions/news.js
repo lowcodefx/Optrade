@@ -2,6 +2,18 @@ const { app } = require('@azure/functions')
 const https = require('https')
 const http = require('http')
 
+// Allowlist of hostnames from which redirects are permitted.
+// Only these domains (and their subdomains) may appear in Location headers.
+const ALLOWED_HOSTS = new Set([
+  'economictimes.indiatimes.com',
+  'www.moneycontrol.com',
+  'moneycontrol.com',
+  'feeds.feedburner.com',
+  'feedburner.com',
+  'ndtvprofit.com',
+  'www.ndtvprofit.com',
+])
+
 // Each source has a primary URL and optional fallbacks tried in order
 const FEEDS = {
   markets: [
@@ -16,8 +28,18 @@ const FEEDS = {
   ],
 }
 
-function fetchUrl(url) {
+function isAllowedHost(hostname) {
+  if (ALLOWED_HOSTS.has(hostname)) return true
+  // Allow exact subdomains of allowlisted base domains
+  for (const h of ALLOWED_HOSTS) {
+    if (hostname.endsWith('.' + h)) return true
+  }
+  return false
+}
+
+function fetchUrl(url, depth = 0) {
   return new Promise((resolve, reject) => {
+    if (depth > 3) return reject(new Error('too many redirects'))
     const lib = url.startsWith('https') ? https : http
     const req = lib.get(url, {
       headers: {
@@ -27,9 +49,20 @@ function fetchUrl(url) {
         'Cache-Control': 'no-cache',
       },
     }, res => {
-      // Follow redirects (max 3)
       if ((res.statusCode === 301 || res.statusCode === 302) && res.headers.location) {
-        return fetchUrl(res.headers.location).then(resolve, reject)
+        res.resume()
+        try {
+          const next = new URL(res.headers.location, url)
+          if (next.protocol !== 'http:' && next.protocol !== 'https:') {
+            return reject(new Error(`redirect to non-http scheme blocked: ${next.protocol}`))
+          }
+          if (!isAllowedHost(next.hostname)) {
+            return reject(new Error(`redirect to unlisted host blocked: ${next.hostname}`))
+          }
+          return fetchUrl(next.toString(), depth + 1).then(resolve, reject)
+        } catch (e) {
+          return reject(new Error(`invalid redirect URL: ${e.message}`))
+        }
       }
       if (res.statusCode !== 200) {
         res.resume()
