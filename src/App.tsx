@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { exchangeRequestToken, fetchUserProfile, fetchUserMargins } from '@/core/services/zerodhaAuth'
 import { activateLiveService, useLiveModeStore } from '@/core/services/tradingService'
+import { prefetchInstruments } from '@/core/services/instrumentsCache'
 import { useSettingsStore, useMarketStore, useOrderStore } from '@/core/store'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { Header } from '@/features/header/Header'
@@ -160,9 +161,12 @@ function ZerodhaCallback() {
     fetchUserMargins().then(m => setMargins(m.available, m.used, m.net))
   }
 
-  // Load on mount if already live
+  // Load on mount if already live (stored credentials)
   useEffect(() => {
-    if (isLive) loadLiveData()
+    if (isLive) {
+      loadLiveData()
+      prefetchInstruments() // start downloading NFO instruments in background
+    }
   }, [isLive]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -176,6 +180,7 @@ function ZerodhaCallback() {
         .then(accessToken => {
           setAccessToken(accessToken)
           activateLiveService()
+          prefetchInstruments() // start downloading NFO instruments in background
           loadLiveData()
           // Push session to background monitor (fire-and-forget)
           const { apiKey } = useSettingsStore.getState()

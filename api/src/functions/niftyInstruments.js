@@ -1,6 +1,15 @@
 const { app } = require('@azure/functions')
 const https = require('https')
 
+// Module-level cache: warm Azure Function instances serve this without re-downloading.
+// Invalidated daily (instruments change on expiry days).
+let _cachedInstruments = null
+let _cacheDay = ''
+
+function getTodayUtcDate() {
+  return new Date().toISOString().slice(0, 10)
+}
+
 function fetchKite(authToken) {
   return new Promise((resolve, reject) => {
     const req = https.request({
@@ -63,6 +72,18 @@ app.http('niftyInstruments', {
     }
 
     try {
+      const today = getTodayUtcDate()
+
+      // Serve from module-level cache if same day (avoids re-downloading 5MB CSV)
+      if (_cachedInstruments && _cacheDay === today) {
+        context.log(`niftyInstruments: served ${_cachedInstruments.length} items from memory cache`)
+        return {
+          status: 200,
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600', 'X-Cache': 'HIT' },
+          body: JSON.stringify({ instruments: _cachedInstruments }),
+        }
+      }
+
       const result = await fetchKite(authToken)
       if (result.status !== 200) {
         context.log.warn('niftyInstruments: Kite returned', result.status)
@@ -70,11 +91,14 @@ app.http('niftyInstruments', {
       }
 
       const instruments = parseNiftyOptions(result.body)
-      context.log(`niftyInstruments: ${instruments.length} NIFTY options returned`)
+      context.log(`niftyInstruments: ${instruments.length} NIFTY options fetched from Kite, caching in memory`)
+
+      _cachedInstruments = instruments
+      _cacheDay = today
 
       return {
         status: 200,
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' },
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600', 'X-Cache': 'MISS' },
         body: JSON.stringify({ instruments }),
       }
     } catch (err) {

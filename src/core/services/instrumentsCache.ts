@@ -34,6 +34,12 @@ function saveToStorage(today: string, data: NFOInstrument[]) {
   }
 }
 
+// Call this right after credentials are set so instruments are ready
+// before the user opens the Chain tab or the option-chain query runs.
+export function prefetchInstruments(): void {
+  getNiftyOptions().catch(() => { /* background — ignore errors */ })
+}
+
 export async function getNiftyOptions(): Promise<NFOInstrument[]> {
   const today = new Date().toISOString().slice(0, 10)
   if (cache && cacheDate === today) return cache
