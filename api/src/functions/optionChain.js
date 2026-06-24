@@ -2,8 +2,9 @@ const { app } = require('@azure/functions')
 const https = require('https')
 
 // ── Server-side caches ────────────────────────────────────────────────────────
-let _instruments = null   // NFOInstrument[]
-let _instrDay   = ''      // YYYY-MM-DD
+let _instruments = null
+let _instrDay    = ''
+let _instrPromise = null   // de-dup concurrent downloads
 
 // ── Kite fetch helper ─────────────────────────────────────────────────────────
 function kiteRequest(path, authToken) {
@@ -24,43 +25,51 @@ function kiteRequest(path, authToken) {
   })
 }
 
-// ── Instruments (cached per day) ──────────────────────────────────────────────
+// ── Instruments (cached per day, de-duped) ───────────────────────────────────
 function parseNiftyOptions(csv) {
   const lines = csv.trim().split('\n')
   if (lines.length < 2) return []
   const h = lines[0].split(',')
-  const idx = n => h.indexOf(n)
-  const tiI = idx('instrument_token'), siI = idx('tradingsymbol'), niI = idx('name')
-  const eiI = idx('expiry'), kiI = idx('strike'), liI = idx('lot_size'), iiI = idx('instrument_type')
+  const col = n => h.indexOf(n)
+  const tiI = col('instrument_token'), siI = col('tradingsymbol'), niI = col('name')
+  const eiI = col('expiry'), kiI = col('strike'), iiI = col('instrument_type')
   const today = new Date().toISOString().slice(0, 10)
   return lines.slice(1).map(line => {
     const c = line.split(',')
-    if (c[niI] !== 'NIFTY') return null
-    const itype = c[iiI]
+    const name = (c[niI] || '').trim()
+    if (name !== 'NIFTY') return null
+    const itype = (c[iiI] || '').trim()
     if (itype !== 'CE' && itype !== 'PE') return null
-    const expiry = c[eiI]
-    if (expiry < today) return null
-    return {
-      instrument_token: parseInt(c[tiI]),
-      tradingsymbol: c[siI],
-      expiry,
-      strike: parseFloat(c[kiI]),
-      instrument_type: itype,
-    }
+    const expiry = (c[eiI] || '').trim()
+    if (!expiry || expiry < today) return null
+    const strike = parseFloat(c[kiI])
+    if (isNaN(strike)) return null
+    return { tradingsymbol: (c[siI] || '').trim(), expiry, strike, instrument_type: itype }
   }).filter(Boolean)
 }
 
-async function getInstruments(authToken, context) {
+async function getInstruments(authToken) {
   const today = new Date().toISOString().slice(0, 10)
   if (_instruments && _instrDay === today) return _instruments
 
-  context.log('optionChain: fetching NFO instruments CSV')
-  const r = await kiteRequest('/instruments/NFO', authToken)
-  if (r.status !== 200) throw new Error(`Kite instruments ${r.status}`)
-  _instruments = parseNiftyOptions(r.body)
-  _instrDay = today
-  context.log(`optionChain: cached ${_instruments.length} NIFTY options`)
-  return _instruments
+  // De-dup: if a download is already in-flight, wait for it
+  if (_instrPromise) return _instrPromise
+
+  _instrPromise = (async () => {
+    const r = await kiteRequest('/instruments/NFO', authToken)
+    if (r.status !== 200) throw new Error(`Kite instruments returned ${r.status}: ${r.body.slice(0, 100)}`)
+    const parsed = parseNiftyOptions(r.body)
+    if (parsed.length === 0) throw new Error('Parsed 0 instruments — check token or CSV format')
+    _instruments = parsed
+    _instrDay = today
+    return _instruments
+  })()
+
+  try {
+    return await _instrPromise
+  } finally {
+    _instrPromise = null  // clear so next day triggers a fresh fetch
+  }
 }
 
 // ── Nearest expiry ────────────────────────────────────────────────────────────
@@ -70,38 +79,39 @@ function getNearestExpiry(instruments) {
   return expiries[0] ?? today
 }
 
+// ── Empty option data fallback ────────────────────────────────────────────────
+function emptyOpt(delta) {
+  return { oi: 0, oiChange: 0, volume: 0, iv: 0, ltp: 0, delta, gamma: 0.002, theta: -2.5, vega: 8 }
+}
+
 // ── Option chain builder ──────────────────────────────────────────────────────
 function buildChain(instruments, expiry, atm, quotes) {
   const RANGE = 5
-  const strikes = Array.from({ length: RANGE * 2 + 1 }, (_, i) => atm + (i - RANGE) * 50)
+  const strikeValues = Array.from({ length: RANGE * 2 + 1 }, (_, i) => atm + (i - RANGE) * 50)
 
   const rows = []
-  for (const strike of strikes) {
-    const ce = instruments.find(i => i.expiry === expiry && i.strike === strike && i.instrument_type === 'CE')
-    const pe = instruments.find(i => i.expiry === expiry && i.strike === strike && i.instrument_type === 'PE')
-    if (!ce || !pe) continue
-    const ceQ = quotes[`NFO:${ce.tradingsymbol}`]
-    const peQ = quotes[`NFO:${pe.tradingsymbol}`]
-    if (!ceQ || !peQ) continue
+  for (const strike of strikeValues) {
+    const ceInst = instruments.find(i => i.expiry === expiry && i.strike === strike && i.instrument_type === 'CE')
+    const peInst = instruments.find(i => i.expiry === expiry && i.strike === strike && i.instrument_type === 'PE')
+    if (!ceInst && !peInst) continue   // no instruments at all for this strike
+
+    const ceQ = ceInst ? quotes[`NFO:${ceInst.tradingsymbol}`] : null
+    const peQ = peInst ? quotes[`NFO:${peInst.tradingsymbol}`] : null
+
     rows.push({
       strike,
-      ce: { oi: ceQ.oi ?? 0, oiChange: ceQ.oi_day_change ?? 0, volume: ceQ.volume ?? 0, iv: 0, ltp: ceQ.last_price, delta: 0.5, gamma: 0.002, theta: -2.5, vega: 8 },
-      pe: { oi: peQ.oi ?? 0, oiChange: peQ.oi_day_change ?? 0, volume: peQ.volume ?? 0, iv: 0, ltp: peQ.last_price, delta: -0.5, gamma: 0.002, theta: -2.5, vega: 8 },
+      ce: ceQ ? { oi: ceQ.oi ?? 0, oiChange: ceQ.oi_day_change ?? 0, volume: ceQ.volume ?? 0, iv: 0, ltp: ceQ.last_price, delta: 0.5, gamma: 0.002, theta: -2.5, vega: 8 } : emptyOpt(0.5),
+      pe: peQ ? { oi: peQ.oi ?? 0, oiChange: peQ.oi_day_change ?? 0, volume: peQ.volume ?? 0, iv: 0, ltp: peQ.last_price, delta: -0.5, gamma: 0.002, theta: -2.5, vega: 8 } : emptyOpt(-0.5),
     })
   }
 
   const totalCEOI = rows.reduce((s, r) => s + r.ce.oi, 0)
   const totalPEOI = rows.reduce((s, r) => s + r.pe.oi, 0)
 
-  // Max pain: strike where total value of all options expiring worthless is minimised
   let maxPainStrike = atm
   let minPain = Infinity
   for (const row of rows) {
-    const pain = rows.reduce((s, r) => {
-      const ceVal = Math.max(0, r.strike - row.strike) * r.ce.oi
-      const peVal = Math.max(0, row.strike - r.strike) * r.pe.oi
-      return s + ceVal + peVal
-    }, 0)
+    const pain = rows.reduce((s, r) => s + r.ce.oi * Math.max(0, r.strike - row.strike) + r.pe.oi * Math.max(0, row.strike - r.strike), 0)
     if (pain < minPain) { minPain = pain; maxPainStrike = row.strike }
   }
 
@@ -127,33 +137,43 @@ app.http('optionChain', {
     }
 
     try {
-      const instruments = await getInstruments(authToken, context)
+      const instruments = await getInstruments(authToken)
       const expiry = getNearestExpiry(instruments)
       const atm = Math.round(spot / 50) * 50
 
-      // Collect symbols for ATM ±5 range
+      context.log(`optionChain: expiry=${expiry} atm=${atm} instruments=${instruments.length}`)
+
+      // Build symbol list for ATM ±5 range
       const RANGE = 5
-      const strikes = Array.from({ length: RANGE * 2 + 1 }, (_, i) => atm + (i - RANGE) * 50)
+      const strikeValues = Array.from({ length: RANGE * 2 + 1 }, (_, i) => atm + (i - RANGE) * 50)
       const symbols = []
-      for (const strike of strikes) {
+      for (const strike of strikeValues) {
         const ce = instruments.find(i => i.expiry === expiry && i.strike === strike && i.instrument_type === 'CE')
         const pe = instruments.find(i => i.expiry === expiry && i.strike === strike && i.instrument_type === 'PE')
         if (ce) symbols.push(`NFO:${ce.tradingsymbol}`)
         if (pe) symbols.push(`NFO:${pe.tradingsymbol}`)
       }
 
-      if (symbols.length === 0) throw new Error('No matching instruments for calculated strikes')
+      context.log(`optionChain: querying ${symbols.length} symbols`)
 
-      // Fetch quotes for all symbols in one Kite call
-      const qs = symbols.map(s => `i=${encodeURIComponent(s)}`).join('&')
-      const quoteRes = await kiteRequest(`/quote?${qs}`, authToken)
-      if (quoteRes.status !== 200) throw new Error(`Kite quote ${quoteRes.status}: ${quoteRes.body.slice(0, 200)}`)
-
-      const quoteJson = JSON.parse(quoteRes.body)
-      const quotes = quoteJson.data ?? {}
+      let quotes = {}
+      if (symbols.length > 0) {
+        const qs = symbols.map(s => `i=${encodeURIComponent(s)}`).join('&')
+        const quoteRes = await kiteRequest(`/quote?${qs}`, authToken)
+        if (quoteRes.status === 200) {
+          try {
+            const quoteJson = JSON.parse(quoteRes.body)
+            quotes = quoteJson.data ?? {}
+          } catch (_) {
+            context.log(`optionChain: quote JSON parse failed, body: ${quoteRes.body.slice(0, 200)}`)
+          }
+        } else {
+          context.log(`optionChain: quote returned ${quoteRes.status}: ${quoteRes.body.slice(0, 200)}`)
+        }
+      }
 
       const chain = buildChain(instruments, expiry, atm, quotes)
-      context.log(`optionChain: ${chain.strikes.length} strikes for expiry ${expiry}, ATM ${atm}`)
+      context.log(`optionChain: built ${chain.strikes.length} strike rows`)
 
       return {
         status: 200,
@@ -161,7 +181,7 @@ app.http('optionChain', {
         body: JSON.stringify(chain),
       }
     } catch (err) {
-      context.log.error('optionChain error:', err.message)
+      console.error('optionChain error:', err.message, err.stack)
       return { status: 502, headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ error: err.message }) }
     }
