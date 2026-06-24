@@ -47,37 +47,21 @@ export async function getNiftyOptions(): Promise<NFOInstrument[]> {
   }
 
   const { apiKey, accessToken } = useSettingsStore.getState()
-  // kite_path=instruments/NFO — slashes unencoded so the proxy receives the full path
-  const res = await fetch('/api/kite?kite_path=instruments/NFO', {
-    headers: { 'X-Kite-Auth': `token ${apiKey}:${accessToken}`, 'X-Kite-Version': '3' },
+  // Dedicated endpoint: parses NFO CSV server-side, returns only NIFTY CE/PE as JSON.
+  // Much faster than streaming 5 MB of raw CSV through the proxy.
+  const res = await fetch('/api/nifty-instruments', {
+    headers: { 'X-Kite-Auth': `token ${apiKey}:${accessToken}` },
   })
-  if (!res.ok) throw new Error('Failed to fetch instruments')
+  if (!res.ok) throw new Error(`Failed to fetch instruments: ${res.status}`)
 
-  const text = await res.text()
-  const lines = text.trim().split('\n')
-  const h = lines[0].split(',')
+  const json = await res.json() as { instruments: NFOInstrument[] }
+  cache = json.instruments ?? []
 
-  const col = (name: string) => h.indexOf(name)
-  const ti = col('instrument_token'), si = col('tradingsymbol'), ni = col('name')
-  const ei = col('expiry'), ki = col('strike'), li = col('lot_size'), ii = col('instrument_type')
+  if (cache.length > 0) {
+    cacheDate = today
+    saveToStorage(today, cache)
+  }
 
-  cache = lines.slice(1)
-    .map(line => {
-      const c = line.split(',')
-      return {
-        instrument_token: parseInt(c[ti]),
-        tradingsymbol: c[si],
-        name: c[ni],
-        expiry: c[ei],
-        strike: parseFloat(c[ki]),
-        lot_size: parseInt(c[li]),
-        instrument_type: c[ii] as 'CE' | 'PE',
-      }
-    })
-    .filter(i => i.name === 'NIFTY' && (i.instrument_type === 'CE' || i.instrument_type === 'PE'))
-
-  cacheDate = today
-  saveToStorage(today, cache)
   return cache
 }
 

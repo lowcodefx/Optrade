@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { exchangeRequestToken, fetchUserProfile, fetchUserMargins } from '@/core/services/zerodhaAuth'
 import { activateLiveService, useLiveModeStore } from '@/core/services/tradingService'
-import { useSettingsStore, useMarketStore } from '@/core/store'
+import { useSettingsStore, useMarketStore, useOrderStore } from '@/core/store'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { Header } from '@/features/header/Header'
 import { MarketContext } from '@/features/market-context/MarketContext'
@@ -64,6 +64,22 @@ function LeftDockTabs() {
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
 })
+
+// Sets order-entry strike to current ATM on first quote load so the
+// user sees the relevant strike immediately instead of a stale default.
+function AutoSelectATM() {
+  const spot = useMarketStore(s => s.quote?.spot)
+  const setStrike = useOrderStore(s => s.setStrike)
+  const optionType = useOrderStore(s => s.optionType)
+  useEffect(() => {
+    if (!spot) return
+    const atm = Math.round(spot / 50) * 50
+    setStrike(atm, optionType, 0)
+  // Run only once when spot first becomes available
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spot !== undefined && spot > 0 ? true : false])
+  return null
+}
 
 function DataBootstrap() {
   const tf = useMarketStore(s => s.activeTimeframe)
@@ -193,6 +209,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <ZerodhaCallback />
       <DataBootstrap />
+      <AutoSelectATM />
       <AlertMonitor />
       <SquareOffReminder />
       <KeyboardShortcuts onQuickPopup={() => setShowQuickPopup(true)} />

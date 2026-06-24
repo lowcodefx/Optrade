@@ -35,7 +35,7 @@ export function OrderEntry() {
       strike,
       optionType,
       expiry: chain?.expiry ?? '26 Jun 2025',
-      quantity: quantity * 50,
+      quantity: quantity * 75,
       orderType: 'LIMIT',
       productType: 'MIS',
       price: limitPrice || premium,
@@ -86,7 +86,7 @@ export function OrderEntry() {
             <span className="flex-1 text-center text-white font-bold text-sm">{quantity}</span>
             <button onClick={() => setQuantity(quantity + 1)} className="px-2 py-1.5 text-[#64748b] hover:text-white"><Plus size={10} /></button>
           </div>
-          <div className="text-[9px] text-[#475569] mt-0.5">{quantity * 50} shares · 1 lot = 50</div>
+          <div className="text-[9px] text-[#475569] mt-0.5">{quantity * 75} shares · 1 lot = 75</div>
         </div>
 
         {/* Limit Price + SL side by side */}
@@ -122,7 +122,7 @@ export function OrderEntry() {
           <div className="text-right">
             <span className="text-[#64748b] text-[9px]">Max loss/lot</span>
             <span className="ml-2 text-[#ef4444] text-xs font-bold">
-              ₹{stopLoss ? ((premium - stopLoss) * 50).toFixed(0) : '—'}
+              ₹{stopLoss ? ((premium - stopLoss) * 75).toFixed(0) : '—'}
             </span>
           </div>
         </div>
