@@ -17,8 +17,16 @@ type Filter = 'all' | 'top-oi' | 'top-vol'
 export function OptionsChain() {
   const chain = useMarketStore(s => s.optionChain)
   const [filter, setFilter] = useState<Filter>('all')
+  const optionType = useOrderStore(s => s.optionType)
 
-  if (!chain) return null
+  if (!chain) return (
+    <SectionCard title="Options Chain" tooltip={tooltip} noPadding>
+      <div className="px-3 py-8 text-center text-[#475569] text-[10px]">
+        <div className="w-5 h-5 border-2 border-[#38bdf8] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+        Loading option chain… (downloading instruments)
+      </div>
+    </SectionCard>
+  )
 
   const maxCEOI = Math.max(...chain.strikes.map(s => s.ce.oi))
   const maxPEOI = Math.max(...chain.strikes.map(s => s.pe.oi))
@@ -72,7 +80,7 @@ export function OptionsChain() {
                 <tr key={row.strike}
                   className={`border-b border-[#0f1f35] cursor-pointer hover:bg-[#0a1628] transition-colors ${isATM ? 'bg-[#0a1f0a]' : ''}`}
                   style={isATM ? { borderLeft: '2px solid #22c55e' } : {}}
-                  onClick={() => useOrderStore.getState().setStrike(row.strike, 'CE', row.ce.ltp)}
+                  onClick={() => useOrderStore.getState().setStrike(row.strike, optionType, optionType === 'CE' ? row.ce.ltp : row.pe.ltp)}
                 >
                   <td className={`py-1.5 px-2 text-right ${ceHighOI ? 'text-[#ef4444] font-bold' : 'text-[#94a3b8]'}`}>{formatOI(row.ce.oi)}</td>
                   <td className={`py-1.5 px-1 text-right text-[9px] ${row.ce.oiChange > 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>{row.ce.oiChange > 0 ? '+' : ''}{formatOI(row.ce.oiChange)}</td>

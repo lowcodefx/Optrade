@@ -20,8 +20,8 @@ export function useOptionChain() {
   const query = useQuery({
     queryKey: ['option-chain'],
     queryFn: () => tradingService.getOptionChain(),
-    refetchInterval: 5000,
-    staleTime: 4000,
+    refetchInterval: 3000,
+    staleTime: 2000,
   })
   useEffect(() => { if (query.data) setOptionChain(query.data) }, [query.data, setOptionChain])
   return query
@@ -32,8 +32,8 @@ export function useCandles(timeframe = '5m', count = 30) {
   const query = useQuery({
     queryKey: ['candles', timeframe],
     queryFn: () => tradingService.getCandles(timeframe, count),
-    refetchInterval: 15000,
-    staleTime: 10000,
+    refetchInterval: 10000,
+    staleTime: 8000,
   })
   useEffect(() => { if (query.data) setCandles(query.data) }, [query.data, setCandles])
   return query
@@ -52,8 +52,8 @@ export function useNifty50Breadth() {
   return useQuery({
     queryKey: ['nifty50-breadth'],
     queryFn: () => tradingService.getNifty50Breadth(),
-    refetchInterval: 60000,
-    staleTime: 55000,
+    refetchInterval: 30000,
+    staleTime: 25000,
     retry: 1,
   })
 }

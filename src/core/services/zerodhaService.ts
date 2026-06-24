@@ -3,7 +3,7 @@ import type { OrderRequest, OrderResponse, KiteOrder } from '@/core/types'
 import type { ITradingService } from './tradingService'
 import { useSettingsStore } from '@/core/store'
 import { calculateEMA, calculateVWAP } from '@/core/utils/indicators'
-import { getNearestExpiry, getStrikesAroundATM } from './instrumentsCache'
+import { getNiftyOptions, getNearestExpiry, getStrikesAroundATM } from './instrumentsCache'
 import { NIFTY50_KITE_INSTRUMENTS, type Nifty50BreadthResult } from '@/core/utils/nifty50Symbols'
 
 const NIFTY_TOKEN = 256265
@@ -243,22 +243,34 @@ export class ZerodhaService implements ITradingService {
   }
 
   async placeOrder(order: OrderRequest): Promise<OrderResponse> {
+    // Look up exact tradingsymbol from instruments cache (avoids manual date formatting)
+    const instruments = await getNiftyOptions()
+    const expiry = order.expiry // YYYY-MM-DD from chain
+    const inst = instruments.find(
+      i => i.expiry === expiry && i.strike === order.strike && i.instrument_type === order.optionType
+    ) ?? instruments.find(
+      i => i.strike === order.strike && i.instrument_type === order.optionType
+    )
+    const tradingsymbol = inst?.tradingsymbol ?? `NIFTY${expiry}${order.strike}${order.optionType}`
+
+    // order.quantity is already in shares (OrderEntry sends quantity * 75)
     const data = await kitePost('/orders/regular', {
-      tradingsymbol: `NIFTY${order.expiry}${order.strike}${order.optionType}`,
+      tradingsymbol,
       exchange: 'NFO',
       transaction_type: 'BUY',
       order_type: order.orderType,
       product: order.productType,
-      quantity: String(order.quantity * LOT_SIZE),
+      quantity: String(order.quantity),
       ...(order.price ? { price: String(order.price) } : {}),
       ...(order.stopLoss ? { trigger_price: String(order.stopLoss) } : {}),
       validity: 'DAY',
     }) as { order_id: string }
 
+    const lots = order.quantity / LOT_SIZE
     return {
       orderId: data.order_id,
       status: 'COMPLETE',
-      message: `Order placed: BUY ${order.quantity} lots NIFTY ${order.strike} ${order.optionType}`,
+      message: `Order placed: BUY ${lots} lot${lots !== 1 ? 's' : ''} NIFTY ${order.strike} ${order.optionType}`,
       timestamp: new Date(),
     }
   }

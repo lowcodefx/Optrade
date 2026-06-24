@@ -6,6 +6,15 @@ import { InfoTooltip } from '@/components/InfoTooltip'
 import { cn } from '@/lib/utils'
 import { Minus, Plus, Zap } from 'lucide-react'
 
+function formatExpiry(expiry: string): string {
+  // Live chain returns YYYY-MM-DD; mock returns human-readable — handle both
+  if (/^\d{4}-\d{2}-\d{2}$/.test(expiry)) {
+    const d = new Date(expiry + 'T00:00:00')
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+  return expiry
+}
+
 const tooltip = {
   title: 'Order Entry',
   what: 'Place MIS LIMIT orders for NIFTY options with auto Stop Loss.',
@@ -34,7 +43,7 @@ export function OrderEntry() {
       symbol: 'NIFTY',
       strike,
       optionType,
-      expiry: chain?.expiry ?? '26 Jun 2025',
+      expiry: chain?.expiry ?? '',
       quantity: quantity * 75,
       orderType: 'LIMIT',
       productType: 'MIS',
@@ -61,7 +70,7 @@ export function OrderEntry() {
       <div className="px-3 pb-3 space-y-2">
         {/* Instrument display */}
         <div className="bg-[#060d1a] border border-[#1e3a5f] rounded px-3 py-2 text-[#38bdf8] text-xs font-semibold">
-          NIFTY {strike} {optionType} — {chain?.expiry ?? '—'}
+          NIFTY {strike} {optionType} — {chain?.expiry ? formatExpiry(chain.expiry) : '—'}
         </div>
 
         {/* CE / PE toggle */}

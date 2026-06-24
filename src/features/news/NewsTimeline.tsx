@@ -130,8 +130,11 @@ export function NewsTimeline() {
           </div>
         )}
 
-        {!error && items.length === 0 && !isFetching && (
+        {!error && items.length === 0 && isFetching && (
           <div className="text-[#475569] text-[10px] text-center py-4">Loading news…</div>
+        )}
+        {!error && items.length === 0 && !isFetching && (
+          <div className="text-[#475569] text-[10px] text-center py-4">No news available. Click refresh to retry.</div>
         )}
 
         {items.map((item, i) => {
