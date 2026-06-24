@@ -1,9 +1,9 @@
-import type { NiftyQuote, OptionChain, OptionStrike, OptionData, Candle, Position, PivotPoints } from '@/core/types'
+import type { NiftyQuote, OptionChain, Candle, Position, PivotPoints } from '@/core/types'
 import type { OrderRequest, OrderResponse, KiteOrder } from '@/core/types'
 import type { ITradingService } from './tradingService'
 import { useSettingsStore } from '@/core/store'
 import { calculateEMA, calculateVWAP } from '@/core/utils/indicators'
-import { getNiftyOptions, getNearestExpiry, getStrikesAroundATM } from './instrumentsCache'
+import { getNiftyOptions } from './instrumentsCache'
 import { NIFTY50_KITE_INSTRUMENTS, type Nifty50BreadthResult } from '@/core/utils/nifty50Symbols'
 
 const NIFTY_TOKEN = 256265
@@ -141,61 +141,25 @@ export class ZerodhaService implements ITradingService {
 
   async getOptionChain(): Promise<OptionChain> {
     const spot = this.spotCache || 24500
-    const expiry = await getNearestExpiry()
-    const instruments = await getStrikesAroundATM(spot, expiry, 5)
-
-    if (instruments.length === 0) throw new Error('No option instruments found')
-
-    const symbols = instruments.map(i => `NFO:${i.tradingsymbol}`)
-    const data = await kiteGet<Record<string, KiteQuote>>('/quote', { i: symbols })
-
-    const atm = Math.round(spot / 50) * 50
-    const strikeMap = new Map<number, { ce?: OptionData; pe?: OptionData }>()
-
-    for (const inst of instruments) {
-      const key = `NFO:${inst.tradingsymbol}`
-      const q = data[key]
-      if (!q) continue
-
-      if (!strikeMap.has(inst.strike)) strikeMap.set(inst.strike, {})
-      const entry = strikeMap.get(inst.strike)!
-
-      const optData: OptionData = {
-        oi: q.oi ?? 0,
-        oiChange: q.oi_day_change ?? 0,
-        volume: q.volume,
-        iv: 0,
-        ltp: q.last_price,
-        delta: inst.instrument_type === 'CE' ? 0.5 : -0.5,
-        gamma: 0.002,
-        theta: -2.5,
-        vega: 8,
-      }
-
-      if (inst.instrument_type === 'CE') entry.ce = optData
-      else entry.pe = optData
+    // Single server-side endpoint: fetches instruments + quotes in one shot,
+    // with module-level instrument cache so only the first call is slow.
+    const res = await fetch(`/api/option-chain?spot=${spot}`, {
+      headers: { 'X-Kite-Auth': authHeader(), 'X-Kite-Version': '3' },
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(err.error ?? `option-chain ${res.status}`)
     }
+    const chain = await res.json() as OptionChain
 
-    const strikes: OptionStrike[] = Array.from(strikeMap.entries())
-      .sort(([a], [b]) => a - b)
-      .map(([strike, { ce, pe }]) => ({
-        strike,
-        ce: ce ?? emptyOption(),
-        pe: pe ?? emptyOption(),
-      }))
-
-    const totalCEOI = strikes.reduce((s, r) => s + r.ce.oi, 0)
-    const totalPEOI = strikes.reduce((s, r) => s + r.pe.oi, 0)
-    const maxPainStrike = calcMaxPain(strikes)
-
-    const pcr = totalCEOI > 0 ? totalPEOI / totalCEOI : 1
+    const pcr = chain.totalCEOI > 0 ? chain.totalPEOI / chain.totalCEOI : 1
     try {
       const { useMarketStore } = await import('@/core/store')
       const q = useMarketStore.getState().quote
       if (q) useMarketStore.getState().setQuote({ ...q, pcr })
     } catch (_) { /* ignore */ }
 
-    return { expiry, atmStrike: atm, strikes, totalCEOI, totalPEOI, maxPainStrike }
+    return chain
   }
 
   async getCandles(timeframe = '5minute', count = 30): Promise<Candle[]> {
@@ -370,20 +334,6 @@ interface KitePosition {
   product: string
 }
 
-function emptyOption(): OptionData {
-  return { oi: 0, oiChange: 0, volume: 0, iv: 0, ltp: 0, delta: 0, gamma: 0, theta: 0, vega: 0 }
-}
-
-function calcMaxPain(strikes: OptionStrike[]): number {
-  let minLoss = Infinity, maxPain = strikes[0]?.strike ?? 0
-  for (const { strike } of strikes) {
-    const loss = strikes.reduce((s, r) => {
-      return s + r.ce.oi * Math.max(0, r.strike - strike) + r.pe.oi * Math.max(0, strike - r.strike)
-    }, 0)
-    if (loss < minLoss) { minLoss = loss; maxPain = strike }
-  }
-  return maxPain
-}
 
 function mapTimeframe(tf: string): string {
   const map: Record<string, string> = {
