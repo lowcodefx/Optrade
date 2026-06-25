@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { usePositions } from '@/core/hooks/useMarketData'
 import { tradingService } from '@/core/services/tradingService'
 import { useQueryClient } from '@tanstack/react-query'
@@ -16,15 +17,36 @@ const tooltip = {
 export function OpenPositions() {
   const { data: positions = [] } = usePositions()
   const qc = useQueryClient()
+  const [exitError, setExitError] = useState<string | null>(null)
+  const [exiting, setExiting] = useState<string | null>(null)
 
   async function exit(id: string) {
-    await tradingService.exitPosition(id)
-    qc.invalidateQueries({ queryKey: ['positions'] })
+    setExiting(id)
+    setExitError(null)
+    try {
+      await tradingService.exitPosition(id)
+      qc.invalidateQueries({ queryKey: ['positions'] })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setExitError(msg.includes('403') || msg.includes('not allowed')
+        ? 'Exit blocked: add Azure IP 20.239.240.186 to Zerodha allowed IPs'
+        : `Exit failed: ${msg}`)
+    } finally {
+      setExiting(null)
+    }
   }
 
   async function exitAll() {
-    await tradingService.exitAllPositions()
-    qc.invalidateQueries({ queryKey: ['positions'] })
+    setExitError(null)
+    try {
+      await tradingService.exitAllPositions()
+      qc.invalidateQueries({ queryKey: ['positions'] })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setExitError(msg.includes('403') || msg.includes('not allowed')
+        ? 'Exit blocked: add Azure IP 20.239.240.186 to Zerodha allowed IPs'
+        : `Exit failed: ${msg}`)
+    }
   }
 
   const totalPnL = positions.reduce((a, p) => a + p.pnl, 0)
@@ -60,8 +82,9 @@ export function OpenPositions() {
                       {pos.pnl >= 0 ? '+' : ''}{formatCurrency(pos.pnl)}
                     </td>
                     <td className="py-2 px-2 text-right">
-                      <button onClick={() => exit(pos.positionId)} className="bg-[#ef4444] text-white text-[9px] font-bold px-2 py-0.5 rounded hover:bg-[#dc2626] transition-colors">
-                        Exit
+                      <button onClick={() => exit(pos.positionId)} disabled={exiting === pos.positionId}
+                        className="bg-[#ef4444] text-white text-[9px] font-bold px-2 py-0.5 rounded hover:bg-[#dc2626] transition-colors disabled:opacity-50">
+                        {exiting === pos.positionId ? '…' : 'Exit'}
                       </button>
                     </td>
                   </tr>
@@ -69,6 +92,11 @@ export function OpenPositions() {
               </tbody>
             </table>
           </div>
+          {exitError && (
+            <div className="mx-3 mt-2 p-2 bg-[#2b0d0d] border border-[#ef4444]/50 rounded text-[#ef4444] text-[9px]">
+              {exitError}
+            </div>
+          )}
           <div className="px-3 py-2 flex items-center justify-between border-t border-[#0f1f35]">
             <div className="flex gap-4 text-[10px]">
               <span className="text-[#64748b]">Day P&L: <span className={`font-bold ${totalPnL >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>{totalPnL >= 0 ? '+' : ''}{formatCurrency(totalPnL)}</span></span>

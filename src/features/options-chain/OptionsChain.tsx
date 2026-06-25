@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useMarketStore, useOrderStore } from '@/core/store'
 import { SectionCard } from '@/components/SectionCard'
 import { formatOI } from '@/lib/utils'
+import { RefreshCw } from 'lucide-react'
 
 const tooltip = {
   title: 'Options Chain',
@@ -17,13 +19,24 @@ type Filter = 'all' | 'top-oi' | 'top-vol'
 export function OptionsChain() {
   const chain = useMarketStore(s => s.optionChain)
   const [filter, setFilter] = useState<Filter>('all')
+  const [refreshing, setRefreshing] = useState(false)
   const optionType = useOrderStore(s => s.optionType)
+  const qc = useQueryClient()
+
+  function refresh() {
+    setRefreshing(true)
+    qc.invalidateQueries({ queryKey: ['option-chain'] })
+    setTimeout(() => setRefreshing(false), 2000)
+  }
 
   if (!chain) return (
     <SectionCard title="Options Chain" tooltip={tooltip} noPadding>
       <div className="px-3 py-8 text-center text-[#475569] text-[10px]">
         <div className="w-5 h-5 border-2 border-[#38bdf8] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
         Loading option chain… (downloading instruments)
+        <button onClick={refresh} className="block mx-auto mt-3 text-[#38bdf8] text-[9px] border border-[#38bdf8] px-3 py-1 rounded hover:bg-[#0f1f35] transition-colors">
+          Retry
+        </button>
       </div>
     </SectionCard>
   )
@@ -47,7 +60,10 @@ export function OptionsChain() {
             {f === 'all' ? 'ATM ±3' : f === 'top-oi' ? 'Top OI' : 'Top Vol'}
           </button>
         ))}
-        <span className="ml-auto text-[9px] text-[#64748b]">
+        <button onClick={refresh} title="Refresh chain" className={`ml-auto text-[#475569] hover:text-[#38bdf8] transition-colors ${refreshing ? 'animate-spin' : ''}`}>
+          <RefreshCw size={11} />
+        </button>
+        <span className="text-[9px] text-[#64748b]">
           PCR: <span className={chain.totalPEOI / chain.totalCEOI > 1 ? 'text-[#22c55e] font-semibold' : 'text-[#ef4444] font-semibold'}>{(chain.totalPEOI / chain.totalCEOI).toFixed(2)}</span>
         </span>
       </div>
