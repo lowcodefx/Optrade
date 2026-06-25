@@ -1,17 +1,13 @@
 const { app } = require('@azure/functions')
 const https = require('https')
+const { getNiftyInstruments, getNearestExpiry } = require('../shared/instruments')
 
-// ── Server-side caches ────────────────────────────────────────────────────────
-let _instruments = null
-let _instrDay    = ''
-let _instrPromise = null   // de-dup concurrent downloads
-
-// ── Kite fetch helper ─────────────────────────────────────────────────────────
-function kiteRequest(path, authToken) {
+function kiteQuote(symbols, authToken) {
   return new Promise((resolve, reject) => {
+    const qs = symbols.map(s => `i=${encodeURIComponent(s)}`).join('&')
     const req = https.request({
       hostname: 'api.kite.trade',
-      path,
+      path: `/quote?${qs}`,
       method: 'GET',
       headers: { 'X-Kite-Version': '3', 'Authorization': authToken },
     }, res => {
@@ -20,85 +16,15 @@ function kiteRequest(path, authToken) {
       res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') }))
     })
     req.on('error', reject)
-    req.setTimeout(25000, () => { req.destroy(); reject(new Error('kite timeout')) })
+    req.setTimeout(10000, () => { req.destroy(); reject(new Error('quote timeout')) })
     req.end()
   })
 }
 
-// ── Instruments (cached per day, de-duped) ───────────────────────────────────
-function parseNiftyOptions(csv) {
-  // Normalise line endings — Kite may return \r\n on some days
-  const lines = csv.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim().split('\n')
-  if (lines.length < 2) return []
-
-  // Trim each header field so a BOM or trailing whitespace doesn't break indexOf
-  const h = lines[0].split(',').map(s => s.trim())
-  const col = n => h.indexOf(n)
-
-  const siI = col('tradingsymbol'), niI = col('name')
-  const eiI = col('expiry'), kiI = col('strike'), iiI = col('instrument_type')
-
-  // Validate header — if any required column is missing we can't parse
-  if ([siI, niI, eiI, kiI, iiI].some(i => i === -1)) return []
-
-  const today = new Date().toISOString().slice(0, 10)
-
-  return lines.slice(1).map(line => {
-    if (!line.trim()) return null           // skip blank lines
-    const c = line.split(',')
-    const name = (c[niI] || '').trim()
-    if (name !== 'NIFTY') return null
-    const itype = (c[iiI] || '').trim()
-    if (itype !== 'CE' && itype !== 'PE') return null
-    const expiry = (c[eiI] || '').trim()
-    if (!expiry || expiry < today) return null
-    const strike = parseFloat(c[kiI])
-    if (isNaN(strike)) return null
-    return { tradingsymbol: (c[siI] || '').trim(), expiry, strike, instrument_type: itype }
-  }).filter(Boolean)
-}
-
-async function getInstruments(authToken) {
-  const today = new Date().toISOString().slice(0, 10)
-  if (_instruments && _instrDay === today) return _instruments
-
-  // De-dup: if a download is already in-flight, wait for it
-  if (_instrPromise) return _instrPromise
-
-  _instrPromise = (async () => {
-    const r = await kiteRequest('/instruments/NFO', authToken)
-    if (r.status !== 200) throw new Error(`Kite instruments returned ${r.status}: ${r.body.slice(0, 150)}`)
-    const parsed = parseNiftyOptions(r.body)
-    if (parsed.length === 0) {
-      // Include first line of response to help diagnose header/format mismatch
-      const firstLine = r.body.slice(0, 200).split(/\r?\n/)[0]
-      throw new Error(`Parsed 0 NIFTY instruments (${r.body.length} bytes). Header: ${firstLine}`)
-    }
-    _instruments = parsed
-    _instrDay = today
-    return _instruments
-  })()
-
-  try {
-    return await _instrPromise
-  } finally {
-    _instrPromise = null  // clear so next day triggers a fresh fetch
-  }
-}
-
-// ── Nearest expiry ────────────────────────────────────────────────────────────
-function getNearestExpiry(instruments) {
-  const today = new Date().toISOString().slice(0, 10)
-  const expiries = [...new Set(instruments.map(i => i.expiry))].filter(e => e >= today).sort()
-  return expiries[0] ?? today
-}
-
-// ── Empty option data fallback ────────────────────────────────────────────────
 function emptyOpt(delta) {
   return { oi: 0, oiChange: 0, volume: 0, iv: 0, ltp: 0, delta, gamma: 0.002, theta: -2.5, vega: 8 }
 }
 
-// ── Option chain builder ──────────────────────────────────────────────────────
 function buildChain(instruments, expiry, atm, quotes) {
   const RANGE = 5
   const strikeValues = Array.from({ length: RANGE * 2 + 1 }, (_, i) => atm + (i - RANGE) * 50)
@@ -107,7 +33,7 @@ function buildChain(instruments, expiry, atm, quotes) {
   for (const strike of strikeValues) {
     const ceInst = instruments.find(i => i.expiry === expiry && i.strike === strike && i.instrument_type === 'CE')
     const peInst = instruments.find(i => i.expiry === expiry && i.strike === strike && i.instrument_type === 'PE')
-    if (!ceInst && !peInst) continue   // no instruments at all for this strike
+    if (!ceInst && !peInst) continue
 
     const ceQ = ceInst ? quotes[`NFO:${ceInst.tradingsymbol}`] : null
     const peQ = peInst ? quotes[`NFO:${peInst.tradingsymbol}`] : null
@@ -122,8 +48,7 @@ function buildChain(instruments, expiry, atm, quotes) {
   const totalCEOI = rows.reduce((s, r) => s + r.ce.oi, 0)
   const totalPEOI = rows.reduce((s, r) => s + r.pe.oi, 0)
 
-  let maxPainStrike = atm
-  let minPain = Infinity
+  let maxPainStrike = atm, minPain = Infinity
   for (const row of rows) {
     const pain = rows.reduce((s, r) => s + r.ce.oi * Math.max(0, r.strike - row.strike) + r.pe.oi * Math.max(0, row.strike - r.strike), 0)
     if (pain < minPain) { minPain = pain; maxPainStrike = row.strike }
@@ -132,7 +57,6 @@ function buildChain(instruments, expiry, atm, quotes) {
   return { expiry, atmStrike: atm, strikes: rows, totalCEOI, totalPEOI, maxPainStrike }
 }
 
-// ── Handler ───────────────────────────────────────────────────────────────────
 app.http('optionChain', {
   methods: ['GET'],
   authLevel: 'anonymous',
@@ -151,13 +75,11 @@ app.http('optionChain', {
     }
 
     try {
-      const instruments = await getInstruments(authToken)
+      const instruments = await getNiftyInstruments(authToken)
       const expiry = getNearestExpiry(instruments)
       const atm = Math.round(spot / 50) * 50
-
       context.log(`optionChain: expiry=${expiry} atm=${atm} instruments=${instruments.length}`)
 
-      // Build symbol list for ATM ±5 range
       const RANGE = 5
       const strikeValues = Array.from({ length: RANGE * 2 + 1 }, (_, i) => atm + (i - RANGE) * 50)
       const symbols = []
@@ -172,22 +94,21 @@ app.http('optionChain', {
 
       let quotes = {}
       if (symbols.length > 0) {
-        const qs = symbols.map(s => `i=${encodeURIComponent(s)}`).join('&')
-        const quoteRes = await kiteRequest(`/quote?${qs}`, authToken)
-        if (quoteRes.status === 200) {
-          try {
-            const quoteJson = JSON.parse(quoteRes.body)
-            quotes = quoteJson.data ?? {}
-          } catch (_) {
-            context.log(`optionChain: quote JSON parse failed, body: ${quoteRes.body.slice(0, 200)}`)
+        try {
+          const qr = await kiteQuote(symbols, authToken)
+          if (qr.status === 200) {
+            const j = JSON.parse(qr.body)
+            quotes = j.data ?? {}
+          } else {
+            context.log(`optionChain: quote ${qr.status}: ${qr.body.slice(0, 150)}`)
           }
-        } else {
-          context.log(`optionChain: quote returned ${quoteRes.status}: ${quoteRes.body.slice(0, 200)}`)
+        } catch (qErr) {
+          context.log(`optionChain: quote fetch failed: ${qErr.message}`)
         }
       }
 
       const chain = buildChain(instruments, expiry, atm, quotes)
-      context.log(`optionChain: built ${chain.strikes.length} strike rows`)
+      context.log(`optionChain: ${chain.strikes.length} rows, totalCEOI=${chain.totalCEOI}`)
 
       return {
         status: 200,
@@ -195,7 +116,7 @@ app.http('optionChain', {
         body: JSON.stringify(chain),
       }
     } catch (err) {
-      console.error('optionChain error:', err.message, err.stack)
+      console.error('[optionChain] error:', err.message)
       return { status: 502, headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ error: err.message }) }
     }
