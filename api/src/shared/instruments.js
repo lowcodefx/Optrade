@@ -24,8 +24,9 @@ function kiteGet(path, authToken) {
   })
 }
 
+function stripQ(s) { return (s || '').trim().replace(/^"|"$/g, '') }
+
 function parseNiftyOptions(csv) {
-  // Normalise line endings
   const lines = csv.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim().split('\n')
   if (lines.length < 2) return []
 
@@ -40,21 +41,31 @@ function parseNiftyOptions(csv) {
     return []
   }
 
-  const today = new Date().toISOString().slice(0, 10)
+  // Log first 5 data rows so we can see actual name/expiry values
+  console.log('[instruments] Sample rows:', lines.slice(1, 6).map(l => l.slice(0, 200)).join('\n'))
 
-  return lines.slice(1).map(line => {
+  const today = new Date().toISOString().slice(0, 10)
+  let failName = 0, failType = 0, failExpiry = 0, failStrike = 0
+
+  const result = lines.slice(1).map(line => {
     if (!line.trim()) return null
     const c = line.split(',')
-    const name = (c[niI] || '').trim()
-    if (name !== 'NIFTY') return null
-    const itype = (c[iiI] || '').trim()
-    if (itype !== 'CE' && itype !== 'PE') return null
-    const expiry = (c[eiI] || '').trim()
-    if (!expiry || expiry < today) return null
+    const name = stripQ(c[niI])
+    const tradingsymbol = stripQ(c[siI])
+    // Accept 'NIFTY' name OR tradingsymbol starting with NIFTY+digit (weekly/monthly format)
+    const isNifty = name === 'NIFTY' || (/^NIFTY\d/.test(tradingsymbol) && name === '')
+    if (!isNifty) { failName++; return null }
+    const itype = stripQ(c[iiI])
+    if (itype !== 'CE' && itype !== 'PE') { failType++; return null }
+    const expiry = stripQ(c[eiI])
+    if (!expiry || expiry < today) { failExpiry++; return null }
     const strike = parseFloat(c[kiI])
-    if (isNaN(strike)) return null
-    return { tradingsymbol: (c[siI] || '').trim(), expiry, strike, instrument_type: itype }
+    if (isNaN(strike)) { failStrike++; return null }
+    return { tradingsymbol, expiry, strike, instrument_type: itype }
   }).filter(Boolean)
+
+  console.log(`[instruments] Filter stats — name:${failName} type:${failType} expiry:${failExpiry} strike:${failStrike} passed:${result.length}`)
+  return result
 }
 
 async function getNiftyInstruments(authToken) {
