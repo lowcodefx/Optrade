@@ -27,14 +27,24 @@ function kiteRequest(path, authToken) {
 
 // ── Instruments (cached per day, de-duped) ───────────────────────────────────
 function parseNiftyOptions(csv) {
-  const lines = csv.trim().split('\n')
+  // Normalise line endings — Kite may return \r\n on some days
+  const lines = csv.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim().split('\n')
   if (lines.length < 2) return []
-  const h = lines[0].split(',')
+
+  // Trim each header field so a BOM or trailing whitespace doesn't break indexOf
+  const h = lines[0].split(',').map(s => s.trim())
   const col = n => h.indexOf(n)
-  const tiI = col('instrument_token'), siI = col('tradingsymbol'), niI = col('name')
+
+  const siI = col('tradingsymbol'), niI = col('name')
   const eiI = col('expiry'), kiI = col('strike'), iiI = col('instrument_type')
+
+  // Validate header — if any required column is missing we can't parse
+  if ([siI, niI, eiI, kiI, iiI].some(i => i === -1)) return []
+
   const today = new Date().toISOString().slice(0, 10)
+
   return lines.slice(1).map(line => {
+    if (!line.trim()) return null           // skip blank lines
     const c = line.split(',')
     const name = (c[niI] || '').trim()
     if (name !== 'NIFTY') return null
@@ -57,9 +67,13 @@ async function getInstruments(authToken) {
 
   _instrPromise = (async () => {
     const r = await kiteRequest('/instruments/NFO', authToken)
-    if (r.status !== 200) throw new Error(`Kite instruments returned ${r.status}: ${r.body.slice(0, 100)}`)
+    if (r.status !== 200) throw new Error(`Kite instruments returned ${r.status}: ${r.body.slice(0, 150)}`)
     const parsed = parseNiftyOptions(r.body)
-    if (parsed.length === 0) throw new Error('Parsed 0 instruments — check token or CSV format')
+    if (parsed.length === 0) {
+      // Include first line of response to help diagnose header/format mismatch
+      const firstLine = r.body.slice(0, 200).split(/\r?\n/)[0]
+      throw new Error(`Parsed 0 NIFTY instruments (${r.body.length} bytes). Header: ${firstLine}`)
+    }
     _instruments = parsed
     _instrDay = today
     return _instruments
