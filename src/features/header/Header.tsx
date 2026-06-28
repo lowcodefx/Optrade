@@ -21,6 +21,7 @@ const predictionColors = {
   BEARISH:  { bg: 'bg-[#ef4444]/15', text: 'text-[#ef4444]', border: 'border-[#ef4444]/40' },
   SIDEWAYS: { bg: 'bg-[#f59e0b]/15', text: 'text-[#f59e0b]', border: 'border-[#f59e0b]/40' },
   NEUTRAL:  { bg: 'bg-[#475569]/15', text: 'text-[#475569]', border: 'border-[#475569]/40' },
+  NO_TRADE: { bg: 'bg-[#f59e0b]/15', text: 'text-[#f59e0b]', border: 'border-[#f59e0b]/40' },
 }
 
 interface Props {
@@ -144,7 +145,7 @@ const [time, setTime] = useState(new Date())
             </div>
             <div className={`${pred.bg} border ${pred.border} rounded px-1.5 py-0.5 flex items-center gap-1`}>
               <span className={`${pred.text} text-[9px] font-bold`}>
-                {prediction1h === 'BULLISH' ? '↑' : prediction1h === 'BEARISH' ? '↓' : prediction1h === 'SIDEWAYS' ? '↔' : '?'}
+                {prediction1h === 'BULLISH' ? '↑' : prediction1h === 'BEARISH' ? '↓' : prediction1h === 'SIDEWAYS' ? '↔' : prediction1h === 'NO_TRADE' ? '⊘' : '?'}
               </span>
               <span className={`${pred.text} text-[9px] font-bold hidden sm:inline`}>{prediction1h}</span>
               <span className="text-[#475569] text-[8px]">1h</span>

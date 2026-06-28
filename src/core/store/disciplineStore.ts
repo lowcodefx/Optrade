@@ -114,6 +114,10 @@ export const useDisciplineStore = create<DisciplineState>()(
           return { allowed: false, reason: `${settings.maxConsecutiveLosses} consecutive losses. Take a break.` }
 
         // Warnings (allowed but flagged)
+        if (s.consecutiveWins >= 3) {
+          return { allowed: true, warning: `${s.consecutiveWins} consecutive wins. Manage risk carefully — avoid overconfidence and position-size creep.` }
+        }
+
         if (s.lastTradeTime) {
           const minsAgo = (Date.now() - s.lastTradeTime) / 60000
           const prevWasLoss = s.consecutiveLosses > 0
