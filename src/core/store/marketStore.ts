@@ -1,11 +1,13 @@
 import { create } from 'zustand'
 import type { NiftyQuote, OptionChain, Candle, TrendAnalysis, TradeStrengthResult, PriceActionSetup, PivotPoints, GlobalMarket, FiiDiiData } from '@/core/types'
 import type { MarketScore, ScoreBreakdown } from '@/core/utils/scoreEngine'
+import type { EntryQualityResult } from '@/core/utils/entryQuality'
 import type { Nifty50BreadthResult } from '@/core/utils/nifty50Symbols'
 import type { KiteOrder } from '@/core/types'
 import { calculateEMA, calculateRSI, calculateADX } from '@/core/utils/indicators'
 import { calculateTradeStrength } from '@/core/utils/tradeStrength'
 import { calculateMarketScore } from '@/core/utils/scoreEngine'
+import { calculateEntryQuality } from '@/core/utils/entryQuality'
 import { detectPatterns, buildPriceActionSetup } from '@/core/utils/patternDetector'
 
 interface MarketState {
@@ -14,6 +16,7 @@ interface MarketState {
   candles: Candle[]
   trendAnalysis: TrendAnalysis | null
   tradeStrength: TradeStrengthResult | null
+  entryQuality: EntryQualityResult | null
   paSetup: PriceActionSetup | null
   paEnabled: boolean
   centerTab: 'chart' | 'chain'
@@ -38,17 +41,10 @@ interface MarketState {
   usedMargin: number
   netMargin: number
 
-  // Pivot points (previous day S1/S2/R1/R2)
   pivotPoints: PivotPoints | null
   showPivots: boolean
-
-  // Order history
   orders: KiteOrder[]
-
-  // Global markets (Dow, Nasdaq, S&P)
   globalMarkets: GlobalMarket[]
-
-  // FII/DII data
   fiiDii: FiiDiiData | null
 
   setQuote: (q: NiftyQuote) => void
@@ -68,14 +64,13 @@ interface MarketState {
   setFiiDii: (d: FiiDiiData) => void
 }
 
-// ─── Helpers for derived score params ────────────────────────────────────────
+// ─── Derived params helpers ───────────────────────────────────────────────────
 
-// Detect Higher High / Higher Low / Lower High / Lower Low from recent candles
 function detectSwingStructure(candles: Candle[]) {
   if (candles.length < 4) return { isHigherHigh: false, isHigherLow: false, isLowerHigh: false, isLowerLow: false }
   const n = candles.length
-  const h = [candles[n - 4].high, candles[n - 3].high, candles[n - 2].high, candles[n - 1].high]
-  const l = [candles[n - 4].low,  candles[n - 3].low,  candles[n - 2].low,  candles[n - 1].low]
+  const h = [candles[n-4].high, candles[n-3].high, candles[n-2].high, candles[n-1].high]
+  const l = [candles[n-4].low,  candles[n-3].low,  candles[n-2].low,  candles[n-1].low]
   return {
     isHigherHigh: h[3] > h[2] && h[2] > h[1],
     isHigherLow:  l[3] > l[2] && l[2] > l[1],
@@ -84,10 +79,8 @@ function detectSwingStructure(candles: Candle[]) {
   }
 }
 
-// Derive approximate 15m trend by grouping 5m candles into 15m blocks
 function derive15mTrend(candles: Candle[]): 'bull' | 'bear' | 'neutral' {
   if (candles.length < 6) return 'neutral'
-  // Most recent 15m close = avg of last 3 candles; previous = avg of candles [-6:-3]
   const recent = candles.slice(-3).reduce((s, c) => s + c.close, 0) / 3
   const prev   = candles.slice(-6, -3).reduce((s, c) => s + c.close, 0) / 3
   if (recent > prev * 1.0003) return 'bull'
@@ -95,10 +88,9 @@ function derive15mTrend(candles: Candle[]): 'bull' | 'bear' | 'neutral' {
   return 'neutral'
 }
 
-// Derive approximate 1h trend by comparing first half vs second half of candle history
 function derive1hTrend(candles: Candle[]): 'bull' | 'bear' | 'neutral' {
   if (candles.length < 12) return 'neutral'
-  const mid = Math.floor(candles.length / 2)
+  const mid      = Math.floor(candles.length / 2)
   const firstHalf  = candles.slice(0, mid).reduce((s, c) => s + c.close, 0) / mid
   const secondHalf = candles.slice(mid).reduce((s, c) => s + c.close, 0) / (candles.length - mid)
   if (secondHalf > firstHalf * 1.0005) return 'bull'
@@ -106,18 +98,21 @@ function derive1hTrend(candles: Candle[]): 'bull' | 'bear' | 'neutral' {
   return 'neutral'
 }
 
-// Get IST hour and minute from current UTC time
-function getISTTime(): { hour: number; minute: number } {
-  const now = new Date()
-  const istMs = now.getTime() + 5.5 * 60 * 60 * 1000
-  const ist = new Date(istMs)
+function getISTTime() {
+  const ist = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
   return { hour: ist.getUTCHours(), minute: ist.getUTCMinutes() }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-function recomputeScores(quote: NiftyQuote, candles: Candle[], optionChain: OptionChain | null, pivotPoints: PivotPoints | null, nifty50Breadth: Nifty50BreadthResult | null) {
-  if (candles.length === 0 || !quote) return null
+function recompute(
+  quote: NiftyQuote,
+  candles: Candle[],
+  optionChain: OptionChain | null,
+  pivotPoints: PivotPoints | null,
+  nifty50Breadth: Nifty50BreadthResult | null,
+) {
+  if (!candles.length || !quote) return null
 
   const closes = candles.map(c => c.close)
   const ema9arr  = calculateEMA(closes, 9)
@@ -129,48 +124,50 @@ function recomputeScores(quote: NiftyQuote, candles: Candle[], optionChain: Opti
   const rsi = calculateRSI(closes)
   const adx = calculateADX(candles)
 
-  const lastCandle = candles[candles.length - 1]
+  const lastCandle     = candles[candles.length - 1]
   const volumeAboveAvg = lastCandle ? lastCandle.volume > 70000 : false
-  const aboveVWAP  = quote.spot > quote.vwap
-  const emaAligned = ema9 > ema20 && ema20 > ema50
-  const trend = emaAligned && aboveVWAP ? 'bullish' : (!emaAligned && !aboveVWAP ? 'bearish' : 'neutral')
+  const emaBull        = ema9 > ema20 && ema20 > ema50
+  const emaBear        = ema9 < ema20 && ema20 < ema50
+  const aboveVWAP      = quote.spot > quote.vwap
+  const emaAligned     = emaBull
+  const trend          = emaBull && aboveVWAP ? 'bullish' : (!emaBull && !aboveVWAP ? 'bearish' : 'neutral')
 
-  const trendAnalysis: TrendAnalysis = { ema9, ema20, ema50, rsi, adx, vwap: quote.vwap, trend, aboveVWAP, emaAligned }
+  const trendAnalysis: TrendAnalysis = {
+    ema9, ema20, ema50, rsi, adx, vwap: quote.vwap, trend, aboveVWAP, emaAligned,
+  }
 
   const tradeStrength = calculateTradeStrength({
     spot: quote.spot, vwap: quote.vwap, ema9, ema20, ema50,
     rsi, adx, pcr: quote.pcr, breadth: quote.breadth,
-    volumeAboveAvg,
-    putWritingDetected: quote.pcr > 1.2,
+    volumeAboveAvg, putWritingDetected: quote.pcr > 1.2,
   })
 
-  // ── Derived structure params ──────────────────────────────────────────────
+  const entryQuality = calculateEntryQuality({ candles, emaBull, emaBear, volumeAboveAvg })
 
-  // Opening range: first 2 candles of the session (9:15 and 9:20)
+  // ── Structural params ──────────────────────────────────────────────────────
   const openingRangeHigh = candles.length >= 2 ? Math.max(candles[0].high, candles[1].high) : undefined
   const openingRangeLow  = candles.length >= 2 ? Math.min(candles[0].low,  candles[1].low)  : undefined
-
-  // Swing structure from recent candles
   const { isHigherHigh, isHigherLow, isLowerHigh, isLowerLow } = detectSwingStructure(candles)
 
-  // Multi-timeframe trends derived from 5m candles
+  // Multi-TF (derived from 5m candles without extra API calls)
   const trend15m = derive15mTrend(candles)
   const trend1h  = derive1hTrend(candles)
 
-  // OI Change totals from the option chain (sum across all strikes in the chain)
+  // OI change totals and max-OI strikes from option chain
   const ceOIChangeTotal = optionChain ? optionChain.strikes.reduce((s, r) => s + r.ce.oiChange, 0) : undefined
   const peOIChangeTotal = optionChain ? optionChain.strikes.reduce((s, r) => s + r.pe.oiChange, 0) : undefined
+  const maxCEOIStrike   = optionChain ? optionChain.strikes.reduce((best, r) => r.ce.oi > best.oi ? { strike: r.strike, oi: r.ce.oi } : best, { strike: 0, oi: -1 }).strike : undefined
+  const maxPEOIStrike   = optionChain ? optionChain.strikes.reduce((best, r) => r.pe.oi > best.oi ? { strike: r.strike, oi: r.pe.oi } : best, { strike: 0, oi: -1 }).strike : undefined
 
-  // Yesterday's high/low from pivot points
+  // Previous day levels from pivot points
   const yesterdayHigh = pivotPoints?.prevHigh
   const yesterdayLow  = pivotPoints?.prevLow
 
-  // Current IST time for time-of-day multiplier
-  const { hour, minute } = getISTTime()
-
-  // N50 breadth — use live if available, else fall back to quote.breadth
-  const n50 = nifty50Breadth
+  // Breadth (live N50 preferred)
+  const n50     = nifty50Breadth
   const breadth = n50 ? n50.breadthPct : quote.breadth
+
+  const { hour, minute } = getISTTime()
 
   const ms = calculateMarketScore({
     spot: quote.spot, vwap: quote.vwap,
@@ -186,6 +183,12 @@ function recomputeScores(quote: NiftyQuote, candles: Candle[], optionChain: Opti
     yesterdayHigh, yesterdayLow,
     openingRangeHigh, openingRangeLow,
     isHigherHigh, isHigherLow, isLowerHigh, isLowerLow,
+    pivotPP: pivotPoints?.pp,
+    pivotR1: pivotPoints?.r1,
+    pivotR2: pivotPoints?.r2,
+    pivotS1: pivotPoints?.s1,
+    pivotS2: pivotPoints?.s2,
+    maxCEOIStrike, maxPEOIStrike,
     // Multi-TF
     trend15m, trend1h,
     // OI Change
@@ -194,7 +197,7 @@ function recomputeScores(quote: NiftyQuote, candles: Candle[], optionChain: Opti
     hour, minute,
   })
 
-  return { trendAnalysis, tradeStrength, ms }
+  return { trendAnalysis, tradeStrength, entryQuality, ms }
 }
 
 export const useMarketStore = create<MarketState>((set, get) => ({
@@ -203,6 +206,7 @@ export const useMarketStore = create<MarketState>((set, get) => ({
   candles: [],
   trendAnalysis: null,
   tradeStrength: null,
+  entryQuality: null,
   paSetup: null,
   paEnabled: false,
   centerTab: 'chart',
@@ -230,38 +234,29 @@ export const useMarketStore = create<MarketState>((set, get) => ({
     set({ quote })
     const { candles, optionChain, pivotPoints, nifty50Breadth } = get()
     if (candles.length > 0) {
-      const result = recomputeScores(quote, candles, optionChain, pivotPoints, nifty50Breadth)
-      if (result) {
-        const { trendAnalysis, tradeStrength, ms } = result
-        set({
-          trendAnalysis, tradeStrength,
-          ceScore: ms.ceScore, peScore: ms.peScore,
-          prediction1h: ms.prediction1h, predictionDetail: ms.predictionDetail,
-          noTradeReason: ms.noTradeReason,
-          timeMultiplier: ms.timeMultiplier,
-          scoreBreakdown: ms.breakdown,
-        })
-      }
+      const r = recompute(quote, candles, optionChain, pivotPoints, nifty50Breadth)
+      if (r) set({
+        trendAnalysis: r.trendAnalysis, tradeStrength: r.tradeStrength, entryQuality: r.entryQuality,
+        ceScore: r.ms.ceScore, peScore: r.ms.peScore,
+        prediction1h: r.ms.prediction1h, predictionDetail: r.ms.predictionDetail,
+        noTradeReason: r.ms.noTradeReason, timeMultiplier: r.ms.timeMultiplier,
+        scoreBreakdown: r.ms.breakdown,
+      })
     }
   },
 
   setOptionChain: (optionChain) => {
     set({ optionChain })
-    // Re-run scores when option chain updates — OI change data may have changed
     const { quote, candles, pivotPoints, nifty50Breadth } = get()
     if (quote && candles.length > 0) {
-      const result = recomputeScores(quote, candles, optionChain, pivotPoints, nifty50Breadth)
-      if (result) {
-        const { trendAnalysis, tradeStrength, ms } = result
-        set({
-          trendAnalysis, tradeStrength,
-          ceScore: ms.ceScore, peScore: ms.peScore,
-          prediction1h: ms.prediction1h, predictionDetail: ms.predictionDetail,
-          noTradeReason: ms.noTradeReason,
-          timeMultiplier: ms.timeMultiplier,
-          scoreBreakdown: ms.breakdown,
-        })
-      }
+      const r = recompute(quote, candles, optionChain, pivotPoints, nifty50Breadth)
+      if (r) set({
+        trendAnalysis: r.trendAnalysis, tradeStrength: r.tradeStrength, entryQuality: r.entryQuality,
+        ceScore: r.ms.ceScore, peScore: r.ms.peScore,
+        prediction1h: r.ms.prediction1h, predictionDetail: r.ms.predictionDetail,
+        noTradeReason: r.ms.noTradeReason, timeMultiplier: r.ms.timeMultiplier,
+        scoreBreakdown: r.ms.breakdown,
+      })
     }
   },
 
@@ -270,24 +265,18 @@ export const useMarketStore = create<MarketState>((set, get) => ({
     const { quote, paEnabled, optionChain, pivotPoints, nifty50Breadth } = get()
     if (paEnabled && candles.length >= 2) {
       const patterns = detectPatterns(candles)
-      const spot = quote?.spot ?? candles[candles.length - 1].close
-      const paSetup = buildPriceActionSetup(candles, patterns, spot)
-      set({ paSetup })
+      const spot     = quote?.spot ?? candles[candles.length - 1].close
+      set({ paSetup: buildPriceActionSetup(candles, patterns, spot) })
     }
-    // Re-run scores when candles update (structure, trend, opening range all change)
     if (quote && candles.length > 0) {
-      const result = recomputeScores(quote, candles, optionChain, pivotPoints, nifty50Breadth)
-      if (result) {
-        const { trendAnalysis, tradeStrength, ms } = result
-        set({
-          trendAnalysis, tradeStrength,
-          ceScore: ms.ceScore, peScore: ms.peScore,
-          prediction1h: ms.prediction1h, predictionDetail: ms.predictionDetail,
-          noTradeReason: ms.noTradeReason,
-          timeMultiplier: ms.timeMultiplier,
-          scoreBreakdown: ms.breakdown,
-        })
-      }
+      const r = recompute(quote, candles, optionChain, pivotPoints, nifty50Breadth)
+      if (r) set({
+        trendAnalysis: r.trendAnalysis, tradeStrength: r.tradeStrength, entryQuality: r.entryQuality,
+        ceScore: r.ms.ceScore, peScore: r.ms.peScore,
+        prediction1h: r.ms.prediction1h, predictionDetail: r.ms.predictionDetail,
+        noTradeReason: r.ms.noTradeReason, timeMultiplier: r.ms.timeMultiplier,
+        scoreBreakdown: r.ms.breakdown,
+      })
     }
   },
 
@@ -297,9 +286,8 @@ export const useMarketStore = create<MarketState>((set, get) => ({
       const { candles, quote } = get()
       if (candles.length >= 2) {
         const patterns = detectPatterns(candles)
-        const spot = quote?.spot ?? candles[candles.length - 1].close
-        const paSetup = buildPriceActionSetup(candles, patterns, spot)
-        set({ paSetup })
+        const spot     = quote?.spot ?? candles[candles.length - 1].close
+        set({ paSetup: buildPriceActionSetup(candles, patterns, spot) })
       }
     } else {
       set({ paSetup: null })

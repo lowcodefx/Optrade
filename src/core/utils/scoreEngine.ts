@@ -6,8 +6,8 @@ export interface ScoreBreakdown {
 }
 
 export interface MarketScore {
-  ceScore: number   // 0–1000 (after time multiplier)
-  peScore: number   // 0–1000
+  ceScore: number
+  peScore: number
   prediction1h: 'BULLISH' | 'BEARISH' | 'SIDEWAYS' | 'NEUTRAL' | 'NO_TRADE'
   predictionDetail: string
   noTradeReason?: string
@@ -24,7 +24,7 @@ interface ScoreParams {
   rsi: number
   adx: number
   pcr: number
-  breadth: number   // 0–100 pct
+  breadth: number
   vix: number
   lastCandleGreen: boolean
   volumeAboveAvg: boolean
@@ -35,43 +35,51 @@ interface ScoreParams {
   strongBullCount?: number
   strongBearCount?: number
 
-  // Market Structure (Factor 10)
+  // Market Structure: key price levels
   yesterdayHigh?: number
   yesterdayLow?: number
-  openingRangeHigh?: number   // high of 9:15–9:25 candles
-  openingRangeLow?: number    // low of 9:15–9:25 candles
-  isHigherHigh?: boolean      // recent candles making higher highs
+  openingRangeHigh?: number
+  openingRangeLow?: number
+  isHigherHigh?: boolean
   isHigherLow?: boolean
   isLowerHigh?: boolean
   isLowerLow?: boolean
 
-  // Multi-Timeframe (Factor 11) — optional; 0 pts contributed if absent
+  // Market Structure: pivot points for S/R sub-factor
+  pivotPP?: number
+  pivotR1?: number
+  pivotR2?: number
+  pivotS1?: number
+  pivotS2?: number
+
+  // OI: strikes with maximum call and put open interest
+  maxCEOIStrike?: number
+  maxPEOIStrike?: number
+
+  // Multi-Timeframe
   trend15m?: 'bull' | 'bear' | 'neutral'
   trend1h?: 'bull' | 'bear' | 'neutral'
 
-  // OI Change Analysis (Factor 5) — enhances PCR scoring
-  ceOIChangeTotal?: number    // sum of CE oiChange across all strikes
-  peOIChangeTotal?: number    // sum of PE oiChange across all strikes
+  // OI Change totals across all strikes in chain
+  ceOIChangeTotal?: number
+  peOIChangeTotal?: number
 
-  // Time of day (IST) — used for multiplier, not a scored factor
+  // Time of day (IST) for multiplier
   hour?: number
   minute?: number
 }
 
-// ─── Time-of-day multiplier ───────────────────────────────────────────────
-// Applied to final raw scores; does not add or subtract points directly.
-// Markets have distinct personality at different times of day.
 function getTimeMultiplier(hour?: number, minute?: number): number {
   if (hour === undefined || minute === undefined) return 1.0
   const t = hour * 60 + minute
-  if (t < 9 * 60 + 25) return 0.80         // 9:15–9:25  opening noise
-  if (t < 9 * 60 + 45) return 0.90         // 9:25–9:45  settling
-  if (t < 11 * 60)     return 1.00         // 9:45–11:00 prime trend window
-  if (t < 12 * 60)     return 0.90         // 11:00–12:00 momentum fading
-  if (t < 13 * 60 + 30) return 0.75        // 12:00–1:30  lunch lull
-  if (t < 14 * 60)     return 0.85         // 1:30–2:00   recovery
-  if (t < 15 * 60 + 15) return 1.00        // 2:00–3:15   afternoon breakout window
-  return 0.85                               // 3:15+       closing / expiry
+  if (t < 9 * 60 + 25)  return 0.80   // 9:15–9:25  opening noise
+  if (t < 9 * 60 + 45)  return 0.90   // 9:25–9:45  settling
+  if (t < 11 * 60)      return 1.00   // 9:45–11:00 prime trend window
+  if (t < 12 * 60)      return 0.90   // 11:00–12:00
+  if (t < 13 * 60 + 30) return 0.75   // 12:00–1:30  lunch lull
+  if (t < 14 * 60)      return 0.85   // 1:30–2:00   recovering
+  if (t < 15 * 60 + 15) return 1.00   // 2:00–3:15   afternoon breakout
+  return 0.85                          // 3:15+       closing
 }
 
 export function calculateMarketScore(p: ScoreParams): MarketScore {
@@ -83,80 +91,104 @@ export function calculateMarketScore(p: ScoreParams): MarketScore {
   const partialBull = !emaBull && !emaBear && p.ema9 > p.ema20
   const partialBear = !emaBull && !emaBear && p.ema9 < p.ema20
 
-  // ── 1. EMA Stack — 175 pts ───────────────────────────────────────────────
-  // Full stack (3 EMAs aligned) = full pts. Partial (EMA9/20 aligned) = 40%.
+  // ── 1. EMA Stack — 175 pts ────────────────────────────────────────────────
   const cEMA = emaBull ? 175 : partialBull ? 0.4 * 175 : 0
   const pEMA = emaBear ? 175 : partialBear ? 0.4 * 175 : 0
   bd.push({ factor: 'EMA Stack', cePoints: Math.round(cEMA), pePoints: Math.round(pEMA), maxPoints: 175 })
   ce += cEMA; pe += pEMA
 
-  // ── 2. VWAP Position — 140 pts ───────────────────────────────────────────
-  // Base 60% for being on the right side; extra 40% scales with distance.
+  // ── 2. VWAP Position — 140 pts ────────────────────────────────────────────
   const vwapDist = Math.min(Math.abs(p.spot - p.vwap) / p.vwap * 100 / 0.5, 1)
   const cVWAP = p.spot > p.vwap ? 140 * (0.6 + 0.4 * vwapDist) : 0
   const pVWAP = p.spot < p.vwap ? 140 * (0.6 + 0.4 * vwapDist) : 0
   bd.push({ factor: 'VWAP', cePoints: Math.round(cVWAP), pePoints: Math.round(pVWAP), maxPoints: 140 })
   ce += cVWAP; pe += pVWAP
 
-  // ── 3. RSI Momentum — 110 pts ────────────────────────────────────────────
-  // Linear scale from 50 → 70 (CE) or 50 → 30 (PE). Halved in extreme zones.
+  // ── 3. RSI Momentum — 110 pts ─────────────────────────────────────────────
   const cRSI = p.rsi >= 50 ? Math.min((p.rsi - 50) / 20, 1) * 110 * (p.rsi < 75 ? 1 : 0.5) : 0
   const pRSI = p.rsi <= 50 ? Math.min((50 - p.rsi) / 20, 1) * 110 * (p.rsi > 25 ? 1 : 0.5) : 0
   bd.push({ factor: 'RSI', cePoints: Math.round(cRSI), pePoints: Math.round(pRSI), maxPoints: 110 })
   ce += cRSI; pe += pRSI
 
   // ── 4. ADX Trend Strength — 75 pts ───────────────────────────────────────
-  // ADX measures trend intensity (not direction). Direction comes from EMA stack.
   const adxStr = Math.min(Math.max(p.adx - 20, 0) / 30, 1)
   const cADX = emaBull ? adxStr * 75 : (emaBear ? 0 : adxStr * 22)
   const pADX = emaBear ? adxStr * 75 : (emaBull ? 0 : adxStr * 22)
   bd.push({ factor: 'ADX', cePoints: Math.round(cADX), pePoints: Math.round(pADX), maxPoints: 75 })
   ce += cADX; pe += pADX
 
-  // ── 5. OI Change Analysis — 100 pts ──────────────────────────────────────
-  // When live OI change data is available: weight buildup/covering patterns.
-  // Fallback: pure PCR scoring.
-  let cOI = 0, pOI = 0
+  // ── 5–8. OI Change Analysis — 100 pts total (4 sub-factors × 25) ─────────
   const hasOI = p.ceOIChangeTotal !== undefined && p.peOIChangeTotal !== undefined
+  const ceC   = hasOI ? p.ceOIChangeTotal! : 0
+  const peC   = hasOI ? p.peOIChangeTotal! : 0
+  const scale = 500_000   // 5L contracts = meaningful OI move
+
+  // 5. Call OI Change (25pts) — call writing (CE↑) = bearish; covering (CE↓) = bullish
+  let cCallOI = 0, pCallOI = 0
   if (hasOI) {
-    const ceC = p.ceOIChangeTotal!
-    const peC = p.peOIChangeTotal!
-    const scale = 1_000_000   // 10L contracts = full magnitude score
-    const putBuildup    = Math.min(Math.max(peC, 0) / scale, 1)   // PE OI up = bullish hedge
-    const callBuildup   = Math.min(Math.max(ceC, 0) / scale, 1)   // CE OI up = resistance building
-    const callCovering  = Math.min(Math.max(-ceC, 0) / scale, 1)  // CE OI down + price up = shorts exiting
-    const putCovering   = Math.min(Math.max(-peC, 0) / scale, 1)  // PE OI down + price down = longs exiting
-
-    cOI = putBuildup * 60 + callCovering * 20
-        + (p.pcr >= 1.0 ? Math.min((p.pcr - 1.0) / 0.5, 1) * 20 : 0)
-    pOI = callBuildup * 60 + putCovering * 20
-        + (p.pcr <= 1.0 ? Math.min((1.0 - p.pcr) / 0.5, 1) * 20 : 0)
+    if (ceC > 0) pCallOI = Math.min(Math.round(ceC / scale * 25), 25)   // call writing → PE
+    else         cCallOI = Math.min(Math.round(-ceC / scale * 15), 15)   // call covering → CE
   } else {
-    // No OI change data — fall back to PCR only
-    cOI = p.pcr >= 1.0 ? Math.min((p.pcr - 1.0) / 0.5, 1) * 80 + 20 : 0
-    pOI = p.pcr <= 1.0 ? Math.min((1.0 - p.pcr) / 0.5, 1) * 100 : 0
+    cCallOI = p.pcr >= 1.0 ? Math.round(Math.min((p.pcr - 1.0) / 0.5, 1) * 15) : 0
+    pCallOI = p.pcr <= 1.0 ? Math.round(Math.min((1.0 - p.pcr) / 0.5, 1) * 25) : 0
   }
-  cOI = Math.min(Math.round(cOI), 100)
-  pOI = Math.min(Math.round(pOI), 100)
-  bd.push({ factor: 'OI Analysis', cePoints: cOI, pePoints: pOI, maxPoints: 100 })
-  ce += cOI; pe += pOI
+  bd.push({ factor: 'OI: Call Change', cePoints: cCallOI, pePoints: pCallOI, maxPoints: 25 })
+  ce += cCallOI; pe += pCallOI
 
-  // ── 6. VIX — 60 pts ──────────────────────────────────────────────────────
+  // 6. Put OI Change (25pts) — put writing (PE↑) = bullish; covering (PE↓) = bearish
+  let cPutOI = 0, pPutOI = 0
+  if (hasOI) {
+    if (peC > 0) cPutOI = Math.min(Math.round(peC / scale * 25), 25)    // put writing → CE
+    else         pPutOI = Math.min(Math.round(-peC / scale * 15), 15)    // put covering → PE
+  } else {
+    cPutOI = p.pcr >= 1.0 ? Math.round(Math.min((p.pcr - 1.0) / 0.5, 1) * 25) : 0
+    pPutOI = p.pcr <= 1.0 ? Math.round(Math.min((1.0 - p.pcr) / 0.5, 1) * 15) : 0
+  }
+  bd.push({ factor: 'OI: Put Change', cePoints: cPutOI, pePoints: pPutOI, maxPoints: 25 })
+  ce += cPutOI; pe += pPutOI
+
+  // 7. Build-up Pattern (25pts) — net flow: puts outweigh calls = bullish
+  let cBuild = 0, pBuild = 0
+  if (hasOI) {
+    const netBull = peC - ceC   // positive = more puts written than calls
+    if (netBull > 0) cBuild = Math.min(Math.round(netBull / (scale * 2) * 25), 25)
+    else             pBuild = Math.min(Math.round(-netBull / (scale * 2) * 25), 25)
+  }
+  bd.push({ factor: 'OI: Build-up', cePoints: cBuild, pePoints: pBuild, maxPoints: 25 })
+  ce += cBuild; pe += pBuild
+
+  // 8. OI S/R Shift (25pts) — max OI strike positions + PCR
+  let cOISR = 0, pOISR = 0
+  if (p.maxPEOIStrike !== undefined && p.maxCEOIStrike !== undefined) {
+    if (p.maxPEOIStrike < p.spot)  cOISR += 12   // put wall below spot = support → bullish
+    if (p.maxPEOIStrike > p.spot)  pOISR += 12   // put wall above spot = hedge → bearish
+    if (p.maxCEOIStrike < p.spot)  cOISR += 8    // blown past call wall = bullish
+    if (p.maxCEOIStrike > p.spot)  pOISR += 5    // call wall overhead = resistance
+  }
+  // PCR as supplement
+  cOISR += p.pcr >= 1.0 ? Math.round(Math.min((p.pcr - 1.0) / 0.5, 1) * 5) : 0
+  pOISR += p.pcr <= 1.0 ? Math.round(Math.min((1.0 - p.pcr) / 0.5, 1) * 5) : 0
+  cOISR = Math.min(cOISR, 25)
+  pOISR = Math.min(pOISR, 25)
+  bd.push({ factor: 'OI: S/R Shift', cePoints: cOISR, pePoints: pOISR, maxPoints: 25 })
+  ce += cOISR; pe += pOISR
+
+  // ── 9. VIX — 60 pts ──────────────────────────────────────────────────────
   const cVIX = p.vix < 15 ? 60 : p.vix < 20 ? 60 * (20 - p.vix) / 5 : 0
   const pVIX = p.vix > 20 ? Math.min((p.vix - 20) / 5, 1) * 60 : p.vix > 15 ? 60 * (p.vix - 15) / 5 : 0
   bd.push({ factor: 'VIX', cePoints: Math.round(cVIX), pePoints: Math.round(pVIX), maxPoints: 60 })
   ce += cVIX; pe += pVIX
 
-  // ── 7. Market Breadth (NIFTY 50) — 60 pts ───────────────────────────────
+  // ── 10. Market Breadth — 60 pts ───────────────────────────────────────────
   let cBreadth: number, pBreadth: number
   if (p.nifty50Bullish !== undefined && p.nifty50Bearish !== undefined) {
     const total = (p.nifty50Bullish + p.nifty50Bearish) || 50
     const bullPct = (p.nifty50Bullish / total) * 100
     const bearPct = (p.nifty50Bearish / total) * 100
-    const strongBullBonus = p.strongBullCount ? (p.strongBullCount / total) * 15 : 0
-    const strongBearBonus = p.strongBearCount ? (p.strongBearCount / total) * 15 : 0
-    cBreadth = bullPct > 50 ? Math.min((bullPct - 50) / 20, 1) * 45 + strongBullBonus : 0
-    pBreadth = bearPct > 50 ? Math.min((bearPct - 50) / 20, 1) * 45 + strongBearBonus : 0
+    const sBullBonus = p.strongBullCount ? (p.strongBullCount / total) * 15 : 0
+    const sBearBonus = p.strongBearCount ? (p.strongBearCount / total) * 15 : 0
+    cBreadth = bullPct > 50 ? Math.min((bullPct - 50) / 20, 1) * 45 + sBullBonus : 0
+    pBreadth = bearPct > 50 ? Math.min((bearPct - 50) / 20, 1) * 45 + sBearBonus : 0
   } else {
     cBreadth = p.breadth > 50 ? Math.min((p.breadth - 50) / 20, 1) * 60 : 0
     pBreadth = p.breadth < 50 ? Math.min((50 - p.breadth) / 20, 1) * 60 : 0
@@ -164,79 +196,101 @@ export function calculateMarketScore(p: ScoreParams): MarketScore {
   bd.push({ factor: 'N50 Breadth', cePoints: Math.round(cBreadth), pePoints: Math.round(pBreadth), maxPoints: 60 })
   ce += cBreadth; pe += pBreadth
 
-  // ── 8. Volume — 35 pts ───────────────────────────────────────────────────
+  // ── 11. Volume — 35 pts ───────────────────────────────────────────────────
   const cVol = p.volumeAboveAvg && emaBull ? 35 : p.volumeAboveAvg ? 17 : 0
   const pVol = p.volumeAboveAvg && emaBear ? 35 : p.volumeAboveAvg ? 17 : 0
   bd.push({ factor: 'Volume', cePoints: Math.round(cVol), pePoints: Math.round(pVol), maxPoints: 35 })
   ce += cVol; pe += pVol
 
-  // ── 9. Last Candle Direction — 10 pts ────────────────────────────────────
+  // ── 12. Last Candle — 10 pts ──────────────────────────────────────────────
   bd.push({ factor: 'Candle', cePoints: p.lastCandleGreen ? 10 : 0, pePoints: !p.lastCandleGreen ? 10 : 0, maxPoints: 10 })
   ce += p.lastCandleGreen ? 10 : 0
   pe += !p.lastCandleGreen ? 10 : 0
 
-  // ── 10. Market Structure — 135 pts ───────────────────────────────────────
-  // Where is price relative to key structural levels?
-  // This answers: are we at resistance (bad CE entry) or at support (bad PE entry)?
-  let cStr = 0, pStr = 0
+  // ── 13–16. Market Structure — 135 pts total (4 sub-factors) ──────────────
 
-  // Yesterday's high/low (55 pts each side)
+  // 13. Previous Day High/Low — 35 pts
+  let cPDH = 0, pPDL = 0
   if (p.yesterdayHigh !== undefined && p.yesterdayLow !== undefined) {
-    if (p.spot > p.yesterdayHigh) cStr += 55       // breakout above prev high = strong bull structure
-    else if (p.spot < p.yesterdayLow) pStr += 55   // breakdown below prev low = strong bear structure
-    // Approaching levels — softer signal
-    else if (p.spot > p.yesterdayHigh * 0.997) pStr += 15   // near resistance, risky for CE
-    else if (p.spot < p.yesterdayLow * 1.003) cStr += 15    // near support, risky for PE
+    if (p.spot > p.yesterdayHigh) cPDH = 35
+    else if (p.spot < p.yesterdayLow) pPDL = 35
+    // Near yesterday high/low but not through — slight signal
+    else if (p.spot >= p.yesterdayHigh * 0.998) cPDH = 10   // testing PDH
+    else if (p.spot <= p.yesterdayLow * 1.002) pPDL = 10    // testing PDL
   }
+  bd.push({ factor: 'Structure: PDH/PDL', cePoints: cPDH, pePoints: pPDL, maxPoints: 35 })
+  ce += cPDH; pe += pPDL
 
-  // Opening range breakout/breakdown (40 pts)
+  // 14. Opening Range Breakout — 30 pts
+  let cORB = 0, pORB = 0
   if (p.openingRangeHigh !== undefined && p.openingRangeLow !== undefined) {
-    if (p.spot > p.openingRangeHigh) cStr += 40    // above opening range = bullish breakout
-    else if (p.spot < p.openingRangeLow) pStr += 40 // below opening range = bearish breakdown
-    // Inside opening range — slight dampening (handled by not awarding pts)
+    if (p.spot > p.openingRangeHigh)      cORB = 30
+    else if (p.spot < p.openingRangeLow)  pORB = 30
+    // Inside opening range: no pts (indecision)
   }
+  bd.push({ factor: 'Structure: ORB', cePoints: cORB, pePoints: pORB, maxPoints: 30 })
+  ce += cORB; pe += pORB
 
-  // Swing structure: Higher Highs + Higher Lows = bull trend intact (40 pts)
-  if (p.isHigherHigh && p.isHigherLow) cStr += 40
-  else if (p.isLowerHigh && p.isLowerLow) pStr += 40
-  else if (p.isHigherHigh) cStr += 20
-  else if (p.isLowerLow) pStr += 20
+  // 15. Support / Resistance Position — 35 pts (pivot levels)
+  let cSR = 0, pSR = 0
+  if (p.pivotPP !== undefined && p.pivotR1 !== undefined && p.pivotS1 !== undefined) {
+    if (p.spot > p.pivotR1) cSR = 35                         // above R1 = bull breakout
+    else if (p.spot > p.pivotPP) cSR = 20                   // above PP but below R1 = mild bull
+    else if (p.spot < p.pivotS1) pSR = 35                   // below S1 = bear breakdown
+    else pSR = 20                                             // below PP but above S1 = mild bear
 
-  cStr = Math.min(Math.round(cStr), 135)
-  pStr = Math.min(Math.round(pStr), 135)
-  bd.push({ factor: 'Market Structure', cePoints: cStr, pePoints: pStr, maxPoints: 135 })
-  ce += cStr; pe += pStr
-
-  // ── 11. Multi-Timeframe Confirmation — 100 pts ───────────────────────────
-  // Higher timeframes override lower timeframes. 5-min bull against 1h bear = no trade.
-  // If data unavailable, factor contributes 0 pts (max possible drops to 900).
-  let cMTF = 0, pMTF = 0
-  const has15m = p.trend15m !== undefined
-  const has1h  = p.trend1h  !== undefined
-
-  if (has15m) {
-    if (p.trend15m === 'bull') cMTF += 50
-    else if (p.trend15m === 'bear') pMTF += 50
-    // neutral contributes 0 — no higher-TF confirmation
+    // Approaching resistance: deduct for CE (buying near resistance is risky)
+    if (p.pivotR1 > 0 && Math.abs(p.spot - p.pivotR1) / p.pivotR1 < 0.002) {
+      cSR = Math.max(cSR - 15, 0); pSR = Math.min(pSR + 10, 35)
+    }
+    // Approaching support: deduct for PE
+    if (p.pivotS1 > 0 && Math.abs(p.spot - p.pivotS1) / p.pivotS1 < 0.002) {
+      pSR = Math.max(pSR - 15, 0); cSR = Math.min(cSR + 10, 35)
+    }
   }
-  if (has1h) {
-    if (p.trend1h === 'bull') cMTF += 50
-    else if (p.trend1h === 'bear') pMTF += 50
+  bd.push({ factor: 'Structure: S/R', cePoints: Math.round(cSR), pePoints: Math.round(pSR), maxPoints: 35 })
+  ce += cSR; pe += pSR
+
+  // 16. HH/HL — LH/LL Trend Structure — 35 pts
+  let cHHHL = 0, pLHLL = 0
+  if (p.isHigherHigh && p.isHigherLow)     cHHHL = 35
+  else if (p.isLowerHigh && p.isLowerLow)  pLHLL = 35
+  else if (p.isHigherHigh)                 cHHHL = 20
+  else if (p.isLowerLow)                   pLHLL = 20
+  bd.push({ factor: 'Structure: HH/HL', cePoints: cHHHL, pePoints: pLHLL, maxPoints: 35 })
+  ce += cHHHL; pe += pLHLL
+
+  // ── 17–19. Multi-Timeframe — 100 pts total (3 sub-factors) ───────────────
+
+  // 17. 5m vs 15m Alignment — 40 pts
+  let cMTF5 = 0, pMTF5 = 0
+  if (p.trend15m) {
+    const bull15m = p.trend15m === 'bull', bear15m = p.trend15m === 'bear'
+    if (emaBull && bull15m)  cMTF5 = 40
+    else if (emaBear && bear15m) pMTF5 = 40
+    // 5m and 15m disagree — small counter-trend pts
+    else if (emaBull && bear15m) pMTF5 = 10
+    else if (emaBear && bull15m) cMTF5 = 10
   }
+  bd.push({ factor: 'MTF: 5m vs 15m', cePoints: cMTF5, pePoints: pMTF5, maxPoints: 40 })
+  ce += cMTF5; pe += pMTF5
 
-  // Penalty: lower TF fighting higher TFs (e.g. 5m bull but 1h bear)
-  if (emaBull && p.trend1h === 'bear') { cMTF -= 20; pMTF += 10 }
-  if (emaBear && p.trend1h === 'bull') { pMTF -= 20; cMTF += 10 }
+  // 18. 15m Trend — 35 pts
+  let cMTF15 = 0, pMTF15 = 0
+  if (p.trend15m === 'bull')  cMTF15 = 35
+  else if (p.trend15m === 'bear') pMTF15 = 35
+  bd.push({ factor: 'MTF: 15m Trend', cePoints: cMTF15, pePoints: pMTF15, maxPoints: 35 })
+  ce += cMTF15; pe += pMTF15
 
-  cMTF = Math.min(Math.max(Math.round(cMTF), 0), 100)
-  pMTF = Math.min(Math.max(Math.round(pMTF), 0), 100)
-  bd.push({ factor: 'Multi-TF', cePoints: cMTF, pePoints: pMTF, maxPoints: 100 })
-  ce += cMTF; pe += pMTF
+  // 19. 1h Trend — 25 pts
+  let cMTF1h = 0, pMTF1h = 0
+  if (p.trend1h === 'bull')  cMTF1h = 25
+  else if (p.trend1h === 'bear') pMTF1h = 25
+  bd.push({ factor: 'MTF: 1h Trend', cePoints: cMTF1h, pePoints: pMTF1h, maxPoints: 25 })
+  ce += cMTF1h; pe += pMTF1h
 
   // ── Time-of-day multiplier ────────────────────────────────────────────────
   const timeMultiplier = getTimeMultiplier(p.hour, p.minute)
-  const rawCE = ce
-  const rawPE = pe
   ce = ce * timeMultiplier
   pe = pe * timeMultiplier
 
@@ -250,9 +304,9 @@ export function calculateMarketScore(p: ScoreParams): MarketScore {
   if (ceScore < 350 && peScore < 350) {
     noTradeReason = 'Both CE and PE scores below 350 — no directional conviction in either direction.'
   } else if (gap < 80 && ceScore < 550 && peScore < 550) {
-    noTradeReason = `Mixed signals — CE ${ceScore} vs PE ${peScore} gap only ${gap}. Wait for a clear edge.`
+    noTradeReason = `Mixed signals — CE ${ceScore} vs PE ${peScore} (gap ${gap}). Wait for a clear edge.`
   } else if (p.vix !== undefined && p.vix > 25) {
-    noTradeReason = `VIX ${p.vix.toFixed(1)} is elevated. Option premiums are inflated — risk/reward is unfavourable.`
+    noTradeReason = `VIX ${p.vix.toFixed(1)} is elevated. Option premiums are inflated — risk/reward unfavourable.`
   } else if (timeMultiplier < 0.80) {
     noTradeReason = 'Low-probability time window (9:15–9:25 opening noise). Wait for the market to settle.'
   }
@@ -266,22 +320,22 @@ export function calculateMarketScore(p: ScoreParams): MarketScore {
     predictionDetail = noTradeReason
   } else if (ceScore >= 700 && ceScore > peScore + 100) {
     prediction1h = 'BULLISH'
-    predictionDetail = `Strong bull — +100 to +200pt rise likely`
+    predictionDetail = 'Strong bull — +100 to +200pt rise likely'
   } else if (peScore >= 700 && peScore > ceScore + 100) {
     prediction1h = 'BEARISH'
-    predictionDetail = `Strong bear — 100 to 200pt fall likely`
+    predictionDetail = 'Strong bear — 100 to 200pt fall likely'
   } else if (ceScore >= 550 && ceScore > peScore) {
     prediction1h = 'BULLISH'
-    predictionDetail = `Mild bull bias — cautious CE entry, confirm with structure`
+    predictionDetail = 'Mild bull bias — cautious CE entry, confirm with structure'
   } else if (peScore >= 550 && peScore > ceScore) {
     prediction1h = 'BEARISH'
-    predictionDetail = `Mild bear bias — cautious PE entry, confirm with structure`
+    predictionDetail = 'Mild bear bias — cautious PE entry, confirm with structure'
   } else if (gap < 100) {
     prediction1h = 'SIDEWAYS'
-    predictionDetail = `Mixed signals — range-bound ±50pt expected`
+    predictionDetail = 'Mixed signals — range-bound ±50pt expected'
   } else {
     prediction1h = 'NEUTRAL'
-    predictionDetail = `No clear signal — wait for confirmation`
+    predictionDetail = 'No clear signal — wait for confirmation'
   }
 
   return { ceScore, peScore, prediction1h, predictionDetail, noTradeReason, timeMultiplier, breakdown: bd }
