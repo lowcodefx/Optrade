@@ -112,6 +112,8 @@ export function OrderEntry() {
   const strengthScore = tradeStrength?.score ?? 0
   const eqScore       = entryQuality?.score ?? 0
 
+  const [orderError, setOrderError] = useState<string | null>(null)
+
   const mutation = useMutation({
     mutationFn: () => tradingService.placeOrder({
       symbol: 'NIFTY', strike, optionType,
@@ -122,10 +124,16 @@ export function OrderEntry() {
       stopLoss: stopLoss || undefined,
     }),
     onSuccess: (res) => {
+      setOrderError(null)
       setLastOrderMessage(res.message)
       setToastVisible(true)
       qc.invalidateQueries({ queryKey: ['positions'] })
       setTimeout(() => setToastVisible(false), 4000)
+    },
+    onError: (err) => {
+      const msg = err instanceof Error ? err.message : 'Order failed'
+      const is403 = msg.includes('403') || msg.includes('Forbidden')
+      setOrderError(is403 ? 'Session expired — go to Settings and re-authenticate with Zerodha.' : msg)
     },
     onSettled: () => setIsSubmitting(false),
   })
@@ -268,6 +276,13 @@ export function OrderEntry() {
         {toastVisible && lastOrderMessage && (
           <div className="bg-[#0d2b0d] border border-[#22c55e] rounded p-2 text-[#22c55e] text-[10px]">
             ✓ {lastOrderMessage}
+          </div>
+        )}
+
+        {orderError && (
+          <div className="flex items-start gap-1.5 bg-[#2b0d0d] border border-[#ef4444]/60 rounded px-2 py-2">
+            <XCircle size={11} className="text-[#ef4444] mt-0.5 shrink-0" />
+            <span className="text-[9px] text-[#ef4444]">{orderError}</span>
           </div>
         )}
       </div>

@@ -4,11 +4,11 @@ import type { OptionStrike } from '@/core/types'
 
 const tooltip = {
   title: 'Smart Option Selection',
-  what: 'Recommends options with LTP in ₹180–200 range (ATM/ITM) for optimal premium and delta.',
-  why: '₹180–200 options strike the right balance: high enough delta to gain value quickly, low enough to limit risk.',
-  how: 'Click any card to auto-fill Order Entry with limit price and SL (entry−20).',
-  bullish: 'CE options in ₹180–200 range for bullish setups.',
-  bearish: 'PE options in ₹180–200 range for bearish setups.',
+  what: 'Recommends options with LTP in ₹180–200 range aligned with market prediction.',
+  why: '₹180–200 options have the right delta balance: gain value quickly without excessive premium.',
+  how: 'Click any card to auto-fill Order Entry. Shows CE options when BULLISH, PE when BEARISH.',
+  bullish: 'Buy CE options in ₹180–200 range.',
+  bearish: 'Buy PE options in ₹180–200 range.',
 }
 
 const TARGET = 190
@@ -17,7 +17,7 @@ const IDEAL_HIGH = 200
 
 interface Candidate { strike: OptionStrike; side: 'ce' | 'pe'; dist: number; inRange: boolean }
 
-function buildCandidates(strikes: OptionStrike[], side: 'ce' | 'pe'): Candidate[] {
+function buildCandidates(strikes: OptionStrike[], side: 'ce' | 'pe', count = 4): Candidate[] {
   return strikes
     .map(s => {
       const ltp = s[side].ltp
@@ -25,7 +25,7 @@ function buildCandidates(strikes: OptionStrike[], side: 'ce' | 'pe'): Candidate[
     })
     .filter(c => c.strike[side].ltp > 0)
     .sort((a, b) => a.dist - b.dist)
-    .slice(0, 2)
+    .slice(0, count)
 }
 
 interface CardProps { c: Candidate }
@@ -58,18 +58,33 @@ function OptionCard({ c }: CardProps) {
 }
 
 export function OptionSelection() {
-  const chain = useMarketStore(s => s.optionChain)
+  const chain       = useMarketStore(s => s.optionChain)
+  const prediction  = useMarketStore(s => s.prediction1h)
   if (!chain) return null
 
-  const ceCandidates = buildCandidates(chain.strikes, 'ce')
-  const peCandidates = buildCandidates(chain.strikes, 'pe')
-  const all = [...ceCandidates, ...peCandidates]
+  // Align suggested options with the current market prediction
+  let all: Candidate[]
+  let hint: string
+
+  if (prediction === 'BULLISH') {
+    all  = buildCandidates(chain.strikes, 'ce', 4)
+    hint = 'CE options (BULLISH signal)'
+  } else if (prediction === 'BEARISH') {
+    all  = buildCandidates(chain.strikes, 'pe', 4)
+    hint = 'PE options (BEARISH signal)'
+  } else {
+    // NEUTRAL / SIDEWAYS / NO_TRADE — show 2 from each side
+    all  = [...buildCandidates(chain.strikes, 'ce', 2), ...buildCandidates(chain.strikes, 'pe', 2)]
+    hint = 'CE + PE (no clear bias)'
+  }
 
   if (all.length === 0) return null
 
   return (
     <SectionCard title="Smart Option Selection" tooltip={tooltip} collapsible defaultOpen={true}>
-      <div className="text-[9px] text-[#475569] mb-2">Showing options closest to ₹{TARGET} LTP (ideal ₹{IDEAL_LOW}–{IDEAL_HIGH})</div>
+      <div className="text-[9px] text-[#475569] mb-2">
+        Closest to ₹{TARGET} LTP (ideal ₹{IDEAL_LOW}–{IDEAL_HIGH}) · {hint}
+      </div>
       <div className="grid grid-cols-2 gap-2">
         {all.map(c => (
           <OptionCard key={`${c.strike.strike}-${c.side}`} c={c} />

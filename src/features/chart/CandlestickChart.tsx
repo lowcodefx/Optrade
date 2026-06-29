@@ -39,7 +39,7 @@ interface Props {
   sl?: number
   target?: number
   pivotPoints?: PivotPoints | null
-  height?: number
+  height?: number | string
 }
 
 const PIVOT_LINES = [
@@ -50,7 +50,7 @@ const PIVOT_LINES = [
   { key: 's2' as keyof PivotPoints, label: 'S2', color: '#ef4444', dash: '3 4' },
 ]
 
-export function CandlestickChart({ candles, entry, sl, target, pivotPoints, height = 220 }: Props) {
+export function CandlestickChart({ candles, entry, sl, target, pivotPoints, height }: Props) {
   if (candles.length === 0) return null
 
   const data = candles.map((c, i) => ({ ...c, index: i }))
@@ -59,7 +59,7 @@ export function CandlestickChart({ candles, entry, sl, target, pivotPoints, heig
   const priceMax = Math.max(...allPrices) + 20
 
   return (
-    <div style={{ height }}>
+    <div style={{ height: height ?? '100%' }}>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 5, right: 50, bottom: 5, left: 0 }}>
           <CartesianGrid strokeDasharray="2 6" stroke="#0f1f35" vertical={false} />
