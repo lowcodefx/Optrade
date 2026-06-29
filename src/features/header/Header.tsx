@@ -132,18 +132,18 @@ const [time, setTime] = useState(new Date())
 
         <div className="w-px h-3 bg-[#1e293b]" />
 
-        {/* CE / PE scores + prediction */}
+        {/* CE / PE scores + prediction — fixed-width badges so layout never shifts */}
         {hasScores && (
           <div className="flex items-center gap-1.5">
-            <div className="flex items-center gap-1 bg-[#0d2b0d] border border-[#22c55e]/30 rounded px-1.5 py-0.5">
+            <div className="flex items-center justify-between w-[68px] bg-[#0d2b0d] border border-[#22c55e]/30 rounded px-1.5 py-0.5">
               <span className="text-[#22c55e] text-[9px] font-bold">CE</span>
-              <span className="text-[#22c55e] text-xs font-bold">{ceScore}</span>
+              <span className="text-[#22c55e] text-xs font-bold tabular-nums">{ceScore}</span>
             </div>
-            <div className="flex items-center gap-1 bg-[#2b0d0d] border border-[#ef4444]/30 rounded px-1.5 py-0.5">
+            <div className="flex items-center justify-between w-[68px] bg-[#2b0d0d] border border-[#ef4444]/30 rounded px-1.5 py-0.5">
               <span className="text-[#ef4444] text-[9px] font-bold">PE</span>
-              <span className="text-[#ef4444] text-xs font-bold">{peScore}</span>
+              <span className="text-[#ef4444] text-xs font-bold tabular-nums">{peScore}</span>
             </div>
-            <div className={`${pred.bg} border ${pred.border} rounded px-1.5 py-0.5 flex items-center gap-1`}>
+            <div className={`${pred.bg} border ${pred.border} rounded px-1.5 py-0.5 flex items-center justify-between w-[88px]`}>
               <span className={`${pred.text} text-[9px] font-bold`}>
                 {prediction1h === 'BULLISH' ? '↑' : prediction1h === 'BEARISH' ? '↓' : prediction1h === 'SIDEWAYS' ? '↔' : prediction1h === 'NO_TRADE' ? '⊘' : '?'}
               </span>
