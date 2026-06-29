@@ -88,7 +88,7 @@ export type CandlePattern =
   | 'BearishEngulfing'
   | 'Doji'
   | 'Hammer'
-  | 'ShootingStaar'
+  | 'ShootingStar'
   | 'InsideBar'
   | 'EMACrossover'
 
