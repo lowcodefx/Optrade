@@ -102,6 +102,7 @@ export interface PatternResult {
 export interface PriceActionSetup {
   patterns: PatternResult[]
   direction: 'bullish' | 'bearish' | 'neutral'
+  isCounterTrend: boolean
   confidence: number
   entry: number
   sl: number

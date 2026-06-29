@@ -262,11 +262,12 @@ export const useMarketStore = create<MarketState>((set, get) => ({
 
   setCandles: (candles) => {
     set({ candles })
-    const { quote, paEnabled, optionChain, pivotPoints, nifty50Breadth } = get()
+    const { quote, paEnabled, optionChain, pivotPoints, nifty50Breadth, prediction1h } = get()
     if (paEnabled && candles.length >= 2) {
       const patterns = detectPatterns(candles)
       const spot     = quote?.spot ?? candles[candles.length - 1].close
-      set({ paSetup: buildPriceActionSetup(candles, patterns, spot) })
+      const bias     = prediction1h === 'BULLISH' ? 'bullish' : prediction1h === 'BEARISH' ? 'bearish' : undefined
+      set({ paSetup: buildPriceActionSetup(candles, patterns, spot, bias) })
     }
     if (quote && candles.length > 0) {
       const r = recompute(quote, candles, optionChain, pivotPoints, nifty50Breadth)
@@ -283,11 +284,12 @@ export const useMarketStore = create<MarketState>((set, get) => ({
   setPAEnabled: (paEnabled) => {
     set({ paEnabled })
     if (paEnabled) {
-      const { candles, quote } = get()
+      const { candles, quote, prediction1h } = get()
       if (candles.length >= 2) {
         const patterns = detectPatterns(candles)
         const spot     = quote?.spot ?? candles[candles.length - 1].close
-        set({ paSetup: buildPriceActionSetup(candles, patterns, spot) })
+        const bias     = prediction1h === 'BULLISH' ? 'bullish' : prediction1h === 'BEARISH' ? 'bearish' : undefined
+        set({ paSetup: buildPriceActionSetup(candles, patterns, spot, bias) })
       }
     } else {
       set({ paSetup: null })
