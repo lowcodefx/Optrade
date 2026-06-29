@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { usePositions } from '@/core/hooks/useMarketData'
 import { tradingService } from '@/core/services/tradingService'
 import { useQueryClient } from '@tanstack/react-query'
+import { useMarketStore } from '@/core/store'
 import { SectionCard } from '@/components/SectionCard'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 
 const tooltip = {
   title: 'Open Positions',
-  what: 'All currently open option positions with live P&L updating every 3 seconds.',
+  what: 'All currently open option positions with live P&L updating every second.',
   why: 'Real-time P&L visibility helps you manage positions and enforce stop-loss discipline.',
   how: 'Monitor LTP vs Entry. Exit immediately when SL hit. Trail SL when in profit.',
   bullish: 'CE position in profit with expanding premium = strong bullish move, consider trailing SL.',
@@ -16,9 +17,19 @@ const tooltip = {
 
 export function OpenPositions() {
   const { data: positions = [] } = usePositions()
+  const optionChain = useMarketStore(s => s.optionChain)
   const qc = useQueryClient()
   const [exitError, setExitError] = useState<string | null>(null)
   const [exiting, setExiting] = useState<string | null>(null)
+
+  // Resolve live LTP from option chain when available (chain refreshes every 3s,
+  // positions poll every 1s — whichever is fresher wins)
+  function liveLtp(strike: number, optionType: 'CE' | 'PE', fallback: number): number {
+    if (!optionChain) return fallback
+    const row = optionChain.strikes.find(s => s.strike === strike)
+    const chainLtp = row?.[optionType === 'CE' ? 'ce' : 'pe']?.ltp
+    return chainLtp && chainLtp > 0 ? chainLtp : fallback
+  }
 
   async function exit(id: string) {
     setExiting(id)
@@ -49,7 +60,10 @@ export function OpenPositions() {
     }
   }
 
-  const totalPnL = positions.reduce((a, p) => a + p.pnl, 0)
+  const totalPnL = positions.reduce((a, p) => {
+    const ltp = liveLtp(p.strike, p.optionType, p.ltp)
+    return a + (ltp - p.entryPrice) * p.quantity
+  }, 0)
   const totalExposure = positions.reduce((a, p) => a + p.entryPrice * p.quantity, 0)
 
   const posLabel = positions.length > 0
@@ -72,14 +86,17 @@ export function OpenPositions() {
                 </tr>
               </thead>
               <tbody>
-                {positions.map(pos => (
+                {positions.map(pos => {
+                  const ltp = liveLtp(pos.strike, pos.optionType, pos.ltp)
+                  const pnl = (ltp - pos.entryPrice) * pos.quantity
+                  return (
                   <tr key={pos.positionId} className="border-b border-[#0f1f35] hover:bg-[#0a1628] transition-colors">
                     <td className="py-2 px-2 font-medium text-white">NIFTY {pos.strike} {pos.optionType}</td>
                     <td className="py-2 px-2 text-[#94a3b8]">{pos.quantity}</td>
                     <td className="py-2 px-2 text-[#94a3b8]">{formatNumber(pos.entryPrice, 2)}</td>
-                    <td className="py-2 px-2 text-white font-medium">{formatNumber(pos.ltp, 2)}</td>
-                    <td className={`py-2 px-2 text-right font-bold ${pos.pnl >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                      {pos.pnl >= 0 ? '+' : ''}{formatCurrency(pos.pnl)}
+                    <td className="py-2 px-2 text-white font-medium">{formatNumber(ltp, 2)}</td>
+                    <td className={`py-2 px-2 text-right font-bold ${pnl >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+                      {pnl >= 0 ? '+' : ''}{formatCurrency(pnl)}
                     </td>
                     <td className="py-2 px-2 text-right">
                       <button onClick={() => exit(pos.positionId)} disabled={exiting === pos.positionId}
@@ -88,7 +105,8 @@ export function OpenPositions() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

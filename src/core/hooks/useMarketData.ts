@@ -43,8 +43,9 @@ export function usePositions() {
   return useQuery({
     queryKey: ['positions'],
     queryFn: () => tradingService.getPositions(),
-    refetchInterval: 3000,
-    staleTime: 2000,
+    refetchInterval: 1000,
+    refetchIntervalInBackground: true,
+    staleTime: 800,
   })
 }
 
