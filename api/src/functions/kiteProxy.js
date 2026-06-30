@@ -73,7 +73,16 @@ app.http('kite', {
     // Replace '+' with '%20' so 'NSE:NIFTY 50' round-trips correctly.
     const kiteParams = new URLSearchParams()
     for (const [key, value] of request.query.entries()) {
-      if (key !== 'kite_path') kiteParams.append(key, value)
+      if (key === 'kite_path') continue
+      // 'instruments' is a single comma-joined param (e.g. multi-symbol /quote calls)
+      // sent this way to avoid relying on many duplicate same-name query keys
+      // surviving the SWA edge/proxy hop intact. Expand it into Kite's expected
+      // repeated 'i' params only on the server-to-server hop to Kite.
+      if (key === 'instruments') {
+        value.split(',').filter(Boolean).forEach(sym => kiteParams.append('i', sym))
+      } else {
+        kiteParams.append(key, value)
+      }
     }
     const kiteQuery = kiteParams.toString().replace(/\+/g, '%20')
 

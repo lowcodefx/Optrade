@@ -72,9 +72,15 @@ export class ZerodhaService implements ITradingService {
   private breadthCache = 50 // updated by getNifty50Breadth
 
   async getNifty50Breadth(): Promise<Nifty50BreadthResult> {
+    // Sent as one comma-joined param (not 50 duplicate 'i=' keys) — the proxy
+    // expands it into Kite's repeated 'i' params server-side, see kiteProxy.js.
     const data = await kiteGet<Record<string, KiteQuote>>('/quote', {
-      i: NIFTY50_KITE_INSTRUMENTS as unknown as string[],
+      instruments: NIFTY50_KITE_INSTRUMENTS.join(','),
     })
+
+    if (Object.keys(data).length === 0) {
+      throw new Error('Empty /quote response for NIFTY 50 breadth')
+    }
 
     const stocks = NIFTY50_KITE_INSTRUMENTS.map(sym => {
       const q = data[sym]
