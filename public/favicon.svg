@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150">
-  <!-- Transparent background — no rect -->
+  <!-- Brand navy background so the white mark stays visible in browser tabs -->
+  <rect width="200" height="150" rx="28" fill="#0a1628"/>
 
   <!-- "o" ring (left) -->
   <circle cx="65" cy="62" r="42" fill="none" stroke="white" stroke-width="18"/>
