@@ -19,33 +19,28 @@ interface Candidate {
 }
 
 // Pick ATM + nearest ITM strikes for the given side.
-// CE bullish: ATM strike + 3 strikes below spot (deeper ITM = higher premium)
-// PE bearish: ATM strike + 3 strikes above spot
+// CE bullish: strike <= atmStrike, sorted descending (ATM first, then deeper ITM)
+// PE bearish: strike >= atmStrike, sorted ascending (ATM first, then deeper ITM)
 function buildCandidates(
   strikes: OptionStrike[],
   side: 'ce' | 'pe',
   atmStrike: number,
   count = 4,
 ): Candidate[] {
-  // For CE: want strikes <= ATM (ATM, then increasingly ITM going down)
-  // For PE: want strikes >= ATM (ATM, then increasingly ITM going up)
-  const ordered = [...strikes]
-    .filter(s => s[side].ltp >= 0) // include ltp=0 (illiquid) — still show the strike
+  const candidates = [...strikes]
+    .filter(s => side === 'ce' ? s.strike <= atmStrike : s.strike >= atmStrike)
     .sort((a, b) => side === 'ce'
-      ? b.strike - a.strike  // descending: ATM first, then ITM
-      : a.strike - b.strike  // ascending: ATM first, then ITM
+      ? b.strike - a.strike  // descending: ATM (highest qualifying) first
+      : a.strike - b.strike  // ascending: ATM (lowest qualifying) first
     )
+    .slice(0, count)
 
-  // Keep only ATM + ITM side
-  const candidates = ordered.filter(s =>
-    side === 'ce' ? s.strike <= atmStrike + 50 : s.strike >= atmStrike - 50
-  )
-
-  return candidates.slice(0, count).map((s, idx) => {
-    const isATM = s.strike === atmStrike || Math.abs(s.strike - atmStrike) <= 50
-    const label = isATM && idx === 0 ? 'ATM' : `${idx + (isATM ? 0 : 1)} ITM`
-    return { strike: s, side, label, isATM: idx === 0 && isATM }
-  })
+  return candidates.map((s, idx) => ({
+    strike: s,
+    side,
+    label: idx === 0 ? 'ATM' : `${idx} ITM`,
+    isATM: idx === 0,
+  }))
 }
 
 interface CardProps { c: Candidate }
@@ -85,8 +80,10 @@ export function OptionSelection() {
   const prediction = useMarketStore(s => s.prediction1h)
   if (!chain) return null
 
-  const atmStrike = chain.atmStrike
-  const spot      = quote?.spot ?? atmStrike
+  // Derive ATM from live spot every render — chain.atmStrike is stale (set when
+  // the chain was fetched, which may have used the default spotCache of 24500).
+  const spot      = quote?.spot ?? chain.atmStrike
+  const atmStrike = Math.round(spot / 50) * 50
 
   let all: Candidate[]
   let hint: string
