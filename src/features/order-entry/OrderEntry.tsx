@@ -64,7 +64,6 @@ export function OrderEntry() {
     lastOrderMessage, setLastOrderMessage, setIsSubmitting,
   } = useOrderStore()
 
-  const [targetPrice, setTargetPrice] = useState<number>(0)
   const [toastVisible, setToastVisible] = useState(false)
 
   const currentStrikeData = chain?.strikes.find(s => s.strike === strike)
@@ -75,8 +74,7 @@ export function OrderEntry() {
   const entry     = limitPrice || premium
   const risk      = stopLoss && entry ? entry - stopLoss : null
   const autoTarget = risk && risk > 0 ? entry + risk * 2 : 0
-  const displayTarget = targetPrice || autoTarget
-  const rr        = risk && risk > 0 && displayTarget ? (displayTarget - entry) / risk : null
+  const rr        = risk && risk > 0 && autoTarget ? (autoTarget - entry) / risk : null
   const rrOk      = rr === null || rr >= MIN_RR
   const rrLabel   = rr !== null ? `${rr.toFixed(1)}:1` : '—'
   const rrColor   = rr === null ? '#64748b' : rr >= 2 ? '#22c55e' : rr >= MIN_RR ? '#f59e0b' : '#ef4444'
@@ -102,11 +100,11 @@ export function OrderEntry() {
 
   const riskScore = useMemo(() => calculateRiskScore({
     entry, stopLoss: stopLoss || null,
-    target: targetPrice || null,
+    target: autoTarget || null,
     optionType, oi: strikeOI,
     hour, minute,
     distToResistancePct, distToSupportPct,
-  }), [entry, stopLoss, targetPrice, optionType, strikeOI, hour, minute, distToResistancePct, distToSupportPct])
+  }), [entry, stopLoss, autoTarget, optionType, strikeOI, hour, minute, distToResistancePct, distToSupportPct])
 
   const marketScore  = optionType === 'CE' ? ceScore : peScore
   const strengthScore = tradeStrength?.score ?? 0
@@ -217,23 +215,6 @@ export function OrderEntry() {
               className="w-full bg-[#060d1a] border border-[#ef4444]/40 rounded px-2 py-1.5 text-white text-xs"
               placeholder="0.00" />
           </div>
-        </div>
-
-        {/* Target */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <div className="text-[#22c55e] text-[9px]">Target ₹</div>
-            {autoTarget > 0 && !targetPrice && (
-              <button onClick={() => setTargetPrice(parseFloat(autoTarget.toFixed(2)))}
-                className="text-[8px] text-[#64748b] hover:text-[#38bdf8] transition-colors">
-                Auto 2:1 → {autoTarget.toFixed(2)}
-              </button>
-            )}
-          </div>
-          <input type="number" value={targetPrice || ''}
-            onChange={e => setTargetPrice(Number(e.target.value))}
-            className="w-full bg-[#060d1a] border border-[#22c55e]/40 rounded px-2 py-1.5 text-white text-xs"
-            placeholder={autoTarget > 0 ? `${autoTarget.toFixed(2)} (2:1 default)` : '0.00'} />
         </div>
 
         {/* Premium + R:R summary */}
