@@ -26,7 +26,7 @@ function emptyOpt(delta) {
 }
 
 function buildChain(instruments, expiry, atm, quotes) {
-  const RANGE = 5
+  const RANGE = 10
   const strikeValues = Array.from({ length: RANGE * 2 + 1 }, (_, i) => atm + (i - RANGE) * 50)
 
   const rows = []
@@ -80,7 +80,7 @@ app.http('optionChain', {
       const atm = Math.round(spot / 50) * 50
       context.log(`optionChain: expiry=${expiry} atm=${atm} instruments=${instruments.length}`)
 
-      const RANGE = 5
+      const RANGE = 10
       const strikeValues = Array.from({ length: RANGE * 2 + 1 }, (_, i) => atm + (i - RANGE) * 50)
       const symbols = []
       for (const strike of strikeValues) {

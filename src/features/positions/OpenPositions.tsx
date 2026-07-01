@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useMarketStore } from '@/core/store'
 import { SectionCard } from '@/components/SectionCard'
 import { formatCurrency, formatNumber } from '@/lib/utils'
+import { RefreshCw } from 'lucide-react'
 
 const tooltip = {
   title: 'Open Positions',
@@ -16,7 +17,7 @@ const tooltip = {
 }
 
 export function OpenPositions() {
-  const { data: positions = [] } = usePositions()
+  const { data: positions = [], isFetching, refetch } = usePositions()
   const optionChain = useMarketStore(s => s.optionChain)
   const qc = useQueryClient()
   const [exitError, setExitError] = useState<string | null>(null)
@@ -66,9 +67,21 @@ export function OpenPositions() {
   }, 0)
   const totalExposure = positions.reduce((a, p) => a + p.entryPrice * p.quantity, 0)
 
-  const posLabel = positions.length > 0
-    ? <span className="text-[9px] font-bold text-[#22c55e] bg-[#0d2b0d] px-1.5 py-0.5 rounded">{positions.length}</span>
-    : undefined
+  const posLabel = (
+    <div className="flex items-center gap-1.5">
+      {positions.length > 0 && (
+        <span className="text-[9px] font-bold text-[#22c55e] bg-[#0d2b0d] px-1.5 py-0.5 rounded">{positions.length}</span>
+      )}
+      <button
+        onClick={() => refetch()}
+        disabled={isFetching}
+        title="Refresh positions"
+        className="text-[#475569] hover:text-[#38bdf8] transition-colors disabled:opacity-40"
+      >
+        <RefreshCw size={11} className={isFetching ? 'animate-spin' : ''} />
+      </button>
+    </div>
+  )
 
   return (
     <SectionCard title="Open Positions" tooltip={tooltip} noPadding collapsible defaultOpen={true} badge={posLabel}>
