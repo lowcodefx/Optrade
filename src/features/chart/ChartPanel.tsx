@@ -1,4 +1,5 @@
 import { useMarketStore } from '@/core/store'
+import { useOrderStore } from '@/core/store'
 import { CandlestickChart } from './CandlestickChart'
 import { SetupPanel } from './SetupPanel'
 import { Maximize2, Minimize2, TrendingUp, Target } from 'lucide-react'
@@ -19,7 +20,16 @@ export function ChartPanel() {
   const setActiveTimeframe = useMarketStore(s => s.setActiveTimeframe)
   const setShowPivots = useMarketStore(s => s.setShowPivots)
 
+  const limitPrice = useOrderStore(s => s.limitPrice)
+  const stopLoss   = useOrderStore(s => s.stopLoss)
+
   const setup = paEnabled ? paSetup : null
+
+  // Future prediction overlay: use user's order-entry values (stable, not live-updating).
+  // Only shown when both entry price and SL are set.
+  const prediction = (limitPrice > 0 && stopLoss > 0 && limitPrice > stopLoss)
+    ? { entry: limitPrice, sl: stopLoss, target: limitPrice + (limitPrice - stopLoss) * 2 }
+    : null
 
   return (
     <div className="border-b border-[#1e293b]">
@@ -106,6 +116,12 @@ export function ChartPanel() {
           sl={setup?.sl}
           target={setup?.target}
           pivotPoints={showPivots ? pivotPoints : null}
+          prediction={prediction}
+          timeframeMinutes={
+            activeTimeframe === '1m' ? 1 : activeTimeframe === '3m' ? 3 :
+            activeTimeframe === '15m' ? 15 : activeTimeframe === '30m' ? 30 :
+            activeTimeframe === '1h' ? 60 : 5
+          }
           height={typeof window !== 'undefined' && window.innerWidth < 768 ? 280 : 220}
         />
       </div>
