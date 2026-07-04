@@ -186,6 +186,8 @@ function aggregateBars(raw: RawCandle[], barSize: number): RawCandle[] {
 
 function calcTrendArr(raw: RawCandle[], barSize: number): Array<'bull' | 'bear' | 'neutral'> {
   const agg = aggregateBars(raw, barSize)
+  // Need at least 9 aggregate bars for EMA9 to be meaningful; return neutral otherwise
+  if (agg.length < 9) return raw.map(() => 'neutral' as const)
   const closes = agg.map(c => c.close)
   const e9  = calcEMA(closes, 9)
   const e20 = calcEMA(closes, 20)
@@ -227,7 +229,8 @@ function computeScores(
   const avgVol = vols.reduce((a, b) => a + b, 0) / Math.max(vols.length, 1)
   const ORH = Math.max(...highs.slice(0, 3))
   const ORL = Math.min(...lows.slice(0, 3))
-  const LB = 10  // lookback bars for HH/HL detection
+  const LB = 10   // lookback bars for HH/HL detection
+  const ROC_N = 5 // bars for rate-of-change (25 min on 5-min candles)
 
   const scores: ScorePoint[] = []
   const candles: Candle[] = []
@@ -240,6 +243,11 @@ function computeScores(
     const isHigherLow  = i >= LB ? lows[i]  > lows[i - LB]  : undefined
     const isLowerHigh  = i >= LB ? highs[i] < highs[i - LB] : undefined
     const isLowerLow   = i >= LB ? lows[i]  < lows[i - LB]  : undefined
+
+    // 5-bar rate of change (%) — responds immediately to price moves, no EMA lag
+    const roc5 = i >= ROC_N
+      ? (closes[i] - closes[i - ROC_N]) / closes[i - ROC_N] * 100
+      : undefined
 
     const score = calculateMarketScore({
       spot: c.close, vwap: vwap[i],
@@ -254,6 +262,7 @@ function computeScores(
       openingRangeHigh: i >= 3 ? ORH : undefined,
       openingRangeLow:  i >= 3 ? ORL : undefined,
       isHigherHigh, isHigherLow, isLowerHigh, isLowerLow,
+      roc5,
       trend15m: trend15m[i],
       trend1h:  trend1h[i],
       // Pivot levels for S/R factor

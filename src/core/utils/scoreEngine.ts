@@ -64,6 +64,9 @@ interface ScoreParams {
   ceOIChangeTotal?: number
   peOIChangeTotal?: number
 
+  // Price momentum: 5-bar rate of change (%) — fires faster than EMAs on reversals
+  roc5?: number
+
   // Time of day (IST) for multiplier
   hour?: number
   minute?: number
@@ -86,8 +89,10 @@ export function calculateMarketScore(p: ScoreParams): MarketScore {
   const bd: ScoreBreakdown[] = []
   let ce = 0, pe = 0
 
-  const emaBull = p.ema9 > p.ema20 && p.ema20 > p.ema50
-  const emaBear = p.ema9 < p.ema20 && p.ema20 < p.ema50
+  // Full stack OR price confirming below/above the medium EMA (catches intraday reversals
+  // where ema50 is still primed from morning and hasn't crossed ema20 yet)
+  const emaBull = p.ema9 > p.ema20 && (p.ema20 > p.ema50 || p.spot > p.ema20 * 1.001)
+  const emaBear = p.ema9 < p.ema20 && (p.ema20 < p.ema50 || p.spot < p.ema20 * 0.999)
   const partialBull = !emaBull && !emaBear && p.ema9 > p.ema20
   const partialBear = !emaBull && !emaBear && p.ema9 < p.ema20
 
@@ -207,9 +212,22 @@ export function calculateMarketScore(p: ScoreParams): MarketScore {
   ce += p.lastCandleGreen ? 10 : 0
   pe += !p.lastCandleGreen ? 10 : 0
 
-  // ── 13–16. Market Structure — 135 pts total (4 sub-factors) ──────────────
+  // ── 13. Price Momentum (ROC 5-bar) — 80 pts ──────────────────────────────
+  let cROC = 0, pROC = 0
+  if (p.roc5 !== undefined) {
+    if      (p.roc5 >  0.2) cROC = 80
+    else if (p.roc5 >  0.1) cROC = 50
+    else if (p.roc5 >  0.05) cROC = 20
+    else if (p.roc5 < -0.2) pROC = 80
+    else if (p.roc5 < -0.1) pROC = 50
+    else if (p.roc5 < -0.05) pROC = 20
+  }
+  bd.push({ factor: 'Price Momentum', cePoints: cROC, pePoints: pROC, maxPoints: 80 })
+  ce += cROC; pe += pROC
 
-  // 13. Previous Day High/Low — 35 pts
+  // ── 14–17. Market Structure — 135 pts total (4 sub-factors) ──────────────
+
+  // 14. Previous Day High/Low — 35 pts
   let cPDH = 0, pPDL = 0
   if (p.yesterdayHigh !== undefined && p.yesterdayLow !== undefined) {
     if (p.spot > p.yesterdayHigh) cPDH = 35
@@ -221,7 +239,7 @@ export function calculateMarketScore(p: ScoreParams): MarketScore {
   bd.push({ factor: 'Structure: PDH/PDL', cePoints: cPDH, pePoints: pPDL, maxPoints: 35 })
   ce += cPDH; pe += pPDL
 
-  // 14. Opening Range Breakout — 30 pts
+  // 15. Opening Range Breakout — 30 pts
   let cORB = 0, pORB = 0
   if (p.openingRangeHigh !== undefined && p.openingRangeLow !== undefined) {
     if (p.spot > p.openingRangeHigh)      cORB = 30
@@ -231,7 +249,7 @@ export function calculateMarketScore(p: ScoreParams): MarketScore {
   bd.push({ factor: 'Structure: ORB', cePoints: cORB, pePoints: pORB, maxPoints: 30 })
   ce += cORB; pe += pORB
 
-  // 15. Support / Resistance Position — 35 pts (pivot levels)
+  // 16. Support / Resistance Position — 35 pts (pivot levels)
   let cSR = 0, pSR = 0
   if (p.pivotPP !== undefined && p.pivotR1 !== undefined && p.pivotS1 !== undefined) {
     if (p.spot > p.pivotR1) cSR = 35                         // above R1 = bull breakout
@@ -251,7 +269,7 @@ export function calculateMarketScore(p: ScoreParams): MarketScore {
   bd.push({ factor: 'Structure: S/R', cePoints: Math.round(cSR), pePoints: Math.round(pSR), maxPoints: 35 })
   ce += cSR; pe += pSR
 
-  // 16. HH/HL — LH/LL Trend Structure — 35 pts
+  // 17. HH/HL — LH/LL Trend Structure — 35 pts
   let cHHHL = 0, pLHLL = 0
   if (p.isHigherHigh && p.isHigherLow)     cHHHL = 35
   else if (p.isLowerHigh && p.isLowerLow)  pLHLL = 35
@@ -260,9 +278,9 @@ export function calculateMarketScore(p: ScoreParams): MarketScore {
   bd.push({ factor: 'Structure: HH/HL', cePoints: cHHHL, pePoints: pLHLL, maxPoints: 35 })
   ce += cHHHL; pe += pLHLL
 
-  // ── 17–19. Multi-Timeframe — 100 pts total (3 sub-factors) ───────────────
+  // ── 18–20. Multi-Timeframe — 100 pts total (3 sub-factors) ───────────────
 
-  // 17. 5m vs 15m Alignment — 40 pts
+  // 18. 5m vs 15m Alignment — 40 pts
   let cMTF5 = 0, pMTF5 = 0
   if (p.trend15m) {
     const bull15m = p.trend15m === 'bull', bear15m = p.trend15m === 'bear'
@@ -275,14 +293,14 @@ export function calculateMarketScore(p: ScoreParams): MarketScore {
   bd.push({ factor: 'MTF: 5m vs 15m', cePoints: cMTF5, pePoints: pMTF5, maxPoints: 40 })
   ce += cMTF5; pe += pMTF5
 
-  // 18. 15m Trend — 35 pts
+  // 19. 15m Trend — 35 pts
   let cMTF15 = 0, pMTF15 = 0
   if (p.trend15m === 'bull')  cMTF15 = 35
   else if (p.trend15m === 'bear') pMTF15 = 35
   bd.push({ factor: 'MTF: 15m Trend', cePoints: cMTF15, pePoints: pMTF15, maxPoints: 35 })
   ce += cMTF15; pe += pMTF15
 
-  // 19. 1h Trend — 25 pts
+  // 20. 1h Trend — 25 pts
   let cMTF1h = 0, pMTF1h = 0
   if (p.trend1h === 'bull')  cMTF1h = 25
   else if (p.trend1h === 'bear') pMTF1h = 25
