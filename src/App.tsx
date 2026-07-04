@@ -12,7 +12,6 @@ import { TrendAnalysis } from '@/features/trend-analysis/TrendAnalysis'
 import { DisciplinePanel } from '@/features/discipline/DisciplinePanel'
 import { CenterPanel } from '@/features/chart/CenterPanel'
 import { OrderEntry } from '@/features/order-entry/OrderEntry'
-import { RiskManagement } from '@/features/risk-management/RiskManagement'
 import { Settings } from '@/features/settings/Settings'
 import { QuickDecisionPopup } from '@/features/quick-popup/QuickDecisionPopup'
 import { TradingPlaybook } from '@/features/playbook/TradingPlaybook'
@@ -222,12 +221,7 @@ export default function App() {
         header={<Header onSettingsClick={() => setShowSettings(true)} onPlaybookClick={() => setShowPlaybook(true)} />}
         leftDock={<LeftDockTabs />}
         center={<CenterPanel />}
-        rightDock={
-          <>
-            <OrderEntry />
-            <RiskManagement />
-          </>
-        }
+        rightDock={<OrderEntry />}
       />
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
       {showQuickPopup && <QuickDecisionPopup onClose={() => setShowQuickPopup(false)} />}
