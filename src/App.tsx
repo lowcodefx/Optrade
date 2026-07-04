@@ -21,6 +21,7 @@ import { NewsTimeline } from '@/features/news/NewsTimeline'
 import { AlertMonitor } from '@/features/alerts/AlertMonitor'
 import { SquareOffReminder } from '@/features/square-off/SquareOffReminder'
 import { AlertsPanel } from '@/features/alerts/AlertsPanel'
+import { TradeEntryWizard } from '@/features/trade-entry/TradeEntryWizard'
 
 type LeftTab = 'discipline' | 'market' | 'analysis'
 
@@ -200,6 +201,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showQuickPopup, setShowQuickPopup] = useState(false)
   const [showPlaybook, setShowPlaybook] = useState(false)
+  const [showWizard, setShowWizard] = useState(false)
 
   if (window.location.pathname === '/login') {
     return (
@@ -221,11 +223,25 @@ export default function App() {
         header={<Header onSettingsClick={() => setShowSettings(true)} onPlaybookClick={() => setShowPlaybook(true)} />}
         leftDock={<LeftDockTabs />}
         center={<CenterPanel />}
-        rightDock={<OrderEntry />}
+        rightDock={
+          <>
+            <div className="p-2 border-b border-[#1e293b]">
+              <button
+                onClick={() => setShowWizard(true)}
+                className="w-full flex items-center justify-center gap-1.5 bg-[#7c3aed] text-white text-[10px] font-bold px-3 py-1.5 rounded hover:bg-[#6d28d9] transition-colors"
+              >
+                <ShieldCheck size={11} />
+                Guided Trade Entry
+              </button>
+            </div>
+            <OrderEntry />
+          </>
+        }
       />
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
       {showQuickPopup && <QuickDecisionPopup onClose={() => setShowQuickPopup(false)} />}
       {showPlaybook && <TradingPlaybook onClose={() => setShowPlaybook(false)} />}
+      {showWizard && <TradeEntryWizard onClose={() => setShowWizard(false)} />}
     </QueryClientProvider>
   )
 }
