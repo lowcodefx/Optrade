@@ -76,7 +76,7 @@ function getTimeMultiplier(hour?: number, minute?: number): number {
   if (t < 9 * 60 + 45)  return 0.90   // 9:25–9:45  settling
   if (t < 11 * 60)      return 1.00   // 9:45–11:00 prime trend window
   if (t < 12 * 60)      return 0.90   // 11:00–12:00
-  if (t < 13 * 60 + 30) return 0.75   // 12:00–1:30  lunch lull
+  if (t < 13 * 60 + 30) return 0.85   // 12:00–1:30  lunch lull
   if (t < 14 * 60)      return 0.85   // 1:30–2:00   recovering
   if (t < 15 * 60 + 15) return 1.00   // 2:00–3:15   afternoon breakout
   return 0.85                          // 3:15+       closing
@@ -92,8 +92,8 @@ export function calculateMarketScore(p: ScoreParams): MarketScore {
   const partialBear = !emaBull && !emaBear && p.ema9 < p.ema20
 
   // ── 1. EMA Stack — 175 pts ────────────────────────────────────────────────
-  const cEMA = emaBull ? 175 : partialBull ? 0.4 * 175 : 0
-  const pEMA = emaBear ? 175 : partialBear ? 0.4 * 175 : 0
+  const cEMA = emaBull ? 175 : partialBull ? 0.55 * 175 : 0
+  const pEMA = emaBear ? 175 : partialBear ? 0.55 * 175 : 0
   bd.push({ factor: 'EMA Stack', cePoints: Math.round(cEMA), pePoints: Math.round(pEMA), maxPoints: 175 })
   ce += cEMA; pe += pEMA
 

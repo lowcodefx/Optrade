@@ -167,6 +167,38 @@ function buildPivots(pd: { high: number; low: number; close: number }): PivotPoi
   }
 }
 
+// ── multi-timeframe helpers ───────────────────────────────────────────────────
+
+function aggregateBars(raw: RawCandle[], barSize: number): RawCandle[] {
+  const result: RawCandle[] = []
+  for (let i = 0; i + barSize <= raw.length; i += barSize) {
+    const chunk = raw.slice(i, i + barSize)
+    result.push({
+      ts: chunk[0].ts, open: chunk[0].open,
+      high: Math.max(...chunk.map(c => c.high)),
+      low:  Math.min(...chunk.map(c => c.low)),
+      close: chunk[chunk.length - 1].close,
+      volume: chunk.reduce((a, b) => a + b.volume, 0),
+    })
+  }
+  return result
+}
+
+function calcTrendArr(raw: RawCandle[], barSize: number): Array<'bull' | 'bear' | 'neutral'> {
+  const agg = aggregateBars(raw, barSize)
+  const closes = agg.map(c => c.close)
+  const e9  = calcEMA(closes, 9)
+  const e20 = calcEMA(closes, 20)
+  return raw.map((_, i) => {
+    const idx = Math.floor(i / barSize)
+    const v9 = e9[Math.min(idx, e9.length - 1)]
+    const v20 = e20[Math.min(idx, e20.length - 1)]
+    if (v9 > v20 * 1.0002) return 'bull'
+    if (v9 < v20 * 0.9998) return 'bear'
+    return 'neutral'
+  })
+}
+
 // ── score + candle computation ────────────────────────────────────────────────
 
 interface ComputeResult { scores: ScorePoint[]; candles: Candle[] }
@@ -174,6 +206,7 @@ interface ComputeResult { scores: ScorePoint[]; candles: Candle[] }
 function computeScores(
   raw: RawCandle[],
   prevDay: { high: number; low: number; close: number } | null,
+  pivots: PivotPoints | null,
 ): ComputeResult {
   const closes = raw.map(c => c.close)
   const highs  = raw.map(c => c.high)
@@ -187,26 +220,45 @@ function computeScores(
   const rsi   = calcRSI(closes, 14)
   const adx   = calcADX(highs, lows, closes, 14)
 
+  // Multi-timeframe trends derived from 5-min bars
+  const trend15m = calcTrendArr(raw, 3)   // 3 × 5min = 15min
+  const trend1h  = calcTrendArr(raw, 12)  // 12 × 5min = 60min
+
   const avgVol = vols.reduce((a, b) => a + b, 0) / Math.max(vols.length, 1)
   const ORH = Math.max(...highs.slice(0, 3))
   const ORL = Math.min(...lows.slice(0, 3))
+  const LB = 10  // lookback bars for HH/HL detection
 
   const scores: ScorePoint[] = []
   const candles: Candle[] = []
 
   raw.forEach((c, i) => {
     const { hour, minute, label } = parseIST(c.ts)
+
+    // Higher high / lower low vs LB bars ago
+    const isHigherHigh = i >= LB ? highs[i] > highs[i - LB] : undefined
+    const isHigherLow  = i >= LB ? lows[i]  > lows[i - LB]  : undefined
+    const isLowerHigh  = i >= LB ? highs[i] < highs[i - LB] : undefined
+    const isLowerLow   = i >= LB ? lows[i]  < lows[i - LB]  : undefined
+
     const score = calculateMarketScore({
       spot: c.close, vwap: vwap[i],
       ema9: ema9[i], ema20: ema20[i], ema50: ema50[i],
       rsi: rsi[i], adx: adx[i],
-      pcr: 1.0, breadth: 50, vix: 14,
+      pcr: 1.0, breadth: 50,
+      vix: 20,        // truly neutral: gives 0 pts to both CE and PE
       lastCandleGreen: c.close >= c.open,
       volumeAboveAvg:  c.volume > avgVol,
       yesterdayHigh: prevDay?.high,
       yesterdayLow:  prevDay?.low,
       openingRangeHigh: i >= 3 ? ORH : undefined,
       openingRangeLow:  i >= 3 ? ORL : undefined,
+      isHigherHigh, isHigherLow, isLowerHigh, isLowerLow,
+      trend15m: trend15m[i],
+      trend1h:  trend1h[i],
+      // Pivot levels for S/R factor
+      pivotPP: pivots?.pp,   pivotR1: pivots?.r1,  pivotR2: pivots?.r2,
+      pivotS1: pivots?.s1,   pivotS2: pivots?.s2,
       hour, minute,
     })
     scores.push({ time: label, ceScore: score.ceScore, peScore: score.peScore })
@@ -248,10 +300,11 @@ export function ScoreBacktest() {
         fetchPrevDayCandle(date, apiKey, accessToken),
       ])
       if (rawCandles.length === 0) throw new Error('No 5-min candles returned — this may be a holiday or weekend')
-      const { scores: s, candles: c } = computeScores(rawCandles, prevDay)
+      const pv = prevDay ? buildPivots(prevDay) : null
+      const { scores: s, candles: c } = computeScores(rawCandles, prevDay, pv)
       setScores(s)
       setChartCandles(c)
-      setPivots(prevDay ? buildPivots(prevDay) : null)
+      setPivots(pv)
       setRan(true)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to fetch data')
