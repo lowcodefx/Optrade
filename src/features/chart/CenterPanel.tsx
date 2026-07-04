@@ -8,6 +8,7 @@ import { AnalyticsDashboard } from '@/features/analytics/AnalyticsDashboard'
 import { OIBuildup } from '@/features/oi-chart/OIBuildup'
 import { OrderHistory } from '@/features/order-history/OrderHistory'
 import { MayBacktest } from '@/features/backtest/MayBacktest'
+import { ScoreBacktest } from '@/features/backtest/ScoreBacktest'
 import { cn } from '@/lib/utils'
 
 type TabId = 'chart' | 'chain' | 'journal' | 'analytics' | 'orders' | 'backtest'
@@ -47,7 +48,12 @@ export function CenterPanel() {
       {centerTab === 'journal'   && <TradeJournal />}
       {centerTab === 'analytics' && <AnalyticsDashboard />}
       {centerTab === 'orders'    && <OrderHistory />}
-      {centerTab === 'backtest'  && <MayBacktest />}
+      {centerTab === 'backtest'  && (
+        <div className="overflow-y-auto">
+          <MayBacktest />
+          <ScoreBacktest />
+        </div>
+      )}
       {centerTab === 'chart' && (
         <>
           <ChartPanel />
