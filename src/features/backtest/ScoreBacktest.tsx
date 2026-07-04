@@ -7,6 +7,8 @@ import {
 } from 'recharts'
 import { Play, AlertCircle } from 'lucide-react'
 import { calculateMarketScore } from '@/core/utils/scoreEngine'
+import { CandlestickChart } from '@/features/chart/CandlestickChart'
+import type { Candle, PivotPoints } from '@/core/types'
 
 // ── types ─────────────────────────────────────────────────────────────────────
 interface RawCandle { ts: string; open: number; high: number; low: number; close: number; volume: number }
@@ -154,18 +156,31 @@ function parseIST(ts: string): { hour: number; minute: number; label: string } {
   return { hour: h, minute: mn, label: `${String(h).padStart(2,'0')}:${String(mn).padStart(2,'0')}` }
 }
 
-// ── score computation ─────────────────────────────────────────────────────────
+// ── pivot computation ─────────────────────────────────────────────────────────
+
+function buildPivots(pd: { high: number; low: number; close: number }): PivotPoints {
+  const pp = (pd.high + pd.low + pd.close) / 3
+  return {
+    pp, prevHigh: pd.high, prevLow: pd.low, prevClose: pd.close,
+    r1: 2 * pp - pd.low,  r2: pp + (pd.high - pd.low),
+    s1: 2 * pp - pd.high, s2: pp - (pd.high - pd.low),
+  }
+}
+
+// ── score + candle computation ────────────────────────────────────────────────
+
+interface ComputeResult { scores: ScorePoint[]; candles: Candle[] }
 
 function computeScores(
-  candles: RawCandle[],
+  raw: RawCandle[],
   prevDay: { high: number; low: number; close: number } | null,
-): ScorePoint[] {
-  const closes  = candles.map(c => c.close)
-  const highs   = candles.map(c => c.high)
-  const lows    = candles.map(c => c.low)
-  const vols    = candles.map(c => c.volume)
+): ComputeResult {
+  const closes = raw.map(c => c.close)
+  const highs  = raw.map(c => c.high)
+  const lows   = raw.map(c => c.low)
+  const vols   = raw.map(c => c.volume)
 
-  const vwap  = calcVWAP(candles)
+  const vwap  = calcVWAP(raw)
   const ema9  = calcEMA(closes, 9)
   const ema20 = calcEMA(closes, 20)
   const ema50 = calcEMA(closes, 50)
@@ -173,24 +188,19 @@ function computeScores(
   const adx   = calcADX(highs, lows, closes, 14)
 
   const avgVol = vols.reduce((a, b) => a + b, 0) / Math.max(vols.length, 1)
-
-  // Opening range = first 3 bars (9:15–9:30 for 5-min)
   const ORH = Math.max(...highs.slice(0, 3))
   const ORL = Math.min(...lows.slice(0, 3))
 
-  return candles.map((c, i) => {
+  const scores: ScorePoint[] = []
+  const candles: Candle[] = []
+
+  raw.forEach((c, i) => {
     const { hour, minute, label } = parseIST(c.ts)
     const score = calculateMarketScore({
-      spot: c.close,
-      vwap: vwap[i],
-      ema9:  ema9[i],
-      ema20: ema20[i],
-      ema50: ema50[i],
-      rsi:   rsi[i],
-      adx:   adx[i],
-      pcr:      1.0,   // neutral (no historical OI available)
-      breadth:  50,    // neutral
-      vix:      14,    // normal volatility
+      spot: c.close, vwap: vwap[i],
+      ema9: ema9[i], ema20: ema20[i], ema50: ema50[i],
+      rsi: rsi[i], adx: adx[i],
+      pcr: 1.0, breadth: 50, vix: 14,
       lastCandleGreen: c.close >= c.open,
       volumeAboveAvg:  c.volume > avgVol,
       yesterdayHigh: prevDay?.high,
@@ -199,8 +209,14 @@ function computeScores(
       openingRangeLow:  i >= 3 ? ORL : undefined,
       hour, minute,
     })
-    return { time: label, ceScore: score.ceScore, peScore: score.peScore }
+    scores.push({ time: label, ceScore: score.ceScore, peScore: score.peScore })
+    candles.push({
+      time: label, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume,
+      ema9: ema9[i], ema20: ema20[i], ema50: ema50[i], vwap: vwap[i],
+    })
   })
+
+  return { scores, candles }
 }
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -216,21 +232,26 @@ export function ScoreBacktest() {
   const { apiKey, accessToken } = useSettingsStore()
   const isLive = useLiveModeStore(s => s.isLive)
 
-  const [date, setDate]     = useState(lastWeekday)
-  const [scores, setScores] = useState<ScorePoint[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError]   = useState('')
-  const [ran, setRan]       = useState(false)
+  const [date, setDate]         = useState(lastWeekday)
+  const [scores, setScores]     = useState<ScorePoint[]>([])
+  const [chartCandles, setChartCandles] = useState<Candle[]>([])
+  const [pivots, setPivots]     = useState<PivotPoints | null>(null)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
+  const [ran, setRan]           = useState(false)
 
   async function run() {
     setLoading(true); setError('')
     try {
-      const [candles, prevDay] = await Promise.all([
+      const [rawCandles, prevDay] = await Promise.all([
         fetch5mCandles(date, apiKey, accessToken),
         fetchPrevDayCandle(date, apiKey, accessToken),
       ])
-      if (candles.length === 0) throw new Error('No 5-min candles returned — this may be a holiday or weekend')
-      setScores(computeScores(candles, prevDay))
+      if (rawCandles.length === 0) throw new Error('No 5-min candles returned — this may be a holiday or weekend')
+      const { scores: s, candles: c } = computeScores(rawCandles, prevDay)
+      setScores(s)
+      setChartCandles(c)
+      setPivots(prevDay ? buildPivots(prevDay) : null)
       setRan(true)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to fetch data')
@@ -341,6 +362,19 @@ export function ScoreBacktest() {
             <span className="text-[#475569]">
               PE≥500 <span className="text-[#ef4444]">{peBars} bars</span>
             </span>
+          </div>
+
+          {/* NIFTY 50 candlestick chart */}
+          <div className="text-[#64748b] text-[9px] uppercase tracking-widest mt-1">
+            NIFTY 5-min candles · {date}
+          </div>
+          <div className="bg-[#060d1a] rounded border border-[#1e293b]">
+            <CandlestickChart
+              candles={chartCandles}
+              pivotPoints={pivots}
+              height={220}
+              timeframeMinutes={5}
+            />
           </div>
 
           <p className="text-[#334155] text-[8px] leading-relaxed">
