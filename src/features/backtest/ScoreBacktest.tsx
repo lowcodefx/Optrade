@@ -370,13 +370,16 @@ export function ScoreBacktest() {
           </div>
 
           <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={scores} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
+            {/* margin matches CandlestickChart exactly so X-axes align */}
+            <LineChart data={scores} margin={{ top: 5, right: 60, bottom: 5, left: 0 }}>
               <CartesianGrid strokeDasharray="2 4" stroke="#1e293b" />
-              <XAxis dataKey="time" tick={{ fontSize: 7, fill: '#475569' }} interval={5} />
+              <XAxis dataKey="time" tick={{ fontSize: 7, fill: '#475569' }} interval={5} axisLine={false} tickLine={false} />
               <YAxis
-                domain={[0, 1000]} width={36}
+                orientation="right" width={50}
+                domain={[0, 1000]}
                 ticks={[0, 250, 500, 700, 1000]}
                 tick={{ fontSize: 7, fill: '#475569' }}
+                axisLine={false} tickLine={false}
               />
               <Tooltip
                 contentStyle={{ background: '#0a1628', border: '1px solid #1e3a5f', borderRadius: 4, fontSize: 10 }}
@@ -384,7 +387,7 @@ export function ScoreBacktest() {
                 formatter={(v: number, key: string) => [v, key === 'ceScore' ? 'CE Score' : 'PE Score']}
               />
 
-              {/* Threshold lines */}
+              {/* Threshold lines — labels appear in the right margin area */}
               <ReferenceLine y={500} stroke="#f59e0b" strokeDasharray="5 3" strokeWidth={1.5}
                 label={{ value: '500', fill: '#f59e0b', fontSize: 8, position: 'right' }} />
               <ReferenceLine y={700} stroke="#22c55e" strokeDasharray="3 5" strokeWidth={1} opacity={0.5}

@@ -131,13 +131,16 @@ export function CandlestickChart({ candles, entry, sl, target, pivotPoints, heig
   if (candles.length === 0) return null
 
   const lastCandle = candles[candles.length - 1]
+  const showPrediction = prediction && prediction.entry > 0 && prediction.sl > 0 && prediction.target > 0
 
-  // Phantom slots for the future zone
-  const phantom = Array.from({ length: FUTURE_SLOTS }, (_, i) => ({
-    index: candles.length + i,
-    time: addMinutes(lastCandle.time, (i + 1) * timeframeMinutes),
-    open: 0, high: 0, low: 0, close: 0, volume: 0,
-  }))
+  // Phantom slots only when a prediction is active (extends X-axis into the future)
+  const phantom = showPrediction
+    ? Array.from({ length: FUTURE_SLOTS }, (_, i) => ({
+        index: candles.length + i,
+        time: addMinutes(lastCandle.time, (i + 1) * timeframeMinutes),
+        open: 0, high: 0, low: 0, close: 0, volume: 0,
+      }))
+    : []
 
   const data = [
     ...candles.map((c, i) => ({ ...c, index: i })),
@@ -151,8 +154,6 @@ export function CandlestickChart({ candles, entry, sl, target, pivotPoints, heig
   }
   const priceMin = Math.min(...allPrices) - 20
   const priceMax = Math.max(...allPrices) + 20
-
-  const showPrediction = prediction && prediction.entry > 0 && prediction.sl > 0 && prediction.target > 0
 
   return (
     <div style={{ height: height ?? '100%' }}>
