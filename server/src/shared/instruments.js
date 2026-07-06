@@ -79,12 +79,14 @@ async function getNiftyInstruments(authToken) {
     console.log('[instruments] Downloading NFO CSV from Kite...')
     const r = await kiteGet('/instruments/NFO', authToken)
     if (r.status !== 200) {
-      throw new Error(`Kite /instruments/NFO returned ${r.status}: ${r.body.slice(0, 150)}`)
+      console.error('[instruments] Kite body (first 150):', r.body.slice(0, 150).replace(/[\r\n]/g, ' '))
+      throw new Error(`Kite /instruments/NFO returned status ${r.status}`)
     }
     const parsed = parseNiftyOptions(r.body)
     if (parsed.length === 0) {
       const firstLine = r.body.slice(0, 300).split('\n')[0]
-      throw new Error(`CSV parsed 0 NIFTY instruments (${r.body.length} bytes). First line: ${firstLine}`)
+      console.error('[instruments] CSV parse failed. bytes:', r.body.length, 'firstLine:', firstLine.replace(/[\r\n]/g, ' '))
+      throw new Error('CSV parsed 0 NIFTY instruments — check server logs')
     }
     _instruments = parsed
     _instrDay = today

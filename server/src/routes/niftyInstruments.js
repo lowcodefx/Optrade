@@ -8,7 +8,7 @@ router.get('/', async (req, res) => {
 
   try {
     const instruments = await getNiftyInstruments(authToken)
-    res.set('Cache-Control', 'public, max-age=3600').json(instruments)
+    res.set('Cache-Control', 'private, max-age=3600').json(instruments)
   } catch (err) {
     console.error('[niftyInstruments] error:', err.message)
     res.status(502).json({ error: err.message })
