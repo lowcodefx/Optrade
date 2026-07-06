@@ -27,6 +27,7 @@ function kiteRequest(method, kitePath, kiteQuery, authHeader, body, contentType)
     })
     req.on('error', reject)
     req.setTimeout(15000, () => { req.destroy(); reject(new Error('Kite request timed out')) })
+    if (body) req.write(body)
     req.end()
   })
 }
@@ -52,7 +53,7 @@ router.all('/', async (req, res) => {
 
   try {
     const result = await kiteRequest(req.method, kitePath, kiteQuery, authHeader, body, contentType)
-    res.status(result.status).type(result.contentType).send(result.body)
+    res.status(result.status).set('Cache-Control', 'no-store').type(result.contentType).send(result.body)
   } catch (err) {
     console.error('[kite] proxy error:', err.message)
     res.status(502).json({ error: 'Proxy failed', detail: err.message })
