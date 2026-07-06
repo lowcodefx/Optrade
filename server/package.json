@@ -7,10 +7,13 @@
     "dev": "node --watch src/index.js",
     "test": "jest --runInBand"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "@azure/storage-blob": "^12.17.0"
+    "@azure/storage-blob": "12.27.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",
