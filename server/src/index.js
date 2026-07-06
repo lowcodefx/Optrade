@@ -32,6 +32,8 @@ app.use('/api/nifty-instruments',  require('./routes/niftyInstruments'))
 app.use('/api/exchange-token',     require('./routes/exchangeToken'))
 app.use('/api/set-token',          require('./routes/setToken'))
 
-app.listen(PORT, () => console.log(`optrade-api listening on ${PORT}`))
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`optrade-api listening on ${PORT}`))
+}
 
 module.exports = app   // exported for supertest
