@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { exchangeRequestToken, fetchUserProfile, fetchUserMargins } from '@/core/services/zerodhaAuth'
+import { API_BASE, vmHeaders } from '@/core/services/apiClient'
 import { activateLiveService, useLiveModeStore } from '@/core/services/tradingService'
 import { prefetchInstruments } from '@/core/services/instrumentsCache'
 import { useSettingsStore, useMarketStore, useOrderStore } from '@/core/store'
@@ -184,9 +185,9 @@ function ZerodhaCallback() {
           loadLiveData()
           // Push session to background monitor (fire-and-forget)
           const { apiKey } = useSettingsStore.getState()
-          fetch('/api/set-token', {
+          fetch(`${API_BASE}/api/set-token`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'Optrade' },
+            headers: vmHeaders({ 'Content-Type': 'application/json', 'X-Requested-With': 'Optrade' }),
             body: JSON.stringify({ apiKey, accessToken }),
           }).catch(() => { /* non-critical */ })
         })

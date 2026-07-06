@@ -1,4 +1,5 @@
 import { useSettingsStore } from '@/core/store'
+import { API_BASE, vmHeaders, kiteAuthHeaders } from './apiClient'
 
 const KITE_LOGIN = 'https://kite.zerodha.com/connect/login'
 
@@ -10,10 +11,10 @@ export function getLoginURL(): string {
 export async function exchangeRequestToken(requestToken: string): Promise<string> {
   const { apiKey, apiSecret } = useSettingsStore.getState()
 
-  // Token exchange goes through our Azure Function proxy to avoid CORS
-  const res = await fetch('/api/exchange-token', {
+  // Token exchange goes through our VM proxy to avoid CORS
+  const res = await fetch(`${API_BASE}/api/exchange-token`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: vmHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ apiKey, apiSecret, requestToken }),
   })
 
@@ -35,8 +36,8 @@ export async function fetchUserMargins(): Promise<{ available: number; used: num
   const { apiKey, accessToken } = useSettingsStore.getState()
   if (!apiKey || !accessToken) return { available: 0, used: 0, net: 0 }
   try {
-    const res = await fetch('/api/kite?kite_path=user/margins', {
-      headers: { 'X-Kite-Auth': `token ${apiKey}:${accessToken}` },
+    const res = await fetch(`${API_BASE}/api/kite?kite_path=user/margins`, {
+      headers: kiteAuthHeaders(),
     })
     if (!res.ok) return { available: 0, used: 0, net: 0 }
     const json = await res.json()
@@ -55,8 +56,8 @@ export async function fetchUserProfile(): Promise<string> {
   const { apiKey, accessToken } = useSettingsStore.getState()
   if (!apiKey || !accessToken) return ''
   try {
-    const res = await fetch('/api/kite?kite_path=user/profile', {
-      headers: { 'X-Kite-Auth': `token ${apiKey}:${accessToken}` },
+    const res = await fetch(`${API_BASE}/api/kite?kite_path=user/profile`, {
+      headers: kiteAuthHeaders(),
     })
     if (!res.ok) return ''
     const json = await res.json()

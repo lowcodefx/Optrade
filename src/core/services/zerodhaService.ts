@@ -1,24 +1,16 @@
 import type { NiftyQuote, OptionChain, Candle, Position, PivotPoints } from '@/core/types'
 import type { OrderRequest, OrderResponse, KiteOrder } from '@/core/types'
 import type { ITradingService } from './tradingService'
-import { useSettingsStore } from '@/core/store'
 import { calculateEMA, calculateVWAP } from '@/core/utils/indicators'
 import { getNiftyOptions } from './instrumentsCache'
 import { NIFTY50_KITE_INSTRUMENTS, type Nifty50BreadthResult } from '@/core/utils/nifty50Symbols'
+import { API_BASE, kiteAuthHeaders } from './apiClient'
 
 const NIFTY_TOKEN = 256265
 const LOT_SIZE = 75
 
-function authHeader() {
-  const { apiKey, accessToken } = useSettingsStore.getState()
-  return `token ${apiKey}:${accessToken}`
-}
-
-// All Kite API calls go through /api/kite Azure Function proxy to avoid CORS.
-// kite_path is built manually (not via URLSearchParams) so slashes in paths
-// like /instruments/historical/256265/5minute stay unencoded.
+// All Kite API calls go through the VM proxy at API_BASE/api/kite.
 function buildKiteUrl(path: string, params?: Record<string, string | string[]>): string {
-  // path = '/quote' → kite_path=quote (no leading slash, no %2F encoding)
   let qs = `kite_path=${path.replace(/^\//, '')}`
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
@@ -26,12 +18,12 @@ function buildKiteUrl(path: string, params?: Record<string, string | string[]>):
       else qs += `&${encodeURIComponent(k)}=${encodeURIComponent(v)}`
     })
   }
-  return `/api/kite?${qs}`
+  return `${API_BASE}/api/kite?${qs}`
 }
 
 async function kiteGet<T>(path: string, params?: Record<string, string | string[]>): Promise<T> {
   const res = await fetch(buildKiteUrl(path, params), {
-    headers: { 'X-Kite-Auth': authHeader(), 'X-Kite-Version': '3' },
+    headers: kiteAuthHeaders(),
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
@@ -44,10 +36,7 @@ async function kiteGet<T>(path: string, params?: Record<string, string | string[
 async function kitePost(path: string, body: Record<string, string>): Promise<unknown> {
   const res = await fetch(buildKiteUrl(path), {
     method: 'POST',
-    headers: {
-      'X-Kite-Auth': authHeader(),
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
+    headers: { ...kiteAuthHeaders(), 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams(body).toString(),
   })
   if (!res.ok) {
@@ -115,8 +104,8 @@ export class ZerodhaService implements ITradingService {
     // Use dedicated /api/nifty-quote which hardcodes the exact Kite URL with
     // %20-encoded spaces — the generic proxy's URLSearchParams converts spaces
     // to + which Zerodha does not decode correctly.
-    const res = await fetch('/api/nifty-quote', {
-      headers: { 'X-Kite-Auth': authHeader() },
+    const res = await fetch(`${API_BASE}/api/nifty-quote`, {
+      headers: kiteAuthHeaders(),
     })
     const text = await res.text()
     if (!res.ok) throw new Error(`nifty-quote ${res.status}: ${text.slice(0, 200)}`)
@@ -149,8 +138,8 @@ export class ZerodhaService implements ITradingService {
     const spot = this.spotCache || 24500
     // Single server-side endpoint: fetches instruments + quotes in one shot,
     // with module-level instrument cache so only the first call is slow.
-    const res = await fetch(`/api/option-chain?spot=${spot}`, {
-      headers: { 'X-Kite-Auth': authHeader(), 'X-Kite-Version': '3' },
+    const res = await fetch(`${API_BASE}/api/option-chain?spot=${spot}`, {
+      headers: kiteAuthHeaders(),
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({})) as { error?: string }
