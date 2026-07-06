@@ -32,9 +32,27 @@ function kiteRequest(method, kitePath, kiteQuery, authHeader, body, contentType)
   })
 }
 
+// Kite API paths this app actually uses — rejects anything outside this set.
+const KITE_PATH_PREFIXES = [
+  'quote', 'ohlc', 'ltp',
+  'user/profile', 'user/margins',
+  'orders', 'trades', 'positions', 'holdings', 'portfolio',
+  'margins', 'charges',
+  'instruments',
+  'mf/',
+]
+
+function isAllowedKitePath(suffix) {
+  if (suffix.includes('..') || suffix.includes('#')) return false
+  return KITE_PATH_PREFIXES.some(prefix => suffix === prefix || suffix.startsWith(prefix + '/') || suffix.startsWith(prefix + '?'))
+}
+
 router.all('/', async (req, res) => {
   const kitePathSuffix = req.query.kite_path
   if (!kitePathSuffix) return res.status(400).json({ error: 'Missing kite_path' })
+  if (!isAllowedKitePath(String(kitePathSuffix))) {
+    return res.status(400).json({ error: 'kite_path not allowed' })
+  }
 
   const kitePath = '/' + kitePathSuffix
   const kiteParams = new URLSearchParams()
