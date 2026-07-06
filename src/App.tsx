@@ -84,7 +84,7 @@ function AutoSelectATM() {
 
 function DataBootstrap() {
   const tf = useMarketStore(s => s.activeTimeframe)
-  const countMap: Record<string, number> = { '1m': 60, '5m': 40, '15m': 30, '1h': 20 }
+  const countMap: Record<string, number> = { '1m': 60, '5m': 80, '15m': 30, '1h': 20 }
   useNiftyQuote()
   useOptionChain()
   useCandles(tf, countMap[tf] ?? 30)
