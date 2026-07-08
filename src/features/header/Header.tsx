@@ -37,7 +37,6 @@ export function Header({ onSettingsClick, onPlaybookClick }: Props) {
   const userName = useMarketStore(s => s.userName)
 const [time, setTime] = useState(new Date())
   const live = useLiveModeStore(s => s.isLive)
-  const availableMargin = useMarketStore(s => s.availableMargin)
   const marketOpen = isMarketOpen()
   const apiKey = useSettingsStore(s => s.apiKey)
 
