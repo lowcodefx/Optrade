@@ -67,22 +67,23 @@ function callClaude(items, apiKey) {
     return `${i + 1}.${time} ${item.title}`
   }).join('\n')
 
-  const prompt = `You are a real-time market alert system for an Indian options trader. Current IST time: ${now}.
+  const prompt = `You are a market alert assistant for an Indian NIFTY options trader. Current IST time: ${now}.
 
-From these latest news headlines, identify ONLY the items that could DIRECTLY impact NIFTY or BANK NIFTY movement in the next few hours. Ignore routine company news.
+Read these headlines and give 2-4 short plain-English alerts about anything that could move NIFTY in the next few hours.
 
 Headlines:
 ${newsText}
 
-Respond with 2-4 alerts in this exact format for each relevant item:
-[IMPACT EMOJI] **Headline summary** — Direct market impact in 1 sentence. Expected move: bullish/bearish/neutral for NIFTY.
+Format each alert exactly like this (no bold, no markdown, no emojis):
+Alert 1: <what happened and what it means for NIFTY in plain simple English>
+Alert 2: <next alert>
 
-Impact emojis: 🔴 = strong negative, 🟠 = mild negative, 🟢 = strong positive, 🟡 = mild positive, ⚪ = watch/neutral
-
-Focus on: RBI/Fed actions, inflation/GDP data, election results, FII activity, global market moves, major circuit breakers, geopolitical events.
-If no high-impact news exists, say: "⚪ No major market-moving events in recent headlines. Normal session expected."
-
-Max 100 words total.`
+Rules:
+- Each alert must be one sentence, max 15 words
+- Say "bullish" or "bearish" and roughly how long the move might last
+- Ignore company-specific news unless it affects the index
+- If nothing important, write: Alert 1: No major news. Market likely to move on technicals today.
+- Do not use any formatting, asterisks, or special characters`
 
   const body = JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
