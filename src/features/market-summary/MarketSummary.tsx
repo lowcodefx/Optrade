@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { API_BASE, vmHeaders } from '@/core/services/apiClient'
-import { Sparkles, RefreshCw, Clock } from 'lucide-react'
+import { Zap, RefreshCw, Clock } from 'lucide-react'
 
 interface SummaryData {
   summary: string
-  headlines: string[]
   updatedAt: string
   stale?: boolean
 }
@@ -20,10 +19,9 @@ export function MarketSummary() {
     try {
       const res = await fetch(`${API_BASE}/api/market-summary`, { headers: vmHeaders() })
       if (!res.ok) throw new Error(`${res.status}`)
-      const json = await res.json()
-      setData(json)
-    } catch (e) {
-      setError('Summary unavailable')
+      setData(await res.json())
+    } catch {
+      setError('Alerts unavailable')
     } finally {
       setLoading(false)
     }
@@ -31,7 +29,7 @@ export function MarketSummary() {
 
   useEffect(() => {
     load()
-    const interval = setInterval(load, 30 * 60 * 1000)
+    const interval = setInterval(load, 10 * 60 * 1000)
     return () => clearInterval(interval)
   }, [])
 
@@ -43,11 +41,9 @@ export function MarketSummary() {
     <div className="p-3 border-b border-[#1e293b]">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5">
-          <Sparkles size={11} className="text-[#7c3aed]" />
-          <span className="text-[9px] font-bold uppercase tracking-widest text-[#94a3b8]">AI Market Brief</span>
-          {data?.stale && (
-            <span className="text-[8px] text-[#f59e0b]">(cached)</span>
-          )}
+          <Zap size={11} className="text-[#f59e0b]" />
+          <span className="text-[9px] font-bold uppercase tracking-widest text-[#94a3b8]">Market Alerts</span>
+          {data?.stale && <span className="text-[8px] text-[#f59e0b]">(cached)</span>}
         </div>
         <div className="flex items-center gap-2">
           {updatedTime && (
@@ -68,8 +64,8 @@ export function MarketSummary() {
 
       {loading && !data && (
         <div className="flex items-center gap-2 py-3">
-          <RefreshCw size={10} className="animate-spin text-[#7c3aed]" />
-          <span className="text-[10px] text-[#475569]">Analyzing market news…</span>
+          <RefreshCw size={10} className="animate-spin text-[#f59e0b]" />
+          <span className="text-[10px] text-[#475569]">Scanning market news…</span>
         </div>
       )}
 
@@ -78,7 +74,7 @@ export function MarketSummary() {
       )}
 
       {data && (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {data.summary.split('\n').filter(l => l.trim()).map((line, i) => (
             <p key={i} className="text-[10px] text-[#cbd5e1] leading-relaxed">{line}</p>
           ))}

@@ -2,7 +2,7 @@ const { Router } = require('express')
 const https = require('https')
 const router = Router()
 
-const CACHE_TTL = 30 * 60 * 1000
+const CACHE_TTL = 10 * 60 * 1000  // 10 minutes — fast enough to catch breaking news
 let cache = null
 let cacheTime = 0
 
@@ -18,46 +18,75 @@ function fetchUrl(url) {
   })
 }
 
-function extractHeadlines(xml) {
-  const matches = [...xml.matchAll(/<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/gs)]
-  return matches
-    .map(m => m[1].trim())
-    .filter(t => t.length > 20 && t.length < 200)
-    .slice(0, 12)
+function extractItems(xml) {
+  // Extract title + pubDate pairs from RSS
+  const items = []
+  const itemBlocks = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)]
+  for (const block of itemBlocks) {
+    const content = block[1]
+    const titleMatch = content.match(/<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/s)
+    const dateMatch = content.match(/<pubDate>(.*?)<\/pubDate>/)
+    const title = titleMatch ? titleMatch[1].replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim() : ''
+    const pubDate = dateMatch ? dateMatch[1].trim() : ''
+    if (title && title.length > 15 && title.length < 250) {
+      items.push({ title, pubDate })
+    }
+  }
+  return items.slice(0, 10)
 }
 
-async function fetchHeadlines() {
+async function fetchAllNews() {
   const feeds = [
+    'https://www.moneycontrol.com/rss/latestnews.xml',
     'https://economictimes.indiatimes.com/markets/rss.cms',
-    'https://www.moneycontrol.com/rss/marketreports.xml',
+    'https://www.business-standard.com/rss/markets-106.rss',
   ]
   const all = []
   for (const feed of feeds) {
     try {
       const xml = await fetchUrl(feed)
-      all.push(...extractHeadlines(xml))
+      all.push(...extractItems(xml))
     } catch (e) {
       console.error('[marketSummary] feed error:', feed, e.message)
     }
   }
-  return [...new Set(all)].slice(0, 15)
+  // Deduplicate by title similarity
+  const seen = new Set()
+  return all.filter(item => {
+    const key = item.title.toLowerCase().slice(0, 40)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  }).slice(0, 18)
 }
 
-function callClaude(headlines, apiKey) {
-  const prompt = `You are a concise market analyst for Indian equity markets (NSE/BSE). Based on these news headlines from today, give a brief market brief in exactly 4 bullet points:
-• Overall market sentiment
-• Key sector or stock in focus
-• Important macro/global factor if any
-• One trading implication for NIFTY options
+function callClaude(items, apiKey) {
+  const now = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true })
+  const newsText = items.map((item, i) => {
+    const time = item.pubDate ? ` [${item.pubDate}]` : ''
+    return `${i + 1}.${time} ${item.title}`
+  }).join('\n')
+
+  const prompt = `You are a real-time market alert system for an Indian options trader. Current IST time: ${now}.
+
+From these latest news headlines, identify ONLY the items that could DIRECTLY impact NIFTY or BANK NIFTY movement in the next few hours. Ignore routine company news.
 
 Headlines:
-${headlines.map((h, i) => `${i + 1}. ${h}`).join('\n')}
+${newsText}
 
-Be direct, specific, and under 120 words total. No fluff.`
+Respond with 2-4 alerts in this exact format for each relevant item:
+[IMPACT EMOJI] **Headline summary** — Direct market impact in 1 sentence. Expected move: bullish/bearish/neutral for NIFTY.
+
+Impact emojis: 🔴 = strong negative, 🟠 = mild negative, 🟢 = strong positive, 🟡 = mild positive, ⚪ = watch/neutral
+
+Focus on: RBI/Fed actions, inflation/GDP data, election results, FII activity, global market moves, major circuit breakers, geopolitical events.
+If no high-impact news exists, say: "⚪ No major market-moving events in recent headlines. Normal session expected."
+
+Max 100 words total.`
 
   const body = JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 300,
+    max_tokens: 350,
     messages: [{ role: 'user', content: prompt }],
   })
 
@@ -104,13 +133,13 @@ router.get('/', async (req, res) => {
   }
 
   try {
-    const headlines = await fetchHeadlines()
-    if (headlines.length === 0) {
+    const items = await fetchAllNews()
+    if (items.length === 0) {
       if (cache) return res.set('Cache-Control', 'no-store').json({ ...cache, stale: true })
       return res.status(502).json({ error: 'No headlines available' })
     }
-    const summary = await callClaude(headlines, apiKey)
-    cache = { summary, headlines, updatedAt: new Date().toISOString() }
+    const summary = await callClaude(items, apiKey)
+    cache = { summary, updatedAt: new Date().toISOString() }
     cacheTime = Date.now()
     res.set('Cache-Control', 'no-store').json(cache)
   } catch (err) {
