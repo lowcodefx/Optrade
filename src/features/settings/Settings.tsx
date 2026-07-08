@@ -1,10 +1,13 @@
-import { useSettingsStore } from '@/core/store'
-import { X } from 'lucide-react'
+import { useSettingsStore, useMarketStore } from '@/core/store'
+import { X, Wallet } from 'lucide-react'
 
 interface Props { onClose: () => void }
 
 export function Settings({ onClose }: Props) {
   const s = useSettingsStore()
+  const availableMargin = useMarketStore(st => st.availableMargin)
+  const usedMargin = useMarketStore(st => st.usedMargin)
+  const netMargin = useMarketStore(st => st.netMargin)
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70" onClick={onClose}>
@@ -16,6 +19,30 @@ export function Settings({ onClose }: Props) {
         </div>
 
         <div className="p-5 space-y-5">
+          {/* Account Balance */}
+          {availableMargin > 0 && (
+            <section className="bg-[#060d1a] border border-[#1e3a5f] rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Wallet size={12} className="text-[#38bdf8]" />
+                <h3 className="text-[#64748b] text-[10px] uppercase tracking-widest">Account Balance</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <p className="text-[9px] text-[#475569] mb-0.5">Available</p>
+                  <p className="text-[#22c55e] font-bold text-sm">₹{availableMargin.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-[#475569] mb-0.5">Used</p>
+                  <p className="text-[#f59e0b] font-bold text-sm">₹{usedMargin.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-[#475569] mb-0.5">Net</p>
+                  <p className="text-white font-bold text-sm">₹{netMargin.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Risk Settings */}
           <section>
             <h3 className="text-[#64748b] text-[10px] uppercase tracking-widest mb-3">Risk Management</h3>
