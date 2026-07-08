@@ -2,69 +2,40 @@ const { Router } = require('express')
 const https = require('https')
 const router = Router()
 
-const CACHE_TTL = 10 * 60 * 1000  // 10 minutes — fast enough to catch breaking news
+const CACHE_TTL = 10 * 60 * 1000
 let cache = null
 let cacheTime = 0
 
-function fetchUrl(url) {
+function fetchJson(url) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, { headers: { 'User-Agent': 'Optrade/1.0' } }, res => {
       const chunks = []
       res.on('data', c => chunks.push(c))
-      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
+      res.on('end', () => {
+        try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))) }
+        catch (e) { reject(new Error('JSON parse error')) }
+      })
     })
     req.on('error', reject)
-    req.setTimeout(8000, () => { req.destroy(); reject(new Error('feed timeout')) })
+    req.setTimeout(8000, () => { req.destroy(); reject(new Error('timeout')) })
   })
 }
 
-function extractItems(xml) {
-  // Extract title + pubDate pairs from RSS
-  const items = []
-  const itemBlocks = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)]
-  for (const block of itemBlocks) {
-    const content = block[1]
-    const titleMatch = content.match(/<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>/s)
-    const dateMatch = content.match(/<pubDate>(.*?)<\/pubDate>/)
-    const title = titleMatch ? titleMatch[1].replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim() : ''
-    const pubDate = dateMatch ? dateMatch[1].trim() : ''
-    if (title && title.length > 15 && title.length < 250) {
-      items.push({ title, pubDate })
-    }
-  }
-  return items.slice(0, 10)
+async function fetchNews(apiKey) {
+  const url = `https://newsapi.org/v2/everything?q=NIFTY+OR+sensex+OR+%22Indian+market%22+OR+RBI+OR+%22stock+market%22&language=en&sortBy=publishedAt&pageSize=15&apiKey=${apiKey}`
+  const data = await fetchJson(url)
+  if (data.status !== 'ok') throw new Error(data.message || 'NewsAPI error')
+  return (data.articles || [])
+    .filter(a => a.title && !a.title.includes('[Removed]'))
+    .slice(0, 12)
+    .map(a => ({ title: a.title, publishedAt: a.publishedAt }))
 }
 
-async function fetchAllNews() {
-  const feeds = [
-    'https://www.moneycontrol.com/rss/latestnews.xml',
-    'https://economictimes.indiatimes.com/markets/rss.cms',
-    'https://www.business-standard.com/rss/markets-106.rss',
-  ]
-  const all = []
-  for (const feed of feeds) {
-    try {
-      const xml = await fetchUrl(feed)
-      all.push(...extractItems(xml))
-    } catch (e) {
-      console.error('[marketSummary] feed error:', feed, e.message)
-    }
-  }
-  // Deduplicate by title similarity
-  const seen = new Set()
-  return all.filter(item => {
-    const key = item.title.toLowerCase().slice(0, 40)
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  }).slice(0, 18)
-}
-
-function callClaude(items, apiKey) {
+function callClaude(articles, claudeKey) {
   const now = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true })
-  const newsText = items.map((item, i) => {
-    const time = item.pubDate ? ` [${item.pubDate}]` : ''
-    return `${i + 1}.${time} ${item.title}`
+  const newsText = articles.map((a, i) => {
+    const t = a.publishedAt ? new Date(a.publishedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }) : ''
+    return `${i + 1}. [${t}] ${a.title}`
   }).join('\n')
 
   const prompt = `You are a market alert assistant for an Indian NIFTY options trader. Current IST time: ${now}.
@@ -98,7 +69,7 @@ Rules:
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'x-api-key': claudeKey,
         'anthropic-version': '2023-06-01',
         'Content-Length': Buffer.byteLength(body),
       },
@@ -108,14 +79,9 @@ Rules:
       res.on('end', () => {
         try {
           const data = JSON.parse(Buffer.concat(chunks).toString())
-          if (data.content && data.content[0]) {
-            resolve(data.content[0].text)
-          } else {
-            reject(new Error('Unexpected Claude response'))
-          }
-        } catch (e) {
-          reject(new Error('Claude parse error'))
-        }
+          if (data.content?.[0]) resolve(data.content[0].text)
+          else reject(new Error('Unexpected Claude response'))
+        } catch (e) { reject(new Error('Claude parse error')) }
       })
     })
     req.on('error', reject)
@@ -126,20 +92,21 @@ Rules:
 }
 
 router.get('/', async (req, res) => {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return res.status(503).json({ error: 'Market summary not configured' })
+  const claudeKey = process.env.ANTHROPIC_API_KEY
+  const newsKey = process.env.NEWS_API_KEY
+  if (!claudeKey || !newsKey) return res.status(503).json({ error: 'Market summary not configured' })
 
   if (cache && Date.now() - cacheTime < CACHE_TTL) {
     return res.set('Cache-Control', 'no-store').json(cache)
   }
 
   try {
-    const items = await fetchAllNews()
-    if (items.length === 0) {
+    const articles = await fetchNews(newsKey)
+    if (articles.length === 0) {
       if (cache) return res.set('Cache-Control', 'no-store').json({ ...cache, stale: true })
       return res.status(502).json({ error: 'No headlines available' })
     }
-    const summary = await callClaude(items, apiKey)
+    const summary = await callClaude(articles, claudeKey)
     cache = { summary, updatedAt: new Date().toISOString() }
     cacheTime = Date.now()
     res.set('Cache-Control', 'no-store').json(cache)
