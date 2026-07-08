@@ -42,11 +42,23 @@ jobs:
 
       - name: Deploy server to VM
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          script: ~/deploy.sh
+          envs: NEWS_API_KEY
+          script: |
+            ~/deploy.sh
+            if [ -n "$NEWS_API_KEY" ]; then
+              if grep -q 'NEWS_API_KEY' ~/optrade-api/ecosystem.config.js; then
+                sed -i "s|NEWS_API_KEY:.*|NEWS_API_KEY: '$NEWS_API_KEY',|" ~/optrade-api/ecosystem.config.js
+              else
+                sed -i "s|ANTHROPIC_API_KEY:|NEWS_API_KEY: '$NEWS_API_KEY',\n        ANTHROPIC_API_KEY:|" ~/optrade-api/ecosystem.config.js
+              fi
+              pm2 restart optrade-api
+            fi
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
