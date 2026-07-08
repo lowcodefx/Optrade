@@ -53,9 +53,13 @@ function LeftDockTabs() {
           </button>
         ))}
       </div>
+      {/* AI Market Alerts — always visible regardless of active tab */}
+      <div className="shrink-0">
+        <MarketSummary />
+      </div>
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto">
-        {tab === 'discipline' && <><DisciplinePanel /><AlertsPanel /><MarketSummary /></>}
+        {tab === 'discipline' && <><DisciplinePanel /><AlertsPanel /></>}
         {tab === 'market'     && <><MarketContext /><TradeStrength /></>}
         {tab === 'analysis'   && <TrendAnalysis />}
       </div>
