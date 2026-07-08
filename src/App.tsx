@@ -18,7 +18,7 @@ import { QuickDecisionPopup } from '@/features/quick-popup/QuickDecisionPopup'
 import { TradingPlaybook } from '@/features/playbook/TradingPlaybook'
 import { useNiftyQuote, useOptionChain, useCandles, useNifty50Breadth, usePivotPoints, useOrders, useGlobalMarkets, useFiiDii } from '@/core/hooks/useMarketData'
 import { ShieldCheck, Activity, TrendingUp } from 'lucide-react'
-import { NewsTimeline } from '@/features/news/NewsTimeline'
+import { MarketSummary } from '@/features/market-summary/MarketSummary'
 import { AlertMonitor } from '@/features/alerts/AlertMonitor'
 import { SquareOffReminder } from '@/features/square-off/SquareOffReminder'
 import { AlertsPanel } from '@/features/alerts/AlertsPanel'
@@ -55,7 +55,7 @@ function LeftDockTabs() {
       </div>
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto">
-        {tab === 'discipline' && <><DisciplinePanel /><AlertsPanel /><NewsTimeline /></>}
+        {tab === 'discipline' && <><DisciplinePanel /><AlertsPanel /><MarketSummary /></>}
         {tab === 'market'     && <><MarketContext /><TradeStrength /></>}
         {tab === 'analysis'   && <TrendAnalysis />}
       </div>

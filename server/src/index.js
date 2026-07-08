@@ -31,6 +31,7 @@ app.use('/api/option-chain',       require('./routes/optionChain'))
 app.use('/api/nifty-instruments',  require('./routes/niftyInstruments'))
 app.use('/api/exchange-token',     require('./routes/exchangeToken'))
 app.use('/api/set-token',          require('./routes/setToken'))
+app.use('/api/market-summary',     require('./routes/marketSummary'))
 
 if (require.main === module) {
   app.listen(PORT, () => console.log(`optrade-api listening on ${PORT}`))
