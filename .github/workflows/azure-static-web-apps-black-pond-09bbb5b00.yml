@@ -40,6 +40,14 @@ jobs:
           VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
           VITE_BACKEND_KEY: ${{ secrets.VITE_BACKEND_KEY }}
 
+      - name: Deploy server to VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: ~/deploy.sh
+
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
