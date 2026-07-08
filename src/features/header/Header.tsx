@@ -161,18 +161,6 @@ const [time, setTime] = useState(new Date())
               <span className="text-[#64748b]">PCR <span className={`font-semibold ${quote.pcr > 1 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>{quote.pcr.toFixed(2)}</span></span>
             </>
           )}
-          {live && availableMargin > 0 && (
-            <>
-              <span className="w-px h-3 bg-[#1e293b]" />
-              <span className="text-[#64748b]">
-                Bal <span className="text-[#22c55e] font-bold">
-                  ₹{availableMargin >= 100000
-                    ? `${(availableMargin / 100000).toFixed(1)}L`
-                    : `${(availableMargin / 1000).toFixed(1)}K`}
-                </span>
-              </span>
-            </>
-          )}
         </div>
       </div>
 
