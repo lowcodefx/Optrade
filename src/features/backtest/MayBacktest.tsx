@@ -7,7 +7,7 @@ import {
 } from 'recharts'
 import { Play, AlertCircle } from 'lucide-react'
 
-const LOT_SIZE   = 75
+const LOT_SIZE   = 65
 const DELTA      = 0.5
 const PL_FACTOR  = LOT_SIZE * DELTA  // ₹37.5 per NIFTY point per lot
 const INITIAL_CAPITAL = 30_000

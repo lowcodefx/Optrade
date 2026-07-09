@@ -1,6 +1,6 @@
 import { useSettingsStore } from '@/core/store'
 
-const LOT_SIZE = 50
+const LOT_SIZE = 65
 
 export function useRiskCalc(premium: number, stopLoss?: number) {
   const { capital, riskPerTrade } = useSettingsStore()

@@ -7,7 +7,7 @@ import { NIFTY50_KITE_INSTRUMENTS, type Nifty50BreadthResult } from '@/core/util
 import { API_BASE, kiteAuthHeaders } from './apiClient'
 
 const NIFTY_TOKEN = 256265
-const LOT_SIZE = 75
+const LOT_SIZE = 65
 
 // All Kite API calls go through the VM proxy at API_BASE/api/kite.
 function buildKiteUrl(path: string, params?: Record<string, string | string[]>): string {

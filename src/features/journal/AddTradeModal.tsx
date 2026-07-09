@@ -6,7 +6,7 @@ import type { TradeResult } from '@/core/types/discipline'
 
 interface Props { onClose: () => void }
 
-const LOT_SIZE = 75
+const LOT_SIZE = 65
 
 export function AddTradeModal({ onClose }: Props) {
   const addEntry = useJournalStore(s => s.addEntry)
