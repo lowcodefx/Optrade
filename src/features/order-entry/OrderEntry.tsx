@@ -116,7 +116,7 @@ export function OrderEntry() {
     mutationFn: () => tradingService.placeOrder({
       symbol: 'NIFTY', strike, optionType,
       expiry: chain?.expiry ?? '',
-      quantity: quantity * 75,
+      quantity: quantity * 65,
       orderType: 'LIMIT', productType: 'MIS',
       price: limitPrice || premium,
       stopLoss: stopLoss || undefined,
@@ -196,7 +196,7 @@ export function OrderEntry() {
             <span className="flex-1 text-center text-white font-bold text-sm">{quantity}</span>
             <button onClick={() => setQuantity(quantity + 1)} className="px-2 py-1.5 text-[#64748b] hover:text-white"><Plus size={10} /></button>
           </div>
-          <div className="text-[9px] text-[#475569] mt-0.5">{quantity * 75} shares · 1 lot = 75</div>
+          <div className="text-[9px] text-[#475569] mt-0.5">{quantity * 65} shares · 1 lot = 65</div>
         </div>
 
         {/* Limit Price + SL */}
