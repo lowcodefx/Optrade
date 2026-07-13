@@ -40,9 +40,7 @@ export function OpenPositions() {
       qc.invalidateQueries({ queryKey: ['positions'] })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      setExitError(msg.includes('403') || msg.includes('not allowed')
-        ? 'Exit blocked: add Azure IP 20.239.240.186 to Zerodha allowed IPs'
-        : `Exit failed: ${msg}`)
+      setExitError(`Exit failed: ${msg}`)
     } finally {
       setExiting(null)
     }
@@ -55,9 +53,7 @@ export function OpenPositions() {
       qc.invalidateQueries({ queryKey: ['positions'] })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      setExitError(msg.includes('403') || msg.includes('not allowed')
-        ? 'Exit blocked: add Azure IP 20.239.240.186 to Zerodha allowed IPs'
-        : `Exit failed: ${msg}`)
+      setExitError(`Exit failed: ${msg}`)
     }
   }
 

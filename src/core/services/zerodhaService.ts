@@ -203,6 +203,7 @@ export class ZerodhaService implements ITradingService {
 
   async placeOrder(order: OrderRequest): Promise<OrderResponse> {
     // Look up exact tradingsymbol from instruments cache (avoids manual date formatting)
+    // order.quantity is already in shares (OrderEntry sends lots * LOT_SIZE)
     const instruments = await getNiftyOptions()
     const expiry = order.expiry // YYYY-MM-DD from chain
     const inst = instruments.find(
@@ -212,7 +213,6 @@ export class ZerodhaService implements ITradingService {
     )
     const tradingsymbol = inst?.tradingsymbol ?? `NIFTY${expiry}${order.strike}${order.optionType}`
 
-    // order.quantity is already in shares (OrderEntry sends quantity * 75)
     const data = await kitePost('/orders/regular', {
       tradingsymbol,
       exchange: 'NFO',
@@ -221,9 +221,22 @@ export class ZerodhaService implements ITradingService {
       product: order.productType,
       quantity: String(order.quantity),
       ...(order.price ? { price: String(order.price) } : {}),
-      ...(order.stopLoss ? { trigger_price: String(order.stopLoss) } : {}),
       validity: 'DAY',
     }) as { order_id: string }
+
+    // Place SL order as a separate SELL SL-M order after buy
+    if (order.stopLoss) {
+      kitePost('/orders/regular', {
+        tradingsymbol,
+        exchange: 'NFO',
+        transaction_type: 'SELL',
+        order_type: 'SL-M',
+        product: order.productType,
+        quantity: String(order.quantity),
+        trigger_price: String(order.stopLoss),
+        validity: 'DAY',
+      }).catch(e => console.warn('[placeOrder] SL order failed:', e.message))
+    }
 
     const lots = order.quantity / LOT_SIZE
     return {
