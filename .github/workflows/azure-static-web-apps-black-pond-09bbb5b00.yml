@@ -59,7 +59,7 @@ jobs:
                 sed -i "s|ANTHROPIC_API_KEY:|NEWS_API_KEY: '${NEWS_API_KEY}',\n        ANTHROPIC_API_KEY:|" "$ECO"
               fi
               pm2 delete optrade-api
-              pm2 start "$ECO"
+              cd ~/optrade-api && pm2 start ecosystem.config.js
             fi
 
   close_pull_request_job:
