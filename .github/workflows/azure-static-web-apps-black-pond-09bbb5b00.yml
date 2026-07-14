@@ -52,12 +52,14 @@ jobs:
           script: |
             ~/deploy.sh
             if [ -n "$NEWS_API_KEY" ]; then
-              if grep -q 'NEWS_API_KEY' ~/optrade-api/ecosystem.config.js; then
-                sed -i "s|NEWS_API_KEY:.*|NEWS_API_KEY: '$NEWS_API_KEY',|" ~/optrade-api/ecosystem.config.js
+              ECO=~/optrade-api/ecosystem.config.js
+              if grep -q 'NEWS_API_KEY' "$ECO"; then
+                sed -i "s|NEWS_API_KEY:.*|NEWS_API_KEY: '${NEWS_API_KEY}',|" "$ECO"
               else
-                sed -i "s|ANTHROPIC_API_KEY:|NEWS_API_KEY: '$NEWS_API_KEY',\n        ANTHROPIC_API_KEY:|" ~/optrade-api/ecosystem.config.js
+                sed -i "s|ANTHROPIC_API_KEY:|NEWS_API_KEY: '${NEWS_API_KEY}',\n        ANTHROPIC_API_KEY:|" "$ECO"
               fi
-              pm2 restart optrade-api
+              pm2 delete optrade-api
+              pm2 start "$ECO"
             fi
 
   close_pull_request_job:
