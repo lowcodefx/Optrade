@@ -3,7 +3,7 @@ import { useSettingsStore } from '@/core/store'
 import { useLiveModeStore } from '@/core/services/tradingService'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
-  ReferenceLine, ResponsiveContainer, CartesianGrid,
+  ReferenceLine, CartesianGrid,
 } from 'recharts'
 import { Play, AlertCircle } from 'lucide-react'
 import { calculateMarketScore } from '@/core/utils/scoreEngine'
@@ -116,9 +116,9 @@ function calcADX(highs: number[], lows: number[], closes: number[], period = 14)
 
 // ── fetch helpers ─────────────────────────────────────────────────────────────
 
-async function fetch5mCandles(date: string, apiKey: string, accessToken: string): Promise<RawCandle[]> {
-  const from = encodeURIComponent(`${date} 09:15:00`)
-  const to   = encodeURIComponent(`${date} 15:30:00`)
+async function fetch5mCandles(fromDate: string, toDate: string, apiKey: string, accessToken: string): Promise<RawCandle[]> {
+  const from = encodeURIComponent(`${fromDate} 09:15:00`)
+  const to   = encodeURIComponent(`${toDate} 15:30:00`)
   const qs = `kite_path=instruments/historical/256265/5minute&from=${from}&to=${to}&continuous=0&oi=0`
   const res = await fetch(`/api/kite?${qs}`, {
     headers: { 'X-Kite-Auth': `token ${apiKey}:${accessToken}`, 'X-Kite-Version': '3' },
@@ -293,7 +293,8 @@ export function ScoreBacktest() {
   const { apiKey, accessToken } = useSettingsStore()
   const isLive = useLiveModeStore(s => s.isLive)
 
-  const [date, setDate]         = useState(lastWeekday)
+  const [fromDate, setFromDate] = useState(lastWeekday)
+  const [toDate, setToDate]     = useState(lastWeekday)
   const [scores, setScores]     = useState<ScorePoint[]>([])
   const [chartCandles, setChartCandles] = useState<Candle[]>([])
   const [pivots, setPivots]     = useState<PivotPoints | null>(null)
@@ -305,8 +306,8 @@ export function ScoreBacktest() {
     setLoading(true); setError('')
     try {
       const [rawCandles, prevDay] = await Promise.all([
-        fetch5mCandles(date, apiKey, accessToken),
-        fetchPrevDayCandle(date, apiKey, accessToken),
+        fetch5mCandles(fromDate, toDate, apiKey, accessToken),
+        fetchPrevDayCandle(fromDate, apiKey, accessToken),
       ])
       if (rawCandles.length === 0) throw new Error('No 5-min candles returned — this may be a holiday or weekend')
       const pv = prevDay ? buildPivots(prevDay) : null
@@ -343,16 +344,30 @@ export function ScoreBacktest() {
           <h3 className="text-[#e2e8f0] text-xs font-semibold">Score Backtest</h3>
           <p className="text-[#475569] text-[9px]">CE / PE score · Scoring engine v2 · 5-min candles</p>
         </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="date"
-            value={date}
-            max={new Date().toISOString().slice(0, 10)}
-            onChange={e => setDate(e.target.value)}
-            className="bg-[#060d1a] border border-[#1e3a5f] rounded px-2 py-1 text-[#e2e8f0] text-[10px]"
-          />
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1">
+            <span className="text-[#475569] text-[9px]">From</span>
+            <input
+              type="date"
+              value={fromDate}
+              max={toDate}
+              onChange={e => setFromDate(e.target.value)}
+              className="bg-[#060d1a] border border-[#1e3a5f] rounded px-2 py-1 text-[#e2e8f0] text-[10px]"
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[#475569] text-[9px]">To</span>
+            <input
+              type="date"
+              value={toDate}
+              min={fromDate}
+              max={new Date().toISOString().slice(0, 10)}
+              onChange={e => setToDate(e.target.value)}
+              className="bg-[#060d1a] border border-[#1e3a5f] rounded px-2 py-1 text-[#e2e8f0] text-[10px]"
+            />
+          </div>
           <button
-            onClick={run} disabled={loading || !date}
+            onClick={run} disabled={loading || !fromDate || !toDate}
             className="flex items-center gap-1.5 bg-[#38bdf8] text-black text-[10px] font-bold px-3 py-1.5 rounded hover:bg-[#0ea5e9] disabled:opacity-50 transition-colors"
           >
             <Play size={10} />
@@ -366,39 +381,37 @@ export function ScoreBacktest() {
       {ran && scores.length > 0 && (
         <>
           <div className="text-[#64748b] text-[9px] uppercase tracking-widest">
-            CE / PE Score · {date} · {scores.length} candles
+            CE / PE Score · {fromDate}{fromDate !== toDate ? ` → ${toDate}` : ''} · {scores.length} candles
           </div>
 
-          <ResponsiveContainer width="100%" height={200}>
-            {/* margin matches CandlestickChart exactly so X-axes align */}
-            <LineChart data={scores} margin={{ top: 5, right: 60, bottom: 5, left: 0 }}>
-              <CartesianGrid strokeDasharray="2 4" stroke="#1e293b" />
-              <XAxis dataKey="time" tick={{ fontSize: 7, fill: '#475569' }} interval={5} axisLine={false} tickLine={false} />
-              <YAxis
-                orientation="right" width={50}
-                domain={[0, 1000]}
-                ticks={[0, 250, 500, 700, 1000]}
-                tick={{ fontSize: 7, fill: '#475569' }}
-                axisLine={false} tickLine={false}
-              />
-              <Tooltip
-                contentStyle={{ background: '#0a1628', border: '1px solid #1e3a5f', borderRadius: 4, fontSize: 10 }}
-                labelStyle={{ color: '#64748b' }}
-                formatter={(v: number, key: string) => [v, key === 'ceScore' ? 'CE Score' : 'PE Score']}
-              />
-
-              {/* Threshold lines — labels appear in the right margin area */}
-              <ReferenceLine y={500} stroke="#f59e0b" strokeDasharray="5 3" strokeWidth={1.5}
-                label={{ value: '500', fill: '#f59e0b', fontSize: 8, position: 'right' }} />
-              <ReferenceLine y={700} stroke="#22c55e" strokeDasharray="3 5" strokeWidth={1} opacity={0.5}
-                label={{ value: '700', fill: '#22c55e', fontSize: 8, position: 'right' }} />
-
-              <Line type="monotone" dataKey="ceScore" stroke="#22c55e" strokeWidth={1.5}
-                dot={false} name="CE Score" isAnimationActive={false} />
-              <Line type="monotone" dataKey="peScore" stroke="#ef4444" strokeWidth={1.5}
-                dot={false} name="PE Score" isAnimationActive={false} />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="overflow-x-auto">
+            <div style={{ width: Math.max(600, scores.length * 9), minWidth: '100%' }}>
+              <LineChart width={Math.max(600, scores.length * 9)} height={200} data={scores} margin={{ top: 5, right: 60, bottom: 5, left: 0 }}>
+                <CartesianGrid strokeDasharray="2 4" stroke="#1e293b" />
+                <XAxis dataKey="time" tick={{ fontSize: 7, fill: '#475569' }} interval={5} axisLine={false} tickLine={false} />
+                <YAxis
+                  orientation="right" width={50}
+                  domain={[0, 1000]}
+                  ticks={[0, 250, 500, 700, 1000]}
+                  tick={{ fontSize: 7, fill: '#475569' }}
+                  axisLine={false} tickLine={false}
+                />
+                <Tooltip
+                  contentStyle={{ background: '#0a1628', border: '1px solid #1e3a5f', borderRadius: 4, fontSize: 10 }}
+                  labelStyle={{ color: '#64748b' }}
+                  formatter={(v: number, key: string) => [v, key === 'ceScore' ? 'CE Score' : 'PE Score']}
+                />
+                <ReferenceLine y={500} stroke="#f59e0b" strokeDasharray="5 3" strokeWidth={1.5}
+                  label={{ value: '500', fill: '#f59e0b', fontSize: 8, position: 'right' }} />
+                <ReferenceLine y={700} stroke="#22c55e" strokeDasharray="3 5" strokeWidth={1} opacity={0.5}
+                  label={{ value: '700', fill: '#22c55e', fontSize: 8, position: 'right' }} />
+                <Line type="monotone" dataKey="ceScore" stroke="#22c55e" strokeWidth={1.5}
+                  dot={false} name="CE Score" isAnimationActive={false} />
+                <Line type="monotone" dataKey="peScore" stroke="#ef4444" strokeWidth={1.5}
+                  dot={false} name="PE Score" isAnimationActive={false} />
+              </LineChart>
+            </div>
+          </div>
 
           {/* Legend + summary */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[9px]">
@@ -431,15 +444,17 @@ export function ScoreBacktest() {
 
           {/* NIFTY 50 candlestick chart */}
           <div className="text-[#64748b] text-[9px] uppercase tracking-widest mt-1">
-            NIFTY 5-min candles · {date}
+            NIFTY 5-min candles · {fromDate}{fromDate !== toDate ? ` → ${toDate}` : ''}
           </div>
-          <div className="bg-[#060d1a] rounded border border-[#1e293b]">
-            <CandlestickChart
-              candles={chartCandles}
-              pivotPoints={pivots}
-              height={220}
-              timeframeMinutes={5}
-            />
+          <div className="bg-[#060d1a] rounded border border-[#1e293b] overflow-x-auto">
+            <div style={{ width: Math.max(600, chartCandles.length * 9), minWidth: '100%' }}>
+              <CandlestickChart
+                candles={chartCandles}
+                pivotPoints={pivots}
+                height={220}
+                timeframeMinutes={5}
+              />
+            </div>
           </div>
 
           <p className="text-[#334155] text-[8px] leading-relaxed">
