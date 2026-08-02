@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { kiteAuthHeaders, API_BASE } from '@/core/services/apiClient'
 import { Plus, X, Eye, Bell, BellOff, Zap } from 'lucide-react'
-import { SECTOR_STOCKS, SECTOR_COLORS } from '../stockSectors'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -127,12 +126,10 @@ function saveAlerts(a: AlertsMap) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function StocksWatchlist({ watchlist, onRemove, onAdd, selectedSector, onSectorSelect }: {
+export function StocksWatchlist({ watchlist, onRemove, onAdd }: {
   watchlist: string[]
   onRemove: (s: string) => void
   onAdd: (s: string) => void
-  selectedSector: string | null
-  onSectorSelect: (s: string | null) => void
 }) {
   const [input, setInput]           = useState('')
   const [alerts, setAlerts]         = useState<AlertsMap>(loadAlerts)
@@ -185,8 +182,6 @@ export function StocksWatchlist({ watchlist, onRemove, onAdd, selectedSector, on
     setAlerts(next)
     saveAlerts(next)
   }
-
-  const sectors = Object.keys(SECTOR_STOCKS)
 
   return (
     <div className="flex flex-col h-full">
@@ -290,34 +285,6 @@ export function StocksWatchlist({ watchlist, onRemove, onAdd, selectedSector, on
         })}
       </div>
 
-      {/* ── Sector filter ── */}
-      <div className="border-t border-[#1e293b] p-2.5 shrink-0">
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="text-[9px] font-bold uppercase tracking-widest text-[#94a3b8]">Sectors</div>
-          {selectedSector && (
-            <button onClick={() => onSectorSelect(null)} className="text-[#475569] text-[8px] hover:text-[#ef4444] transition-colors">
-              Clear
-            </button>
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-1">
-          {sectors.map(name => {
-            const c       = SECTOR_COLORS[name]
-            const active  = selectedSector === name
-            return (
-              <button
-                key={name}
-                onClick={() => onSectorSelect(active ? null : name)}
-                className={`rounded px-1.5 py-1 text-[8px] font-semibold text-center transition-colors ${
-                  active ? `${c.activeBg} ${c.text} ring-1 ring-current` : `${c.bg} ${c.text} hover:${c.activeBg}`
-                }`}
-              >
-                {name}
-              </button>
-            )
-          })}
-        </div>
-      </div>
 
       {/* Alert editor modal */}
       {editingAlert && (

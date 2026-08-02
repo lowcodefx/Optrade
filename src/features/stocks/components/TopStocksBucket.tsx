@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { API_BASE, kiteAuthHeaders } from '@/core/services/apiClient'
 import { ChevronDown, ChevronRight, Info, RefreshCw, Bookmark, BookmarkCheck, Flame, Newspaper, LineChart } from 'lucide-react'
-import { SECTOR_STOCKS } from '../stockSectors'
+import { SECTOR_STOCKS, SECTOR_COLORS } from '../stockSectors'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -547,12 +547,12 @@ function AccordionSection({ title, stocks, defaultOpen, onWatchlist, watchlist, 
 
 type Tab = 'top10' | 'all'
 
-export function TopStocksBucket({ onAddToWatchlist, watchlist, selectedSector }: {
+export function TopStocksBucket({ onAddToWatchlist, watchlist }: {
   onAddToWatchlist: (s: string) => void
   watchlist: string[]
-  selectedSector: string | null
 }) {
-  const [tab, setTab] = useState<Tab>('top10')
+  const [tab, setTab]                   = useState<Tab>('top10')
+  const [selectedSector, setSelectedSector] = useState<string | null>(null)
   const qc = useQueryClient()
 
   const { data, isLoading, error, refetch, isFetching } = useQuery({
@@ -592,6 +592,27 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, selectedSector }:
           >
             All Stocks
           </button>
+        </div>
+
+        {/* Sector filter pills */}
+        <div className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-none">
+          {Object.keys(SECTOR_STOCKS).map(name => {
+            const c      = SECTOR_COLORS[name]
+            const active = selectedSector === name
+            return (
+              <button
+                key={name}
+                onClick={() => setSelectedSector(active ? null : name)}
+                className={`shrink-0 rounded px-2 py-0.5 text-[8px] font-bold transition-colors ${
+                  active
+                    ? `${c.activeBg} ${c.text} ring-1 ring-current`
+                    : `${c.bg} ${c.text}`
+                }`}
+              >
+                {name}
+              </button>
+            )
+          })}
         </div>
       </div>
 
