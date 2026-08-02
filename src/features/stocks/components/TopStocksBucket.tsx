@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { API_BASE, kiteAuthHeaders } from '@/core/services/apiClient'
-import { ChevronDown, ChevronRight, Info, RefreshCw, Bookmark, BookmarkCheck, Flame, Newspaper, LineChart } from 'lucide-react'
+import { ChevronDown, ChevronRight, Info, RefreshCw, Bookmark, BookmarkCheck, Flame, Newspaper, LineChart, ShoppingCart } from 'lucide-react'
 import { SECTOR_STOCKS, SECTOR_COLORS } from '../stockSectors'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -396,13 +396,14 @@ function InfoModal({ stock, onClose }: { stock: StockScore; onClose: () => void 
 
 // ── Stock row ─────────────────────────────────────────────────────────────────
 
-function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist }: {
+function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist, onBuy }: {
   stock: StockScore
   rank?: number
   cap?: string
   onInfo: () => void
   onWatchlist: () => void
   inWatchlist: boolean
+  onBuy: (symbol: string, price: number) => void
 }) {
   const [showChart, setShowChart] = useState(false)
   const scoreColor = stock.totalScore >= 70 ? 'text-[#22c55e]' : stock.totalScore >= 50 ? 'text-[#f59e0b]' : 'text-[#ef4444]'
@@ -447,6 +448,13 @@ function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist }: {
         <button onClick={onInfo} className="text-[#334155] hover:text-[#64748b] shrink-0 transition-colors" title="Score details + news">
           <Info size={12} />
         </button>
+        <button
+          title="Buy CNC"
+          onClick={e => { e.stopPropagation(); onBuy(stock.symbol, stock.last_price ?? 0) }}
+          className="p-1 rounded text-[#22c55e]/60 hover:text-[#22c55e] hover:bg-[#22c55e]/10 transition-colors shrink-0"
+        >
+          <ShoppingCart size={11} />
+        </button>
       </div>
       {showChart && <ChartModal stock={stock} onClose={() => setShowChart(false)} />}
     </>
@@ -455,12 +463,13 @@ function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist }: {
 
 // ── Top 10 view ───────────────────────────────────────────────────────────────
 
-function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter }: {
+function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter, onBuy }: {
   data: AnalysisResult
   onWatchlist: (s: string) => void
   watchlist: string[]
   heldSymbols: string[]
   sectorFilter: string | null
+  onBuy: (symbol: string, price: number) => void
 }) {
   const [infoStock, setInfoStock] = useState<StockScore | null>(null)
 
@@ -493,6 +502,7 @@ function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter }: 
           onInfo={() => setInfoStock(s)}
           onWatchlist={() => onWatchlist(s.symbol)}
           inWatchlist={watchlist.includes(s.symbol)}
+          onBuy={onBuy}
         />
       ))}
       {infoStock && <InfoModal stock={infoStock} onClose={() => setInfoStock(null)} />}
@@ -502,13 +512,14 @@ function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter }: 
 
 // ── By-category accordion view ────────────────────────────────────────────────
 
-function AccordionSection({ title, stocks, defaultOpen, onWatchlist, watchlist, sectorFilter }: {
+function AccordionSection({ title, stocks, defaultOpen, onWatchlist, watchlist, sectorFilter, onBuy }: {
   title: string
   stocks: StockScore[]
   defaultOpen?: boolean
   onWatchlist: (s: string) => void
   watchlist: string[]
   sectorFilter: string | null
+  onBuy: (symbol: string, price: number) => void
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false)
   const [infoStock, setInfoStock] = useState<StockScore | null>(null)
@@ -536,6 +547,7 @@ function AccordionSection({ title, stocks, defaultOpen, onWatchlist, watchlist, 
           onInfo={() => setInfoStock(s)}
           onWatchlist={() => onWatchlist(s.symbol)}
           inWatchlist={watchlist.includes(s.symbol)}
+          onBuy={onBuy}
         />
       ))}
       {infoStock && <InfoModal stock={infoStock} onClose={() => setInfoStock(null)} />}
@@ -553,7 +565,34 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist }: {
 }) {
   const [tab, setTab]                   = useState<Tab>('top10')
   const [selectedSector, setSelectedSector] = useState<string | null>(null)
+  const [buyStock, setBuyStock]         = useState<{ symbol: string; price: number } | null>(null)
+  const [buyQty, setBuyQty]             = useState('1')
+  const [buyError, setBuyError]         = useState<string | null>(null)
+  const [buyLoading, setBuyLoading]     = useState(false)
+  const [buySuccess, setBuySuccess]     = useState<string | null>(null)
   const qc = useQueryClient()
+
+  async function placeCNCOrder(symbol: string, price: number, qty: number): Promise<string> {
+    const body = new URLSearchParams({
+      exchange: 'NSE',
+      tradingsymbol: symbol,
+      transaction_type: 'BUY',
+      quantity: String(qty),
+      product: 'CNC',
+      order_type: 'LIMIT',
+      price: price.toFixed(2),
+      validity: 'DAY',
+    }).toString()
+
+    const res = await fetch(`${API_BASE}/api/kite?kite_path=orders/regular`, {
+      method: 'POST',
+      headers: { ...kiteAuthHeaders(), 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.message ?? json.error ?? `HTTP ${res.status}`)
+    return json.data?.order_id ?? 'placed'
+  }
 
   const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ['stockAnalysis'],
@@ -645,15 +684,66 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist }: {
           watchlist={watchlist}
           heldSymbols={heldSymbols}
           sectorFilter={selectedSector}
+          onBuy={(symbol, price) => { setBuyStock({ symbol, price }); setBuyQty('1'); setBuyError(null); setBuySuccess(null) }}
         />
       )}
 
       {data && tab === 'all' && (
         <>
-          <AccordionSection title="Large Cap" stocks={data.largeCap} defaultOpen onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} />
-          <AccordionSection title="Mid Cap"   stocks={data.midCap}             onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} />
-          <AccordionSection title="Small Cap" stocks={data.smallCap}           onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} />
+          <AccordionSection title="Large Cap" stocks={data.largeCap} defaultOpen onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} onBuy={(symbol, price) => { setBuyStock({ symbol, price }); setBuyQty('1'); setBuyError(null); setBuySuccess(null) }} />
+          <AccordionSection title="Mid Cap"   stocks={data.midCap}             onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} onBuy={(symbol, price) => { setBuyStock({ symbol, price }); setBuyQty('1'); setBuyError(null); setBuySuccess(null) }} />
+          <AccordionSection title="Small Cap" stocks={data.smallCap}           onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} onBuy={(symbol, price) => { setBuyStock({ symbol, price }); setBuyQty('1'); setBuyError(null); setBuySuccess(null) }} />
         </>
+      )}
+
+      {buyStock && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setBuyStock(null)}>
+          <div className="bg-[#0a1628] border border-[#1e293b] rounded-xl p-5 w-72 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-white font-bold text-sm mb-3">Place CNC Buy — {buyStock.symbol}</h3>
+            <div className="space-y-2 mb-4">
+              <div className="flex justify-between text-[10px]">
+                <span className="text-[#475569]">Limit Price</span>
+                <span className="text-white font-semibold">₹{buyStock.price.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-[#475569]">Quantity</span>
+                <input
+                  type="number" min="1" value={buyQty}
+                  onChange={e => setBuyQty(e.target.value)}
+                  className="flex-1 bg-[#060d1a] border border-[#1e293b] rounded px-2 py-1 text-white text-[10px] text-right focus:outline-none focus:border-[#38bdf8]"
+                />
+              </div>
+              <div className="flex justify-between text-[10px]">
+                <span className="text-[#475569]">Order Value</span>
+                <span className="text-white font-semibold">₹{(buyStock.price * (parseInt(buyQty) || 1)).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+            {buyError && <p className="text-[9px] text-[#ef4444] mb-2">{buyError}</p>}
+            {buySuccess && <p className="text-[9px] text-[#22c55e] mb-2">✓ Order placed — {buySuccess}</p>}
+            <div className="flex gap-2">
+              <button onClick={() => setBuyStock(null)} className="flex-1 py-1.5 rounded border border-[#1e293b] text-[10px] text-[#475569] hover:text-white">Cancel</button>
+              <button
+                disabled={buyLoading}
+                onClick={async () => {
+                  setBuyError(null); setBuySuccess(null); setBuyLoading(true)
+                  try {
+                    const orderId = await placeCNCOrder(buyStock.symbol, buyStock.price, parseInt(buyQty) || 1)
+                    setBuySuccess(`Order ID ${orderId}`)
+                    setTimeout(() => setBuyStock(null), 2000)
+                  } catch (err: unknown) {
+                    setBuyError(err instanceof Error ? err.message : 'Order failed')
+                  } finally {
+                    setBuyLoading(false)
+                  }
+                }}
+                className="flex-1 py-1.5 rounded bg-[#22c55e]/90 hover:bg-[#22c55e] disabled:opacity-50 text-white text-[10px] font-bold"
+              >
+                {buyLoading ? 'Placing…' : 'Confirm Buy'}
+              </button>
+            </div>
+            <p className="text-[7px] text-[#334155] text-center mt-2">CNC · LIMIT · NSE · DAY</p>
+          </div>
+        </div>
       )}
 
     </div>
