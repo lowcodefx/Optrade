@@ -62,11 +62,15 @@ const [time, setTime] = useState(new Date())
       {/* ── Row 1: Brand · Clock · User · Connect · Settings ── */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#1e293b]/60">
 
-        {/* Left: Logo + name */}
-        <div className="flex items-center gap-2">
+        {/* Left: Logo + name (click to go home) */}
+        <button
+          onClick={() => { window.location.href = '/' }}
+          className="flex items-center gap-2 hover:opacity-75 transition-opacity"
+          title="Home"
+        >
           <img src="/favicon.svg" alt="Optrade" className="h-5 w-auto shrink-0" />
           <span className="text-white font-bold text-sm tracking-wide">Optrade</span>
-        </div>
+        </button>
 
         {/* Right: clock · balance · user · playbook · connect · settings */}
         <div className="flex items-center gap-3">
