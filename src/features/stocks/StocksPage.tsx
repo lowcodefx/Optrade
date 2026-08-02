@@ -68,7 +68,7 @@ export function StocksPage() {
                 watchlist={watchlist}
               />
             </div>
-            <div className="flex-1 overflow-y-auto min-w-0">
+            <div className="flex-[1.6] overflow-y-auto min-w-0">
               <HoldingsBucket />
             </div>
           </div>

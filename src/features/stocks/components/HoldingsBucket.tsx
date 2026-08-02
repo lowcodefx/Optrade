@@ -16,7 +16,8 @@ function saveBuyDates(d: Record<string, string>) {
 
 // Mock buy dates (days ago from today)
 const MOCK_AGES: Record<string, number> = {
-  RELIANCE: 15, INFY: 8, HDFCBANK: 22, TCS: 5, BHARTIARTL: 31,
+  BHARTIARTL: 31, INFY: 8, COFORGE: 3, HDFCBANK: 22, TCS: 5,
+  MPHASIS: 18, WIPRO: 4, RELIANCE: 12,
 }
 
 function daysHeld(symbol: string, isMock: boolean, buyDates: Record<string, string>): number | null {
@@ -52,11 +53,22 @@ interface KiteHolding {
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
 const MOCK_HOLDINGS: KiteHolding[] = [
-  { tradingsymbol: 'RELIANCE',   exchange: 'NSE', quantity: 5,  average_price: 2820, last_price: 2950, pnl: 650,  day_change: 18,  day_change_percentage: 0.61,  close_price: 2932 },
-  { tradingsymbol: 'INFY',       exchange: 'NSE', quantity: 10, average_price: 1540, last_price: 1590, pnl: 500,  day_change: -8,  day_change_percentage: -0.50, close_price: 1598 },
-  { tradingsymbol: 'HDFCBANK',   exchange: 'NSE', quantity: 8,  average_price: 1680, last_price: 1720, pnl: 320,  day_change: 12,  day_change_percentage: 0.70,  close_price: 1708 },
-  { tradingsymbol: 'TCS',        exchange: 'NSE', quantity: 3,  average_price: 3650, last_price: 3820, pnl: 510,  day_change: 35,  day_change_percentage: 0.92,  close_price: 3785 },
-  { tradingsymbol: 'BHARTIARTL', exchange: 'NSE', quantity: 15, average_price:  920, last_price:  990, pnl: 1050, day_change: -5,  day_change_percentage: -0.50, close_price:  995 },
+  // TARGET HIT — large cap, 15% up vs 12% target
+  { tradingsymbol: 'BHARTIARTL', exchange: 'NSE', quantity: 15, average_price: 920,  last_price: 1058, pnl: 2070, day_change: 15,  day_change_percentage:  1.44, close_price: 1043 },
+  // HOLD — large cap, 0.3% up, excellent remaining R:R (lots of runway)
+  { tradingsymbol: 'INFY',       exchange: 'NSE', quantity: 10, average_price: 1540, last_price: 1545, pnl:   50, day_change: -8,  day_change_percentage: -0.52, close_price: 1553 },
+  // HOLD — mid cap, just entered, large upside remaining
+  { tradingsymbol: 'COFORGE',    exchange: 'NSE', quantity:  2, average_price: 1800, last_price: 1808, pnl:   16, day_change: 22,  day_change_percentage:  1.23, close_price: 1786 },
+  // CAUTION — large cap, 1.2% up, R:R narrowing
+  { tradingsymbol: 'HDFCBANK',   exchange: 'NSE', quantity:  8, average_price: 1680, last_price: 1700, pnl:  160, day_change:  5,  day_change_percentage:  0.29, close_price: 1695 },
+  // EXIT? — large cap, 4.7% up but remaining R:R is poor (SL stays at entry)
+  { tradingsymbol: 'TCS',        exchange: 'NSE', quantity:  3, average_price: 3650, last_price: 3820, pnl:  510, day_change: 35,  day_change_percentage:  0.92, close_price: 3785 },
+  // EXIT? — mid cap, 13% up, nearly at 16% target
+  { tradingsymbol: 'MPHASIS',    exchange: 'NSE', quantity:  4, average_price: 2100, last_price: 2373, pnl: 1092, day_change: -25, day_change_percentage: -1.04, close_price: 2398 },
+  // SL HIT — large cap, fell below 5% SL level
+  { tradingsymbol: 'WIPRO',      exchange: 'NSE', quantity: 20, average_price:  480, last_price:  448, pnl: -640, day_change: -12, day_change_percentage: -2.61, close_price:  460 },
+  // Loss but above SL — large cap, 2.5% loss, still valid, high remaining upside
+  { tradingsymbol: 'RELIANCE',   exchange: 'NSE', quantity:  5, average_price: 2820, last_price: 2750, pnl: -350, day_change: -30, day_change_percentage: -1.08, close_price: 2780 },
 ]
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
@@ -94,8 +106,10 @@ interface ComputedRow {
   pct: number
   totalPnL: number
   dayPnL: number
+  dayPnLAmount: number
   slPrice: number
   tgtPrice: number
+  progressPct: number
   originalRisk: number
   achievedRR: number
   remainingRR: number
@@ -117,9 +131,11 @@ function compute(h: KiteHolding): ComputedRow {
   const riskRem        = Math.max(0, h.last_price - slPrice)
   const rewardRem      = Math.max(0, tgtPrice - h.last_price)
   const remainingRR    = riskRem > 0 ? rewardRem / riskRem : 0
+  const dayPnLAmount = h.day_change * h.quantity
+  const progressPct  = Math.max(0, Math.min(100, ((h.last_price - slPrice) / (tgtPrice - slPrice)) * 100))
   return {
-    h, cap: label, pct, totalPnL, dayPnL,
-    slPrice, tgtPrice, originalRisk, achievedRR, remainingRR,
+    h, cap: label, pct, totalPnL, dayPnL, dayPnLAmount,
+    slPrice, tgtPrice, progressPct, originalRisk, achievedRR, remainingRR,
     slHit:    h.last_price <= slPrice,
     targetHit: h.last_price >= tgtPrice,
     rrAlert:  achievedRR >= 2.5,
@@ -175,10 +191,10 @@ function StatusBadge({ r }: { r: ComputedRow }) {
 // ── RR color ──────────────────────────────────────────────────────────────────
 
 function rrColor(r: ComputedRow) {
-  if (r.targetHit || r.achievedRR >= 2.5) return 'text-[#22c55e] font-bold'
-  if (r.remainingRR >= 2) return 'text-[#22c55e]'
-  if (r.remainingRR >= 1) return 'text-[#f59e0b]'
-  return 'text-[#ef4444]'
+  if (r.slHit || r.achievedRR < 0) return 'text-[#ef4444]'
+  if (r.targetHit || r.achievedRR >= 2.5) return 'text-[#22c55e]'
+  if (r.achievedRR >= 1.0) return 'text-[#22c55e] opacity-80'
+  return 'text-[#f59e0b]'
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -224,8 +240,8 @@ export function HoldingsBucket() {
     if (sortKey === 'symbol') { av = a.h.tradingsymbol < b.h.tradingsymbol ? -1 : 1; bv = 0 }
     else if (sortKey === 'price') { av = a.h.last_price; bv = b.h.last_price }
     else if (sortKey === 'pnl')   { av = a.totalPnL;     bv = b.totalPnL }
-    else if (sortKey === 'rr')    { av = a.remainingRR;  bv = b.remainingRR }
-    else if (sortKey === 'day')   { av = a.dayPnL;       bv = b.dayPnL }
+    else if (sortKey === 'rr')    { av = a.achievedRR;   bv = b.achievedRR }
+    else if (sortKey === 'day')   { av = a.dayPnLAmount;  bv = b.dayPnLAmount }
     else if (sortKey === 'age')  { av = daysHeld(a.h.tradingsymbol, isMock, buyDates) ?? -1; bv = daysHeld(b.h.tradingsymbol, isMock, buyDates) ?? -1 }
     if (sortKey === 'symbol') return sortDir === 'asc' ? av : -av
     return sortDir === 'asc' ? av - bv : bv - av
@@ -312,7 +328,7 @@ export function HoldingsBucket() {
           {sorted.length === 0 ? (
             <div className="py-10 text-center text-[#334155] text-[10px]">No holdings in this range</div>
           ) : (
-            <table className="w-full text-[10px] border-collapse" style={{ minWidth: 680 }}>
+            <table className="w-full text-[10px] border-collapse" style={{ minWidth: 700 }}>
               <thead className="sticky top-0 z-10 bg-[#060d1a]">
                 <tr className="border-b border-[#1e293b]">
                   {/* sticky first col */}
@@ -322,10 +338,8 @@ export function HoldingsBucket() {
                   <ColHeader label="CMP"          sortKey="price"  current={sortKey} dir={sortDir} onSort={toggleSort} />
                   <th className="px-2 py-2 text-left text-[8px] font-bold uppercase tracking-widest text-[#475569] whitespace-nowrap">Avg. Buy</th>
                   <th className="px-2 py-2 text-left text-[8px] font-bold uppercase tracking-widest text-[#475569] whitespace-nowrap">Qty</th>
-                  <ColHeader label="Total P&L"    sortKey="pnl"    current={sortKey} dir={sortDir} onSort={toggleSort} />
-                  <th className="px-2 py-2 text-left text-[8px] font-bold uppercase tracking-widest text-[#475569] whitespace-nowrap">Target ₹</th>
-                  <th className="px-2 py-2 text-left text-[8px] font-bold uppercase tracking-widest text-[#475569] whitespace-nowrap">SL ₹</th>
-                  <ColHeader label="R:R"          sortKey="rr"     current={sortKey} dir={sortDir} onSort={toggleSort} />
+                  <ColHeader label="P&L · Range"  sortKey="pnl"    current={sortKey} dir={sortDir} onSort={toggleSort} />
+                  <ColHeader label="Achieved R:R" sortKey="rr"     current={sortKey} dir={sortDir} onSort={toggleSort} />
                   <ColHeader label="Day P&L"      sortKey="day"    current={sortKey} dir={sortDir} onSort={toggleSort} />
                   <th className="px-2 py-2 text-left text-[8px] font-bold uppercase tracking-widest text-[#475569] whitespace-nowrap">Status</th>
                   <ColHeader label="Age"          sortKey="age"    current={sortKey} dir={sortDir} onSort={toggleSort} />
@@ -333,8 +347,7 @@ export function HoldingsBucket() {
               </thead>
               <tbody>
                 {sorted.map(r => {
-                  const pUp  = r.pct >= 0
-                  const dUp  = r.dayPnL >= 0
+                  const dUp  = r.dayPnLAmount >= 0
                   return (
                     <tr key={r.h.tradingsymbol} className="border-b border-[#0f1f35] hover:bg-[#0a1628] transition-colors">
                       {/* sticky symbol */}
@@ -344,24 +357,30 @@ export function HoldingsBucket() {
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap">
                         <div className="text-white font-semibold">₹{r.h.last_price.toLocaleString('en-IN')}</div>
-                        <div className={`text-[8px] font-semibold ${pUp ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                          {pUp ? '+' : ''}{r.pct.toFixed(2)}%
-                        </div>
                       </td>
                       <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">₹{r.h.average_price.toLocaleString('en-IN')}</td>
                       <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">{r.h.quantity}</td>
-                      <td className="px-2 py-2 whitespace-nowrap">
-                        <div className={`font-semibold ${r.totalPnL >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+                      {/* Combined P&L · SL progress bar · Target */}
+                      <td className="px-2 py-2 whitespace-nowrap" style={{ minWidth: 170 }}>
+                        <div className={`text-[9px] font-bold mb-1.5 ${r.totalPnL >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
                           {r.totalPnL >= 0 ? '+' : ''}₹{Math.abs(r.totalPnL).toFixed(0)}
                         </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[7px] text-[#ef4444] shrink-0">₹{r.slPrice.toFixed(0)}</span>
+                          <div className="flex-1 h-1 bg-[#1e293b] rounded-full overflow-hidden" style={{ minWidth: 40 }}>
+                            <div
+                              className={`h-full rounded-full ${r.slHit ? 'bg-[#ef4444]' : r.targetHit ? 'bg-[#22c55e]' : 'bg-gradient-to-r from-[#ef4444] via-[#f59e0b] to-[#22c55e]'}`}
+                              style={{ width: `${r.progressPct}%` }}
+                            />
+                          </div>
+                          <span className="text-[7px] text-[#22c55e] shrink-0">₹{r.tgtPrice.toFixed(0)}</span>
+                        </div>
                       </td>
-                      <td className="px-2 py-2 text-[#22c55e] whitespace-nowrap">₹{r.tgtPrice.toFixed(0)}</td>
-                      <td className="px-2 py-2 text-[#ef4444] whitespace-nowrap">₹{r.slPrice.toFixed(0)}</td>
                       <td className={`px-2 py-2 font-bold whitespace-nowrap ${rrColor(r)}`}>
-                        1:{r.remainingRR.toFixed(1)}
+                        {r.achievedRR.toFixed(1)}R
                       </td>
                       <td className={`px-2 py-2 whitespace-nowrap font-semibold ${dUp ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                        {dUp ? '+' : ''}{r.dayPnL.toFixed(2)}%
+                        {dUp ? '+' : ''}₹{Math.abs(r.dayPnLAmount).toFixed(0)}
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap">
                         <StatusBadge r={r} />
