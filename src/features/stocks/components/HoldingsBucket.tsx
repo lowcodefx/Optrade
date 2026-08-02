@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { kiteAuthHeaders, API_BASE } from '@/core/services/apiClient'
 import { RefreshCw, TrendingUp, TrendingDown, FlaskConical } from 'lucide-react'
@@ -29,13 +30,51 @@ async function fetchHoldings(): Promise<KiteHolding[]> {
   return (json.data ?? []) as KiteHolding[]
 }
 
-function pct(avg: number, ltp: number) {
-  if (avg <= 0) return 0
-  return ((ltp - avg) / avg) * 100
+function holdingPct(h: KiteHolding) {
+  if (h.average_price <= 0) return 0
+  return ((h.last_price - h.average_price) / h.average_price) * 100
 }
 
+// ── Slicer types ──────────────────────────────────────────────────────────────
+
+type PrimaryFilter = 'all' | 'profit' | 'loss'
+type BucketFilter  = 'any' | 'small' | 'mid' | 'big'
+
+const PROFIT_BUCKETS: { key: BucketFilter; label: string; min: number; max: number }[] = [
+  { key: 'small', label: '0–2%',  min: 0,  max: 2  },
+  { key: 'mid',   label: '2–5%',  min: 2,  max: 5  },
+  { key: 'big',   label: '>5%',   min: 5,  max: Infinity },
+]
+const LOSS_BUCKETS: { key: BucketFilter; label: string; min: number; max: number }[] = [
+  { key: 'small', label: '0–2%',  min: 0,  max: 2  },
+  { key: 'mid',   label: '2–5%',  min: 2,  max: 5  },
+  { key: 'big',   label: '>5%',   min: 5,  max: Infinity },
+]
+
+function applyFilter(holdings: KiteHolding[], primary: PrimaryFilter, bucket: BucketFilter) {
+  return holdings.filter(h => {
+    const p = holdingPct(h)
+    if (primary === 'profit') {
+      if (p <= 0) return false
+      if (bucket === 'any') return true
+      const b = PROFIT_BUCKETS.find(x => x.key === bucket)
+      return b ? p >= b.min && p < b.max : true
+    }
+    if (primary === 'loss') {
+      if (p >= 0) return false
+      const abs = Math.abs(p)
+      if (bucket === 'any') return true
+      const b = LOSS_BUCKETS.find(x => x.key === bucket)
+      return b ? abs >= b.min && abs < b.max : true
+    }
+    return true // 'all'
+  })
+}
+
+// ── Row ───────────────────────────────────────────────────────────────────────
+
 function HoldingRow({ h }: { h: KiteHolding }) {
-  const p    = pct(h.average_price, h.last_price)
+  const p    = holdingPct(h)
   const gain = (h.last_price - h.average_price) * h.quantity
   const isUp = p >= 0
   return (
@@ -76,7 +115,96 @@ function HoldingRow({ h }: { h: KiteHolding }) {
   )
 }
 
+// ── Slicer bar ────────────────────────────────────────────────────────────────
+
+function SlicerBar({ holdings, primary, setPrimary, bucket, setBucket }: {
+  holdings: KiteHolding[]
+  primary: PrimaryFilter
+  setPrimary: (f: PrimaryFilter) => void
+  bucket: BucketFilter
+  setBucket: (b: BucketFilter) => void
+}) {
+  const gainers = holdings.filter(h => holdingPct(h) > 0)
+  const losers  = holdings.filter(h => holdingPct(h) < 0)
+
+  const buckets = primary === 'profit' ? PROFIT_BUCKETS : primary === 'loss' ? LOSS_BUCKETS : []
+
+  function pickPrimary(f: PrimaryFilter) {
+    setPrimary(f)
+    setBucket('any')
+  }
+
+  return (
+    <div className="px-3 py-2 border-b border-[#1e293b] bg-[#060d1a] space-y-1.5">
+      {/* Primary row */}
+      <div className="flex gap-1">
+        {([
+          { key: 'all'    as PrimaryFilter, label: `All (${holdings.length})`,   active: 'bg-[#1e3a5f] text-[#38bdf8]',   inactive: 'bg-[#0a1628] text-[#475569] hover:text-[#94a3b8]' },
+          { key: 'profit' as PrimaryFilter, label: `Profit (${gainers.length})`, active: 'bg-[#22c55e]/20 text-[#22c55e]', inactive: 'bg-[#0a1628] text-[#475569] hover:text-[#22c55e]' },
+          { key: 'loss'   as PrimaryFilter, label: `Loss (${losers.length})`,    active: 'bg-[#ef4444]/20 text-[#ef4444]', inactive: 'bg-[#0a1628] text-[#475569] hover:text-[#ef4444]'  },
+        ]).map(({ key, label, active, inactive }) => (
+          <button
+            key={key}
+            onClick={() => pickPrimary(key)}
+            className={`flex-1 text-[9px] font-bold py-1 rounded border transition-colors ${
+              primary === key
+                ? `${active} border-current`
+                : `${inactive} border-[#1e293b]`
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Bucket row — only when Profit or Loss selected */}
+      {buckets.length > 0 && (
+        <div className="flex gap-1">
+          <button
+            onClick={() => setBucket('any')}
+            className={`flex-1 text-[8px] font-semibold py-0.5 rounded transition-colors ${
+              bucket === 'any'
+                ? primary === 'profit' ? 'bg-[#22c55e]/15 text-[#22c55e]' : 'bg-[#ef4444]/15 text-[#ef4444]'
+                : 'text-[#334155] hover:text-[#64748b]'
+            }`}
+          >
+            Any
+          </button>
+          {buckets.map(b => {
+            const count = holdings.filter(h => {
+              const p = holdingPct(h)
+              if (primary === 'profit' && p <= 0) return false
+              if (primary === 'loss'   && p >= 0) return false
+              const abs = Math.abs(p)
+              return abs >= b.min && abs < b.max
+            }).length
+            const isActive = bucket === b.key
+            return (
+              <button
+                key={b.key}
+                onClick={() => setBucket(b.key)}
+                className={`flex-1 text-[8px] font-semibold py-0.5 rounded transition-colors ${
+                  isActive
+                    ? primary === 'profit' ? 'bg-[#22c55e]/15 text-[#22c55e]' : 'bg-[#ef4444]/15 text-[#ef4444]'
+                    : 'text-[#334155] hover:text-[#64748b]'
+                }`}
+              >
+                {b.label} <span className="opacity-60">({count})</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
 export function HoldingsBucket() {
+  const [primary, setPrimary] = useState<PrimaryFilter>('all')
+  const [bucket,  setBucket]  = useState<BucketFilter>('any')
+
   const { data: rawHoldings, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['stockHoldings'],
     queryFn: fetchHoldings,
@@ -84,8 +212,9 @@ export function HoldingsBucket() {
     retry: false,
   })
 
-  const isMock     = !isLoading && (!rawHoldings || rawHoldings.length === 0)
-  const holdings   = isMock ? MOCK_HOLDINGS : (rawHoldings ?? [])
+  const isMock   = !isLoading && (!rawHoldings || rawHoldings.length === 0)
+  const holdings = isMock ? MOCK_HOLDINGS : (rawHoldings ?? [])
+  const visible  = applyFilter(holdings, primary, bucket)
 
   const totalInvested = holdings.reduce((s, h) => s + h.average_price * h.quantity, 0)
   const totalCurrent  = holdings.reduce((s, h) => s + h.last_price * h.quantity, 0)
@@ -94,6 +223,7 @@ export function HoldingsBucket() {
 
   return (
     <div className="flex flex-col h-full">
+
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#1e293b] bg-[#060d1a] sticky top-0 z-10">
         <div>
@@ -131,15 +261,28 @@ export function HoldingsBucket() {
         </div>
       </div>
 
+      {/* Slicers */}
+      {!isLoading && holdings.length > 0 && (
+        <SlicerBar
+          holdings={holdings}
+          primary={primary} setPrimary={setPrimary}
+          bucket={bucket}   setBucket={setBucket}
+        />
+      )}
+
       {isLoading && (
         <div className="flex items-center justify-center py-16">
           <RefreshCw size={18} className="animate-spin text-[#38bdf8]" />
         </div>
       )}
 
-      <div className="flex-1">
-        {holdings.map(h => <HoldingRow key={h.tradingsymbol} h={h} />)}
+      <div className="flex-1 overflow-y-auto">
+        {visible.length === 0 && !isLoading && (
+          <div className="py-10 text-center text-[#334155] text-[10px]">No holdings in this range</div>
+        )}
+        {visible.map(h => <HoldingRow key={h.tradingsymbol} h={h} />)}
       </div>
+
     </div>
   )
 }
