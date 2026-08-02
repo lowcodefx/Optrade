@@ -79,7 +79,7 @@ export function Home() {
           <div className="w-11 h-11 rounded-xl bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center mb-5">
             <TrendingUp size={22} className="text-[#38bdf8]" />
           </div>
-          <h2 className="text-white font-bold text-lg mb-2">Options Trading</h2>
+          <h2 className="text-white font-bold text-lg mb-2">Optrade Options</h2>
           <p className="text-[#475569] text-sm leading-relaxed mb-6">
             Live NIFTY options analysis, CE/PE scoring, order entry, and market alerts.
           </p>
@@ -103,9 +103,9 @@ export function Home() {
           <div className="w-11 h-11 rounded-xl bg-[#7c3aed]/10 border border-[#7c3aed]/20 flex items-center justify-center mb-5">
             <BarChart2 size={22} className="text-[#a78bfa]" />
           </div>
-          <h2 className="text-white font-bold text-lg mb-2">Stock Investments</h2>
+          <h2 className="text-white font-bold text-lg mb-2">Optrade Swing</h2>
           <p className="text-[#475569] text-sm leading-relaxed mb-6">
-            Track your equity portfolio, analyse fundamentals, and plan long-term investments.
+            AI-scored swing trade picks, equity portfolio tracking, and market analysis.
           </p>
           <div className="flex items-center gap-2 text-[#a78bfa] text-sm font-semibold">
             <span>Open Portfolio</span>
