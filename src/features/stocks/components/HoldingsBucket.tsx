@@ -360,34 +360,40 @@ export function HoldingsBucket() {
                       </td>
                       <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">{r.h.average_price.toLocaleString('en-IN')}</td>
                       <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">{r.h.quantity}</td>
-                      {/* P&L · center-anchored dual bar (center = avg buy / breakeven) */}
+                      {/* P&L · center-anchored dual bar (loss=red←, profit=→green) */}
                       <td className="px-2 py-2 whitespace-nowrap" style={{ minWidth: 210 }}>
                         <div className="flex items-center gap-1">
-                          {/* SL label */}
                           <span className="text-[7px] text-[#ef4444] shrink-0">{r.slPrice.toFixed(0)}</span>
-                          {/* Left half: red fills right-to-left from center for LOSS */}
-                          <div className="relative flex-1 h-3 bg-[#1a0a0a] rounded-l overflow-hidden">
-                            {r.totalPnL < 0 && (
-                              <div
-                                className="absolute right-0 top-0 h-full bg-[#ef4444]"
-                                style={{ width: `${Math.min(100, ((r.h.average_price - r.h.last_price) / (r.h.average_price - r.slPrice)) * 100)}%` }}
-                              />
-                            )}
+                          {/* Full bar: left half = SL zone (red tint bg), right half = target zone (green tint bg) */}
+                          <div className="relative flex-1 flex h-3 rounded overflow-hidden">
+                            {/* Left half: dark red bg; bright red fill grows right→left from center for loss */}
+                            <div className="relative flex-1 bg-[#1c0808] overflow-hidden">
+                              {r.totalPnL < 0 && (
+                                <div
+                                  className="absolute right-0 top-0 h-full bg-[#ef4444]"
+                                  style={{ width: `${Math.min(100, ((r.h.average_price - r.h.last_price) / (r.h.average_price - r.slPrice)) * 100)}%` }}
+                                />
+                              )}
+                            </div>
+                            {/* Right half: dark green bg; bright green fill grows left→right from center for profit */}
+                            <div className="relative flex-1 bg-[#081c08] overflow-hidden">
+                              {r.totalPnL >= 0 && (
+                                <div
+                                  className="absolute left-0 top-0 h-full bg-[#22c55e]"
+                                  style={{ width: `${Math.min(100, ((r.h.last_price - r.h.average_price) / (r.tgtPrice - r.h.average_price)) * 100)}%` }}
+                                />
+                              )}
+                            </div>
+                            {/* P&L amount centered over full bar */}
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <span
+                                className={`text-[9px] font-bold leading-none ${r.totalPnL >= 0 ? 'text-white' : 'text-white'}`}
+                                style={{ textShadow: '0 0 5px rgba(0,0,0,1), 0 0 5px rgba(0,0,0,1)' }}
+                              >
+                                {r.totalPnL >= 0 ? '+' : '-'}{Math.abs(r.totalPnL).toFixed(0)}
+                              </span>
+                            </div>
                           </div>
-                          {/* Center: P&L amount */}
-                          <div className={`text-[9px] font-bold shrink-0 w-12 text-center ${r.totalPnL >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                            {r.totalPnL >= 0 ? '+' : '-'}{Math.abs(r.totalPnL).toFixed(0)}
-                          </div>
-                          {/* Right half: green fills left-to-right from center for PROFIT */}
-                          <div className="relative flex-1 h-3 bg-[#0a1a0a] rounded-r overflow-hidden">
-                            {r.totalPnL >= 0 && (
-                              <div
-                                className="absolute left-0 top-0 h-full bg-[#22c55e]"
-                                style={{ width: `${Math.min(100, ((r.h.last_price - r.h.average_price) / (r.tgtPrice - r.h.average_price)) * 100)}%` }}
-                              />
-                            )}
-                          </div>
-                          {/* Target label */}
                           <span className="text-[7px] text-[#22c55e] shrink-0">{r.tgtPrice.toFixed(0)}</span>
                         </div>
                       </td>
