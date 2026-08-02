@@ -33,11 +33,34 @@ app.use('/api/exchange-token',     require('./routes/exchangeToken'))
 app.use('/api/set-token',          require('./routes/setToken'))
 app.use('/api/market-summary',     require('./routes/marketSummary'))
 app.use('/api/stock-analysis',     require('./routes/stockAnalysis'))
+// Manual trigger for testing (protected by authMiddleware already applied to /api)
+app.post('/api/holdings-alert/run', async (_req, res) => {
+  try {
+    const { runHoldingsAlert } = require('./jobs/holdingsAlertJob')
+    runHoldingsAlert().catch(err => console.error('[manual trigger]', err.message))
+    res.json({ triggered: true, note: 'Job started — check server logs for result' })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 app.use('/api/stock-history',      require('./routes/stockHistory'))
 app.use('/api/stock-news',         require('./routes/stockNews'))
 
 if (require.main === module) {
   app.listen(PORT, () => console.log(`optrade-api listening on ${PORT}`))
+
+  // Daily holdings R:R alert — 1 PM IST = 07:30 UTC, weekdays only
+  try {
+    const cron = require('node-cron')
+    const { runHoldingsAlert } = require('./jobs/holdingsAlertJob')
+    cron.schedule('30 7 * * 1-5', () => {
+      console.log('[cron] Firing daily holdings alert…')
+      runHoldingsAlert().catch(err => console.error('[cron] Error:', err.message))
+    }, { timezone: 'UTC' })
+    console.log('[cron] Holdings alert scheduled — 1 PM IST on weekdays')
+  } catch (err) {
+    console.warn('[cron] node-cron not available, skipping schedule:', err.message)
+  }
 }
 
 module.exports = app   // exported for supertest
