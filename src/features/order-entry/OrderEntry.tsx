@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useOrderStore, useMarketStore } from '@/core/store'
+import { useOrderStore, useMarketStore, useDisciplineStore } from '@/core/store'
 import { tradingService } from '@/core/services/tradingService'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { cn } from '@/lib/utils'
@@ -110,6 +110,9 @@ export function OrderEntry() {
   const strengthScore = tradeStrength?.score ?? 0
   const eqScore       = entryQuality?.score ?? 0
 
+  const { isLocked, lockReason, checkCanTrade } = useDisciplineStore()
+  const canTrade = checkCanTrade()
+
   const [orderError, setOrderError] = useState<string | null>(null)
 
   const mutation = useMutation({
@@ -136,7 +139,7 @@ export function OrderEntry() {
     onSettled: () => setIsSubmitting(false),
   })
 
-  const canPlace = rrOk && !mutation.isPending
+  const canPlace = rrOk && !mutation.isPending && !isLocked && canTrade.allowed
 
   return (
     <div className="flex flex-col border-b border-[#1e293b]">
@@ -236,6 +239,19 @@ export function OrderEntry() {
             <span className="text-[9px] text-[#ef4444]">
               R:R {rrLabel} below minimum 1.5:1. Adjust target or stop loss.
             </span>
+          </div>
+        )}
+
+        {/* Discipline lock banner */}
+        {(isLocked || !canTrade.allowed) && (
+          <div className="mx-2 mb-2 px-3 py-2 rounded bg-[#ef4444]/10 border border-[#ef4444]/30 text-[9px] text-[#ef4444] leading-relaxed">
+            🔒 {lockReason || canTrade.reason || 'Trading locked by discipline rules'}
+          </div>
+        )}
+        {/* Discipline warning banner */}
+        {!isLocked && canTrade.allowed && canTrade.warning && (
+          <div className="mx-2 mb-2 px-3 py-2 rounded bg-[#f59e0b]/10 border border-[#f59e0b]/30 text-[9px] text-[#f59e0b] leading-relaxed">
+            ⚠️ {canTrade.warning}
           </div>
         )}
 
