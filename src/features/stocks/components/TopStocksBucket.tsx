@@ -613,6 +613,14 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist }: {
               </button>
             )
           })}
+          {selectedSector && (
+            <button
+              onClick={() => setSelectedSector(null)}
+              className="shrink-0 rounded px-2 py-0.5 text-[8px] font-bold text-[#475569] bg-[#1e293b] hover:text-[#ef4444] hover:bg-[#ef4444]/10 transition-colors ml-1"
+            >
+              ✕ Clear
+            </button>
+          )}
         </div>
       </div>
 
