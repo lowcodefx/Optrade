@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { kiteAuthHeaders, API_BASE } from '@/core/services/apiClient'
-import { RefreshCw, FlaskConical, ChevronDown, ChevronUp, ChevronsUpDown, CalendarDays } from 'lucide-react'
+import { RefreshCw, ChevronDown, ChevronUp, ChevronsUpDown, CalendarDays } from 'lucide-react'
 
 // ── Aging helpers ─────────────────────────────────────────────────────────────
 
@@ -14,14 +14,7 @@ function saveBuyDates(d: Record<string, string>) {
   localStorage.setItem(BUY_DATES_KEY, JSON.stringify(d))
 }
 
-// Mock buy dates (days ago from today)
-const MOCK_AGES: Record<string, number> = {
-  BHARTIARTL: 31, INFY: 8, COFORGE: 3, HDFCBANK: 22, TCS: 5,
-  MPHASIS: 18, WIPRO: 4, RELIANCE: 12,
-}
-
-function daysHeld(symbol: string, isMock: boolean, buyDates: Record<string, string>): number | null {
-  if (isMock) return MOCK_AGES[symbol] ?? null
+function daysHeld(symbol: string, buyDates: Record<string, string>): number | null {
   const d = buyDates[symbol]
   if (!d) return null
   const diff = Date.now() - new Date(d).getTime()
@@ -49,27 +42,6 @@ interface KiteHolding {
   day_change_percentage: number
   close_price: number
 }
-
-// ── Mock data ─────────────────────────────────────────────────────────────────
-
-const MOCK_HOLDINGS: KiteHolding[] = [
-  // TARGET HIT — large cap, 15% up vs 12% target
-  { tradingsymbol: 'BHARTIARTL', exchange: 'NSE', quantity: 15, average_price: 920,  last_price: 1058, pnl: 2070, day_change: 15,  day_change_percentage:  1.44, close_price: 1043 },
-  // HOLD — large cap, 0.3% up, excellent remaining R:R (lots of runway)
-  { tradingsymbol: 'INFY',       exchange: 'NSE', quantity: 10, average_price: 1540, last_price: 1545, pnl:   50, day_change: -8,  day_change_percentage: -0.52, close_price: 1553 },
-  // HOLD — mid cap, just entered, large upside remaining
-  { tradingsymbol: 'COFORGE',    exchange: 'NSE', quantity:  2, average_price: 1800, last_price: 1808, pnl:   16, day_change: 22,  day_change_percentage:  1.23, close_price: 1786 },
-  // CAUTION — large cap, 1.2% up, R:R narrowing
-  { tradingsymbol: 'HDFCBANK',   exchange: 'NSE', quantity:  8, average_price: 1680, last_price: 1700, pnl:  160, day_change:  5,  day_change_percentage:  0.29, close_price: 1695 },
-  // EXIT? — large cap, 4.7% up but remaining R:R is poor (SL stays at entry)
-  { tradingsymbol: 'TCS',        exchange: 'NSE', quantity:  3, average_price: 3650, last_price: 3820, pnl:  510, day_change: 35,  day_change_percentage:  0.92, close_price: 3785 },
-  // EXIT? — mid cap, 13% up, nearly at 16% target
-  { tradingsymbol: 'MPHASIS',    exchange: 'NSE', quantity:  4, average_price: 2100, last_price: 2373, pnl: 1092, day_change: -25, day_change_percentage: -1.04, close_price: 2398 },
-  // SL HIT — large cap, fell below 5% SL level
-  { tradingsymbol: 'WIPRO',      exchange: 'NSE', quantity: 20, average_price:  480, last_price:  448, pnl: -640, day_change: -12, day_change_percentage: -2.61, close_price:  460 },
-  // Loss but above SL — large cap, 2.5% loss, still valid, high remaining upside
-  { tradingsymbol: 'RELIANCE',   exchange: 'NSE', quantity:  5, average_price: 2820, last_price: 2750, pnl: -350, day_change: -30, day_change_percentage: -1.08, close_price: 2780 },
-]
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 
@@ -206,15 +178,14 @@ export function HoldingsBucket() {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [buyDates, setBuyDates] = useState<Record<string, string>>(loadBuyDates)
 
-  const { data: rawHoldings, isLoading, refetch, isFetching } = useQuery({
+  const { data: rawHoldings, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['stockHoldings'],
     queryFn: fetchHoldings,
     refetchInterval: 60000,
     retry: false,
   })
 
-  const isMock   = !isLoading && (!rawHoldings || rawHoldings.length === 0)
-  const holdings = (isMock ? MOCK_HOLDINGS : (rawHoldings ?? [])).map(compute)
+  const holdings = (rawHoldings ?? []).map(compute)
 
   // Filter
   const filtered = holdings.filter(r => {
@@ -242,7 +213,7 @@ export function HoldingsBucket() {
     else if (sortKey === 'pnl')   { av = a.totalPnL;     bv = b.totalPnL }
     else if (sortKey === 'rr')    { av = a.achievedRR;   bv = b.achievedRR }
     else if (sortKey === 'day')   { av = a.dayPnLAmount;  bv = b.dayPnLAmount }
-    else if (sortKey === 'age')  { av = daysHeld(a.h.tradingsymbol, isMock, buyDates) ?? -1; bv = daysHeld(b.h.tradingsymbol, isMock, buyDates) ?? -1 }
+    else if (sortKey === 'age')  { av = daysHeld(a.h.tradingsymbol, buyDates) ?? -1; bv = daysHeld(b.h.tradingsymbol, buyDates) ?? -1 }
     if (sortKey === 'symbol') return sortDir === 'asc' ? av : -av
     return sortDir === 'asc' ? av - bv : bv - av
   })
@@ -265,13 +236,8 @@ export function HoldingsBucket() {
         <div>
           <div className="flex items-center gap-1.5">
             <h2 className="text-[#e2e8f0] text-xs font-bold">My Holdings</h2>
-            {isMock && (
-              <span className="flex items-center gap-0.5 bg-[#f59e0b]/10 text-[#f59e0b] text-[7px] font-bold px-1.5 py-0.5 rounded border border-[#f59e0b]/20">
-                <FlaskConical size={7} /> Demo
-              </span>
-            )}
           </div>
-          <p className="text-[#334155] text-[8px]">{isMock ? 'Connect Zerodha to see your portfolio' : 'Refreshes every 60s'}</p>
+          <p className="text-[#334155] text-[8px]">Live · refreshes every 60s</p>
         </div>
         <button onClick={() => refetch()} disabled={isFetching} className="text-[#475569] hover:text-[#94a3b8] disabled:opacity-40">
           <RefreshCw size={11} className={isFetching ? 'animate-spin' : ''} />
@@ -322,10 +288,20 @@ export function HoldingsBucket() {
         </div>
       )}
 
+      {/* Error / empty states */}
+      {!isLoading && isError && (
+        <div className="py-10 text-center text-[10px] text-[#475569] px-4">
+          <p className="text-[#ef4444] font-semibold mb-1">Could not load holdings</p>
+          <p className="text-[#334155]">Check that your API key and access token are set in Settings, then try again.</p>
+        </div>
+      )}
+
       {/* Table with horizontal scroll + sticky first column */}
-      {!isLoading && (
+      {!isLoading && !isError && (
         <div className="flex-1 overflow-auto">
-          {sorted.length === 0 ? (
+          {sorted.length === 0 && holdings.length === 0 ? (
+            <div className="py-10 text-center text-[#334155] text-[10px]">No equity holdings found</div>
+          ) : sorted.length === 0 ? (
             <div className="py-10 text-center text-[#334155] text-[10px]">No holdings in this range</div>
           ) : (
             <table className="w-full text-[10px] border-collapse" style={{ minWidth: 700 }}>
@@ -353,7 +329,6 @@ export function HoldingsBucket() {
                       {/* sticky symbol */}
                       <td className="sticky left-0 z-10 bg-[#060d1a] px-3 py-2 border-r border-[#1e293b] whitespace-nowrap">
                         <div className="font-semibold text-white text-[10px]">{r.h.tradingsymbol}</div>
-                        <div className="text-[7px] text-[#334155]">{r.cap} · {r.h.quantity} qty</div>
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap">
                         <div className="text-white font-semibold">{r.h.last_price.toLocaleString('en-IN')}</div>
@@ -408,7 +383,7 @@ export function HoldingsBucket() {
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap">
                         {(() => {
-                          const d = daysHeld(r.h.tradingsymbol, isMock, buyDates)
+                          const d = daysHeld(r.h.tradingsymbol, buyDates)
                           if (d !== null) {
                             return <span className={`font-semibold ${agingColor(d)}`}>{d}d</span>
                           }
