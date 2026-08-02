@@ -4,7 +4,7 @@ import { useOrderStore, useMarketStore, useDisciplineStore } from '@/core/store'
 import { tradingService } from '@/core/services/tradingService'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { cn } from '@/lib/utils'
-import { Minus, Plus, Zap, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react'
+import { Minus, Plus, Zap, AlertTriangle, CheckCircle2, XCircle, ChevronDown } from 'lucide-react'
 import { calculateRiskScore } from '@/core/utils/riskScore'
 
 function formatExpiry(expiry: string): string {
@@ -24,6 +24,21 @@ const tooltip = {
   how: 'Select a strike from the chain, set SL and target, verify all four scores are green, then BUY.',
   bullish: 'Buy CE when Market Score > 600 and prediction is BULLISH.',
   bearish: 'Buy PE when Market Score > 600 and prediction is BEARISH.',
+}
+
+// ── Score breakdown row ───────────────────────────────────────────────────────
+function BreakdownRow({ label, val, max, passed }: { label: string; val: number; max: number; passed?: boolean }) {
+  const pct = max > 0 ? Math.round((val / max) * 100) : 0
+  return (
+    <div className="flex items-center gap-1.5 py-0.5">
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${passed !== false ? 'bg-[#22c55e]' : 'bg-[#ef4444]'}`} />
+      <span className="flex-1 text-[8px] text-[#94a3b8] truncate">{label}</span>
+      <span className="text-[8px] font-semibold text-white">{val}/{max}</span>
+      <div className="w-10 h-1 bg-[#1e293b] rounded-full overflow-hidden">
+        <div className="h-full bg-[#38bdf8] rounded-full" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  )
 }
 
 // ── Score badge ───────────────────────────────────────────────────────────────
@@ -54,9 +69,9 @@ export function OrderEntry() {
   const noTradeReason = useMarketStore(s => s.noTradeReason)
   const ceScore       = useMarketStore(s => s.ceScore)
   const peScore       = useMarketStore(s => s.peScore)
-  const tradeStrength = useMarketStore(s => s.tradeStrength)
-  const entryQuality  = useMarketStore(s => s.entryQuality)
-  const pivotPoints   = useMarketStore(s => s.pivotPoints)
+  const tradeStrength  = useMarketStore(s => s.tradeStrength)
+  const scoreBreakdown = useMarketStore(s => s.scoreBreakdown)
+  const pivotPoints    = useMarketStore(s => s.pivotPoints)
 
   const {
     strike, optionType, quantity, limitPrice, stopLoss,
@@ -65,6 +80,7 @@ export function OrderEntry() {
   } = useOrderStore()
 
   const [toastVisible, setToastVisible] = useState(false)
+  const [expandedBadge, setExpandedBadge] = useState<'ce' | 'pe' | 'strength' | 'risk' | null>(null)
 
   const currentStrikeData = chain?.strikes.find(s => s.strike === strike)
   const premium           = currentStrikeData ? currentStrikeData[optionType === 'CE' ? 'ce' : 'pe'].ltp : limitPrice
@@ -106,9 +122,7 @@ export function OrderEntry() {
     distToResistancePct, distToSupportPct,
   }), [entry, stopLoss, autoTarget, optionType, strikeOI, hour, minute, distToResistancePct, distToSupportPct])
 
-  const marketScore  = optionType === 'CE' ? ceScore : peScore
   const strengthScore = tradeStrength?.score ?? 0
-  const eqScore       = entryQuality?.score ?? 0
 
   const { isLocked, lockReason, checkCanTrade } = useDisciplineStore()
   const canTrade = checkCanTrade()
@@ -162,14 +176,69 @@ export function OrderEntry() {
 
         {/* 4-score panel */}
         <div className="grid grid-cols-4 gap-1">
-          <ScoreBadge label="Market" score={marketScore} max={1000}
-            sublabel={marketScore >= 700 ? 'Strong' : marketScore >= 500 ? 'Moderate' : 'Weak'} />
-          <ScoreBadge label="Strength" score={strengthScore} max={100}
-            sublabel={tradeStrength?.label ?? '—'} />
-          <ScoreBadge label="Entry" score={eqScore} max={100}
-            sublabel={entryQuality?.label ?? '—'} />
-          <ScoreBadge label="Risk" score={riskScore.score} max={100}
-            sublabel={riskScore.label} />
+          {/* CE Score */}
+          <div>
+            <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpandedBadge(expandedBadge === 'ce' ? null : 'ce')}>
+              <ScoreBadge label="CE" score={ceScore} max={1000}
+                sublabel={ceScore >= 700 ? 'Strong' : ceScore >= 500 ? 'Moderate' : 'Weak'} />
+              <ChevronDown size={8} className={`text-[#475569] transition-transform ${expandedBadge === 'ce' ? 'rotate-180' : ''}`} />
+            </div>
+            {expandedBadge === 'ce' && scoreBreakdown.length > 0 && (
+              <div className="mt-1 px-2 py-1.5 bg-[#0a1628] rounded border border-[#1e293b] space-y-0.5">
+                {scoreBreakdown.map(b => (
+                  <BreakdownRow key={b.factor} label={b.factor} val={b.cePoints} max={b.maxPoints} passed={b.cePoints > 0} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* PE Score */}
+          <div>
+            <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpandedBadge(expandedBadge === 'pe' ? null : 'pe')}>
+              <ScoreBadge label="PE" score={peScore} max={1000}
+                sublabel={peScore >= 700 ? 'Strong' : peScore >= 500 ? 'Moderate' : 'Weak'} />
+              <ChevronDown size={8} className={`text-[#475569] transition-transform ${expandedBadge === 'pe' ? 'rotate-180' : ''}`} />
+            </div>
+            {expandedBadge === 'pe' && scoreBreakdown.length > 0 && (
+              <div className="mt-1 px-2 py-1.5 bg-[#0a1628] rounded border border-[#1e293b] space-y-0.5">
+                {scoreBreakdown.map(b => (
+                  <BreakdownRow key={b.factor} label={b.factor} val={b.pePoints} max={b.maxPoints} passed={b.pePoints > 0} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Trade Strength */}
+          <div>
+            <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpandedBadge(expandedBadge === 'strength' ? null : 'strength')}>
+              <ScoreBadge label="Strength" score={strengthScore} max={100}
+                sublabel={tradeStrength?.label ?? '—'} />
+              <ChevronDown size={8} className={`text-[#475569] transition-transform ${expandedBadge === 'strength' ? 'rotate-180' : ''}`} />
+            </div>
+            {expandedBadge === 'strength' && tradeStrength?.signals && tradeStrength.signals.length > 0 && (
+              <div className="mt-1 px-2 py-1.5 bg-[#0a1628] rounded border border-[#1e293b] space-y-0.5">
+                {tradeStrength.signals.map(s => (
+                  <BreakdownRow key={s.name} label={s.name} val={s.passed ? s.weight : 0} max={s.weight} passed={s.passed} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Risk Score */}
+          <div>
+            <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpandedBadge(expandedBadge === 'risk' ? null : 'risk')}>
+              <ScoreBadge label="Risk" score={riskScore.score} max={100}
+                sublabel={riskScore.label} />
+              <ChevronDown size={8} className={`text-[#475569] transition-transform ${expandedBadge === 'risk' ? 'rotate-180' : ''}`} />
+            </div>
+            {expandedBadge === 'risk' && riskScore.signals.length > 0 && (
+              <div className="mt-1 px-2 py-1.5 bg-[#0a1628] rounded border border-[#1e293b] space-y-0.5">
+                {riskScore.signals.map(s => (
+                  <BreakdownRow key={s.name} label={s.name} val={s.points} max={s.maxPoints} passed={s.passed} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Instrument display */}
