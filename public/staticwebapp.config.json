@@ -1,10 +1,13 @@
 {
   "routes": [
-    {
-      "route": "/login",
-      "rewrite": "/index.html"
-    }
+    { "route": "/login",     "rewrite": "/index.html" },
+    { "route": "/dashboard", "rewrite": "/index.html" },
+    { "route": "/stocks",    "rewrite": "/index.html" }
   ],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/assets/*", "/*.svg", "/*.ico", "/*.png"]
+  },
   "mimeTypes": {
     ".js": "text/javascript",
     ".mjs": "text/javascript",

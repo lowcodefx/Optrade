@@ -23,6 +23,8 @@ import { AlertMonitor } from '@/features/alerts/AlertMonitor'
 import { SquareOffReminder } from '@/features/square-off/SquareOffReminder'
 import { AlertsPanel } from '@/features/alerts/AlertsPanel'
 import { TradeEntryWizard } from '@/features/trade-entry/TradeEntryWizard'
+import { Home } from '@/features/home/Home'
+import { StocksPage } from '@/features/stocks/StocksPage'
 
 type LeftTab = 'discipline' | 'market' | 'analysis'
 
@@ -137,6 +139,7 @@ function LoginRedirect() {
     const key = urlKey || apiKey
     if (urlKey && urlKey !== apiKey) setApiKey(urlKey)
     if (key) {
+      // Zerodha will redirect back to the root domain; Home.tsx handles the callback
       window.location.href = `https://kite.zerodha.com/connect/login?api_key=${key}&v=3`
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -204,10 +207,28 @@ export default function App() {
   const [showPlaybook, setShowPlaybook] = useState(false)
   const [showWizard, setShowWizard] = useState(false)
 
-  if (window.location.pathname === '/login') {
+  const path = window.location.pathname
+
+  if (path === '/login') {
     return (
       <QueryClientProvider client={queryClient}>
         <LoginRedirect />
+      </QueryClientProvider>
+    )
+  }
+
+  if (path === '/') {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <Home />
+      </QueryClientProvider>
+    )
+  }
+
+  if (path === '/stocks') {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <StocksPage />
       </QueryClientProvider>
     )
   }
