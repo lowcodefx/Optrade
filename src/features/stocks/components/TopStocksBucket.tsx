@@ -571,7 +571,7 @@ type Tab = 'top10' | 'all'
 export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
   onAddToWatchlist: (s: string, price?: number) => void
   watchlist: string[]
-  onLogEntry?: (symbol: string, price: number, action: 'CNC Buy') => void
+  onLogEntry?: (symbol: string, price: number, action: 'buy') => void
 }) {
   const [tab, setTab]                   = useState<Tab>('top10')
   const [selectedSector, setSelectedSector] = useState<string | null>(null)
@@ -758,7 +758,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
                   try {
                     const orderId = await placeCNCOrder(buyStock.symbol, buyStock.price, parseInt(buyQty, 10) || 1)
                     setBuySuccess(`Order ID ${orderId}`)
-                    onLogEntry?.(buyStock.symbol, buyStock.price, 'CNC Buy')
+                    onLogEntry?.(buyStock.symbol, buyStock.price, 'buy')
                     if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current)
                     autoCloseTimer.current = setTimeout(() => { setBuyStock(null); autoCloseTimer.current = null }, 2000)
                   } catch (err: unknown) {

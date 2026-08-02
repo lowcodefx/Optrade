@@ -7,6 +7,7 @@ import { HoldingsBucket } from './components/HoldingsBucket'
 import { StocksWatchlist } from './components/StocksWatchlist'
 import { StockPortfolioSummary } from './components/StockPortfolioSummary'
 import { LogEntryModal } from './components/TradeLog'
+import type { TradeLogEntry } from './components/TradeLog'
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } })
 
@@ -14,23 +15,31 @@ export function StocksPage() {
   const [watchlist, setWatchlist] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('sw_watchlist') ?? '[]') } catch { return [] }
   })
-  const [pendingLog, setPendingLog] = useState<{ symbol: string; price: number; action: 'Watchlist' | 'CNC Buy' } | null>(null)
+  const [pendingLog, setPendingLog] = useState<{ symbol: string; price: number; action: 'buy' | 'watchlist' } | null>(null)
+  const [tradeLogKey, setTradeLogKey] = useState(0)
 
   function addToWatchlist(symbol: string, price?: number) {
     setWatchlist(prev => {
       if (prev.includes(symbol)) return prev
       const next = [...prev, symbol]
       localStorage.setItem('sw_watchlist', JSON.stringify(next))
+      // Only trigger log modal for new additions
+      setPendingLog({ symbol, price: price ?? 0, action: 'watchlist' })
       return next
     })
-    setPendingLog({ symbol, price: price ?? 0, action: 'Watchlist' })
   }
+
   function removeFromWatchlist(symbol: string) {
     setWatchlist(prev => {
       const next = prev.filter(s => s !== symbol)
       localStorage.setItem('sw_watchlist', JSON.stringify(next))
       return next
     })
+  }
+
+  function handleSave(_entry: TradeLogEntry) {
+    setPendingLog(null)
+    setTradeLogKey(k => k + 1)
   }
 
   return (
@@ -70,7 +79,7 @@ export function StocksPage() {
               <TopStocksBucket
                 onAddToWatchlist={addToWatchlist}
                 watchlist={watchlist}
-                onLogEntry={(sym, price) => setPendingLog({ symbol: sym, price, action: 'CNC Buy' })}
+                onLogEntry={(sym, price) => setPendingLog({ symbol: sym, price, action: 'buy' })}
               />
             </div>
             <div className="flex-[1.6] overflow-y-auto min-w-0">
@@ -80,7 +89,7 @@ export function StocksPage() {
 
           {/* Right dock */}
           <div className="w-56 shrink-0 border-l border-[#1e293b] overflow-y-auto">
-            <StockPortfolioSummary />
+            <StockPortfolioSummary tradeLogKey={tradeLogKey} />
           </div>
 
         </div>
@@ -90,7 +99,8 @@ export function StocksPage() {
           symbol={pendingLog.symbol}
           price={pendingLog.price}
           action={pendingLog.action}
-          onClose={() => setPendingLog(null)}
+          onSave={handleSave}
+          onCancel={() => setPendingLog(null)}
         />
       )}
     </QueryClientProvider>
