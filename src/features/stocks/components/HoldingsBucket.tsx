@@ -35,6 +35,41 @@ function holdingPct(h: KiteHolding) {
   return ((h.last_price - h.average_price) / h.average_price) * 100
 }
 
+// ── R:R helpers ───────────────────────────────────────────────────────────────
+
+const LARGE_CAP_SYMS = new Set([
+  'RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','BHARTIARTL','ITC',
+  'KOTAKBANK','LT','WIPRO','HDFC','BAJFINANCE','ASIANPAINT','MARUTI',
+  'TITAN','SUNPHARMA','NTPC','ONGC','COALINDIA','TATASTEEL',
+])
+const MID_CAP_SYMS = new Set([
+  'MPHASIS','PIIND','LTTS','COFORGE','PERSISTENT','ABCAPITAL',
+  'SONACOMS','LTIM','KALYANKJIL','AARTIIND',
+])
+
+function capProfile(symbol: string): { slPct: number; tgtPct: number; label: string } {
+  if (LARGE_CAP_SYMS.has(symbol)) return { slPct: 0.05, tgtPct: 0.12, label: 'LG' }
+  if (MID_CAP_SYMS.has(symbol))  return { slPct: 0.07, tgtPct: 0.16, label: 'MD' }
+  return                                 { slPct: 0.10, tgtPct: 0.22, label: 'SM' }
+}
+
+function rrData(h: KiteHolding) {
+  const { slPct, tgtPct, label } = capProfile(h.tradingsymbol)
+  const slPrice  = h.average_price * (1 - slPct)
+  const tgtPrice = h.average_price * (1 + tgtPct)
+  // Remaining risk/reward from current price
+  const riskLeft   = Math.max(0, h.last_price - slPrice)
+  const rewardLeft = Math.max(0, tgtPrice - h.last_price)
+  const rr         = riskLeft > 0 ? rewardLeft / riskLeft : 0
+  return {
+    slPrice, tgtPrice, rr,
+    slPct: slPct * 100, tgtPct: tgtPct * 100,
+    label,
+    slHit:     h.last_price <= slPrice,
+    targetHit: h.last_price >= tgtPrice,
+  }
+}
+
 // ── Slicer types ──────────────────────────────────────────────────────────────
 
 type PrimaryFilter = 'all' | 'profit' | 'loss'
@@ -77,13 +112,35 @@ function HoldingRow({ h }: { h: KiteHolding }) {
   const p    = holdingPct(h)
   const gain = (h.last_price - h.average_price) * h.quantity
   const isUp = p >= 0
+  const rr   = rrData(h)
+
+  const rrColor  = rr.targetHit ? 'text-[#22c55e]'
+    : rr.slHit   ? 'text-[#ef4444]'
+    : rr.rr >= 2 ? 'text-[#22c55e]'
+    : rr.rr >= 1 ? 'text-[#f59e0b]'
+    :              'text-[#ef4444]'
+
+  const rrBadge = rr.targetHit
+    ? { text: 'TARGET HIT', cls: 'bg-[#22c55e]/15 text-[#22c55e] border-[#22c55e]/30' }
+    : rr.slHit
+    ? { text: 'SL HIT',     cls: 'bg-[#ef4444]/15 text-[#ef4444] border-[#ef4444]/30' }
+    : rr.rr >= 2
+    ? { text: 'HOLD',       cls: 'bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20' }
+    : rr.rr >= 1
+    ? { text: 'CAUTION',    cls: 'bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/20' }
+    : { text: 'EXIT?',      cls: 'bg-[#ef4444]/10 text-[#ef4444] border-[#ef4444]/20' }
+
   return (
     <div className="px-3 py-2.5 border-b border-[#0f1f35] hover:bg-[#0a1628] transition-colors">
+      {/* Top row: symbol + price */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full shrink-0 mt-0.5 ${isUp ? 'bg-[#22c55e]' : 'bg-[#ef4444]'}`} />
           <div>
-            <div className="text-white text-[11px] font-semibold">{h.tradingsymbol}</div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-white text-[11px] font-semibold">{h.tradingsymbol}</span>
+              <span className="text-[7px] font-bold text-[#334155]">{rr.label}</span>
+            </div>
             <div className="text-[#475569] text-[9px]">{h.quantity} shares · avg ₹{h.average_price.toFixed(1)}</div>
           </div>
         </div>
@@ -95,6 +152,8 @@ function HoldingRow({ h }: { h: KiteHolding }) {
           </div>
         </div>
       </div>
+
+      {/* P&L bar */}
       <div className="flex items-center justify-between mt-1.5">
         <div className="flex-1 h-1 bg-[#1e293b] rounded-full overflow-hidden">
           <div
@@ -106,10 +165,35 @@ function HoldingRow({ h }: { h: KiteHolding }) {
           {gain >= 0 ? '+' : ''}₹{Math.abs(gain).toFixed(0)}
         </span>
       </div>
+
+      {/* Day change */}
       <div className="text-[8px] text-[#334155] mt-0.5">
         Day: <span className={h.day_change >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}>
           {h.day_change >= 0 ? '+' : ''}{h.day_change_percentage?.toFixed(2) ?? '0.00'}%
         </span>
+      </div>
+
+      {/* R:R block */}
+      <div className="mt-2 flex items-center justify-between bg-[#060d1a] rounded px-2 py-1.5">
+        <div className="flex items-center gap-3 text-[8px]">
+          <span className="text-[#334155]">
+            SL <span className="text-[#ef4444] font-semibold">₹{rr.slPrice.toFixed(0)}</span>
+            <span className="text-[#475569] ml-0.5">({rr.slPct.toFixed(0)}%)</span>
+          </span>
+          <span className="text-[#1e293b]">·</span>
+          <span className="text-[#334155]">
+            Tgt <span className="text-[#22c55e] font-semibold">₹{rr.tgtPrice.toFixed(0)}</span>
+            <span className="text-[#475569] ml-0.5">({rr.tgtPct.toFixed(0)}%)</span>
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className={`text-[9px] font-bold ${rrColor}`}>
+            1:{rr.rr.toFixed(1)}
+          </span>
+          <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded border ${rrBadge.cls}`}>
+            {rrBadge.text}
+          </span>
+        </div>
       </div>
     </div>
   )
