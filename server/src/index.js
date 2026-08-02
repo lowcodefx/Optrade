@@ -45,6 +45,7 @@ app.post('/api/holdings-alert/run', async (_req, res) => {
 })
 app.use('/api/stock-history',      require('./routes/stockHistory'))
 app.use('/api/stock-news',         require('./routes/stockNews'))
+app.use('/api/nifty-trend',        require('./routes/niftyTrend'))
 
 if (require.main === module) {
   app.listen(PORT, () => console.log(`optrade-api listening on ${PORT}`))

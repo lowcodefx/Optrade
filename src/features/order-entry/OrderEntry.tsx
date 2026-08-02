@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useOrderStore, useMarketStore, useDisciplineStore } from '@/core/store'
 import { tradingService } from '@/core/services/tradingService'
+import { API_BASE, kiteAuthHeaders } from '@/core/services/apiClient'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { cn } from '@/lib/utils'
 import { Minus, Plus, Zap, AlertTriangle, CheckCircle2, XCircle, ChevronDown } from 'lucide-react'
@@ -127,6 +128,24 @@ export function OrderEntry() {
   const { isLocked, lockReason, checkCanTrade } = useDisciplineStore()
   const canTrade = checkCanTrade()
 
+  // ── NIFTY 15min trend filter ───────────────────────────────────────────────
+  const { data: trendData } = useQuery({
+    queryKey: ['niftyTrend'],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/nifty-trend`, { headers: kiteAuthHeaders() })
+      if (!res.ok) return { bias: 'NEUTRAL' as const, note: '' }
+      return res.json() as Promise<{ bias: 'UP' | 'DOWN' | 'NEUTRAL'; ema20: number | null; spot: number | null; note: string }>
+    },
+    refetchInterval: 5 * 60 * 1000,   // refresh every 5 min
+    staleTime: 4 * 60 * 1000,
+    retry: false,
+  })
+  const trendBias = trendData?.bias ?? 'NEUTRAL'
+  // CE blocked if NIFTY trend is DOWN; PE blocked if NIFTY trend is UP
+  const trendBlocksCE = trendBias === 'DOWN'
+  const trendBlocksPE = trendBias === 'UP'
+  const trendBlocks = (optionType === 'CE' && trendBlocksCE) || (optionType === 'PE' && trendBlocksPE)
+
   const [orderError, setOrderError] = useState<string | null>(null)
 
   const mutation = useMutation({
@@ -153,7 +172,7 @@ export function OrderEntry() {
     onSettled: () => setIsSubmitting(false),
   })
 
-  const canPlace = rrOk && !mutation.isPending && !isLocked && canTrade.allowed
+  const canPlace = rrOk && !mutation.isPending && !isLocked && canTrade.allowed && !trendBlocks
 
   return (
     <div className="flex flex-col border-b border-[#1e293b]">
@@ -163,7 +182,23 @@ export function OrderEntry() {
         <span className="ml-auto text-[9px] font-bold text-[#38bdf8] bg-[#0f1f35] px-1.5 py-0.5 rounded">MIS · LIMIT</span>
       </div>
 
+      {/* NIFTY trend indicator */}
+      <div className="flex items-center gap-1.5 px-3 py-1 border-b border-[#1e293b] bg-[#0a1628]">
+        <span className="text-[8px] text-[#475569] uppercase tracking-wider">NIFTY 15m Trend</span>
+        {trendBias === 'UP' && <span className="text-[9px] font-bold text-[#22c55e]">↑ Uptrend</span>}
+        {trendBias === 'DOWN' && <span className="text-[9px] font-bold text-[#ef4444]">↓ Downtrend</span>}
+        {trendBias === 'NEUTRAL' && <span className="text-[9px] font-bold text-[#475569]">→ Neutral</span>}
+        {trendData?.note && <span className="text-[7px] text-[#334155] ml-auto truncate max-w-[110px]" title={trendData.note}>{trendData.note}</span>}
+      </div>
+
       <div className="px-3 pb-3 space-y-2">
+        {/* Trend block banner */}
+        {trendBlocks && (
+          <div className="mx-2 mb-1 px-3 py-1.5 rounded bg-[#f59e0b]/10 border border-[#f59e0b]/30 text-[9px] text-[#f59e0b]">
+            ⚠️ NIFTY trend opposes this trade direction ({trendBias === 'DOWN' ? 'Downtrend — avoid CE' : 'Uptrend — avoid PE'})
+          </div>
+        )}
+
         {/* NO TRADE banner */}
         {noTradeReason && (
           <div className="flex items-start gap-1.5 bg-[#1a1000] border border-[#f59e0b]/50 rounded px-2 py-2">
