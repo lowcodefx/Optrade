@@ -361,21 +361,25 @@ export function HoldingsBucket() {
                       <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">{r.h.average_price.toLocaleString('en-IN')}</td>
                       <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">{r.h.quantity}</td>
                       {/* P&L · left-red / right-green dual bar · Target */}
-                      <td className="px-2 py-2 whitespace-nowrap" style={{ minWidth: 190 }}>
-                        <div className="flex items-center gap-0.5">
+                      <td className="px-2 py-2 whitespace-nowrap" style={{ minWidth: 200 }}>
+                        <div className="flex items-center gap-1">
                           {/* SL label */}
                           <span className="text-[7px] text-[#ef4444] shrink-0">{r.slPrice.toFixed(0)}</span>
-                          {/* Red bar: covered range (SL → current) */}
-                          <div className="flex-1 h-1.5 bg-[#1e293b] rounded-l overflow-hidden">
+                          {/* Proportional dual bar with P&L overlaid center */}
+                          <div className="relative flex-1 flex h-3 rounded overflow-hidden bg-[#0f172a]">
+                            {/* Red bar: progressPct% of total width */}
                             <div className="h-full bg-[#ef4444]" style={{ width: `${r.progressPct}%` }} />
-                          </div>
-                          {/* Center P&L */}
-                          <div className={`text-[9px] font-bold shrink-0 mx-1 min-w-[38px] text-center ${r.totalPnL >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                            {r.totalPnL >= 0 ? '+' : ''}{Math.abs(r.totalPnL).toFixed(0)}
-                          </div>
-                          {/* Green bar: remaining range (current → target) */}
-                          <div className="flex-1 h-1.5 bg-[#1e293b] rounded-r overflow-hidden">
-                            <div className="h-full bg-[#22c55e]" style={{ width: `${100 - r.progressPct}%` }} />
+                            {/* Green bar: remaining width */}
+                            <div className="h-full bg-[#22c55e] flex-1" />
+                            {/* P&L centered absolutely over both bars */}
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <span
+                                className="text-[9px] font-bold leading-none text-white"
+                                style={{ textShadow: '0 0 4px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.95)' }}
+                              >
+                                {r.totalPnL >= 0 ? '+' : '-'}{Math.abs(r.totalPnL).toFixed(0)}
+                              </span>
+                            </div>
                           </div>
                           {/* Target label */}
                           <span className="text-[7px] text-[#22c55e] shrink-0">{r.tgtPrice.toFixed(0)}</span>
