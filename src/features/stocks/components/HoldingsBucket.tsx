@@ -356,31 +356,31 @@ export function HoldingsBucket() {
                         <div className="text-[7px] text-[#334155]">{r.cap} · {r.h.quantity} qty</div>
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap">
-                        <div className="text-white font-semibold">₹{r.h.last_price.toLocaleString('en-IN')}</div>
+                        <div className="text-white font-semibold">{r.h.last_price.toLocaleString('en-IN')}</div>
                       </td>
-                      <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">₹{r.h.average_price.toLocaleString('en-IN')}</td>
+                      <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">{r.h.average_price.toLocaleString('en-IN')}</td>
                       <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">{r.h.quantity}</td>
                       {/* Combined P&L · SL progress bar · Target */}
                       <td className="px-2 py-2 whitespace-nowrap" style={{ minWidth: 170 }}>
                         <div className={`text-[9px] font-bold mb-1.5 ${r.totalPnL >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                          {r.totalPnL >= 0 ? '+' : ''}₹{Math.abs(r.totalPnL).toFixed(0)}
+                          {r.totalPnL >= 0 ? '+' : ''}{Math.abs(r.totalPnL).toFixed(0)}
                         </div>
                         <div className="flex items-center gap-1">
-                          <span className="text-[7px] text-[#ef4444] shrink-0">₹{r.slPrice.toFixed(0)}</span>
+                          <span className="text-[7px] text-[#ef4444] shrink-0">{r.slPrice.toFixed(0)}</span>
                           <div className="flex-1 h-1 bg-[#1e293b] rounded-full overflow-hidden" style={{ minWidth: 40 }}>
                             <div
                               className={`h-full rounded-full ${r.slHit ? 'bg-[#ef4444]' : r.targetHit ? 'bg-[#22c55e]' : 'bg-gradient-to-r from-[#ef4444] via-[#f59e0b] to-[#22c55e]'}`}
                               style={{ width: `${r.progressPct}%` }}
                             />
                           </div>
-                          <span className="text-[7px] text-[#22c55e] shrink-0">₹{r.tgtPrice.toFixed(0)}</span>
+                          <span className="text-[7px] text-[#22c55e] shrink-0">{r.tgtPrice.toFixed(0)}</span>
                         </div>
                       </td>
                       <td className={`px-2 py-2 font-bold whitespace-nowrap ${rrColor(r)}`}>
                         {r.achievedRR.toFixed(1)}R
                       </td>
                       <td className={`px-2 py-2 whitespace-nowrap font-semibold ${dUp ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                        {dUp ? '+' : ''}₹{Math.abs(r.dayPnLAmount).toFixed(0)}
+                        {dUp ? '+' : ''}{Math.abs(r.dayPnLAmount).toFixed(0)}
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap">
                         <StatusBadge r={r} />
