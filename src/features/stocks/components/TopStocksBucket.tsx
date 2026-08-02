@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { API_BASE, kiteAuthHeaders } from '@/core/services/apiClient'
 import { ChevronDown, ChevronRight, Info, RefreshCw, Bookmark, BookmarkCheck, Flame, Newspaper, LineChart, ShoppingCart } from 'lucide-react'
@@ -572,6 +572,17 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist }: {
   const [buySuccess, setBuySuccess]     = useState<string | null>(null)
   const qc = useQueryClient()
 
+  const autoCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleBuy = (symbol: string, price: number) => {
+    setBuyStock({ symbol, price })
+    setBuyQty('1')
+    setBuyError(null)
+    setBuySuccess(null)
+  }
+
+  useEffect(() => () => { if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current) }, [])
+
   async function placeCNCOrder(symbol: string, price: number, qty: number): Promise<string> {
     const body = new URLSearchParams({
       exchange: 'NSE',
@@ -684,15 +695,15 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist }: {
           watchlist={watchlist}
           heldSymbols={heldSymbols}
           sectorFilter={selectedSector}
-          onBuy={(symbol, price) => { setBuyStock({ symbol, price }); setBuyQty('1'); setBuyError(null); setBuySuccess(null) }}
+          onBuy={handleBuy}
         />
       )}
 
       {data && tab === 'all' && (
         <>
-          <AccordionSection title="Large Cap" stocks={data.largeCap} defaultOpen onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} onBuy={(symbol, price) => { setBuyStock({ symbol, price }); setBuyQty('1'); setBuyError(null); setBuySuccess(null) }} />
-          <AccordionSection title="Mid Cap"   stocks={data.midCap}             onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} onBuy={(symbol, price) => { setBuyStock({ symbol, price }); setBuyQty('1'); setBuyError(null); setBuySuccess(null) }} />
-          <AccordionSection title="Small Cap" stocks={data.smallCap}           onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} onBuy={(symbol, price) => { setBuyStock({ symbol, price }); setBuyQty('1'); setBuyError(null); setBuySuccess(null) }} />
+          <AccordionSection title="Large Cap" stocks={data.largeCap} defaultOpen onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} onBuy={handleBuy} />
+          <AccordionSection title="Mid Cap"   stocks={data.midCap}             onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} onBuy={handleBuy} />
+          <AccordionSection title="Small Cap" stocks={data.smallCap}           onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} onBuy={handleBuy} />
         </>
       )}
 
@@ -715,7 +726,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist }: {
               </div>
               <div className="flex justify-between text-[10px]">
                 <span className="text-[#475569]">Order Value</span>
-                <span className="text-white font-semibold">₹{(buyStock.price * (parseInt(buyQty) || 1)).toLocaleString('en-IN')}</span>
+                <span className="text-white font-semibold">₹{(buyStock.price * (parseInt(buyQty, 10) || 1)).toLocaleString('en-IN')}</span>
               </div>
             </div>
             {buyError && <p className="text-[9px] text-[#ef4444] mb-2">{buyError}</p>}
@@ -727,9 +738,10 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist }: {
                 onClick={async () => {
                   setBuyError(null); setBuySuccess(null); setBuyLoading(true)
                   try {
-                    const orderId = await placeCNCOrder(buyStock.symbol, buyStock.price, parseInt(buyQty) || 1)
+                    const orderId = await placeCNCOrder(buyStock.symbol, buyStock.price, parseInt(buyQty, 10) || 1)
                     setBuySuccess(`Order ID ${orderId}`)
-                    setTimeout(() => setBuyStock(null), 2000)
+                    if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current)
+                    autoCloseTimer.current = setTimeout(() => { setBuyStock(null); autoCloseTimer.current = null }, 2000)
                   } catch (err: unknown) {
                     setBuyError(err instanceof Error ? err.message : 'Order failed')
                   } finally {
