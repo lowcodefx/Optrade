@@ -360,26 +360,32 @@ export function HoldingsBucket() {
                       </td>
                       <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">{r.h.average_price.toLocaleString('en-IN')}</td>
                       <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">{r.h.quantity}</td>
-                      {/* P&L · left-red / right-green dual bar · Target */}
-                      <td className="px-2 py-2 whitespace-nowrap" style={{ minWidth: 200 }}>
+                      {/* P&L · center-anchored dual bar (center = avg buy / breakeven) */}
+                      <td className="px-2 py-2 whitespace-nowrap" style={{ minWidth: 210 }}>
                         <div className="flex items-center gap-1">
                           {/* SL label */}
                           <span className="text-[7px] text-[#ef4444] shrink-0">{r.slPrice.toFixed(0)}</span>
-                          {/* Proportional dual bar with P&L overlaid center */}
-                          <div className="relative flex-1 flex h-3 rounded overflow-hidden bg-[#0f172a]">
-                            {/* Red bar: progressPct% of total width */}
-                            <div className="h-full bg-[#ef4444]" style={{ width: `${r.progressPct}%` }} />
-                            {/* Green bar: remaining width */}
-                            <div className="h-full bg-[#22c55e] flex-1" />
-                            {/* P&L centered absolutely over both bars */}
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                              <span
-                                className="text-[9px] font-bold leading-none text-white"
-                                style={{ textShadow: '0 0 4px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.95)' }}
-                              >
-                                {r.totalPnL >= 0 ? '+' : '-'}{Math.abs(r.totalPnL).toFixed(0)}
-                              </span>
-                            </div>
+                          {/* Left half: red fills right-to-left from center for LOSS */}
+                          <div className="relative flex-1 h-3 bg-[#1a0a0a] rounded-l overflow-hidden">
+                            {r.totalPnL < 0 && (
+                              <div
+                                className="absolute right-0 top-0 h-full bg-[#ef4444]"
+                                style={{ width: `${Math.min(100, ((r.h.average_price - r.h.last_price) / (r.h.average_price - r.slPrice)) * 100)}%` }}
+                              />
+                            )}
+                          </div>
+                          {/* Center: P&L amount */}
+                          <div className={`text-[9px] font-bold shrink-0 w-12 text-center ${r.totalPnL >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
+                            {r.totalPnL >= 0 ? '+' : '-'}{Math.abs(r.totalPnL).toFixed(0)}
+                          </div>
+                          {/* Right half: green fills left-to-right from center for PROFIT */}
+                          <div className="relative flex-1 h-3 bg-[#0a1a0a] rounded-r overflow-hidden">
+                            {r.totalPnL >= 0 && (
+                              <div
+                                className="absolute left-0 top-0 h-full bg-[#22c55e]"
+                                style={{ width: `${Math.min(100, ((r.h.last_price - r.h.average_price) / (r.tgtPrice - r.h.average_price)) * 100)}%` }}
+                              />
+                            )}
                           </div>
                           {/* Target label */}
                           <span className="text-[7px] text-[#22c55e] shrink-0">{r.tgtPrice.toFixed(0)}</span>
