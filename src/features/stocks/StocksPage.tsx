@@ -6,6 +6,7 @@ import { TopStocksBucket } from './components/TopStocksBucket'
 import { HoldingsBucket } from './components/HoldingsBucket'
 import { StocksWatchlist } from './components/StocksWatchlist'
 import { StockPortfolioSummary } from './components/StockPortfolioSummary'
+import { LogEntryModal } from './components/TradeLog'
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } })
 
@@ -13,13 +14,16 @@ export function StocksPage() {
   const [watchlist, setWatchlist] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('sw_watchlist') ?? '[]') } catch { return [] }
   })
+  const [pendingLog, setPendingLog] = useState<{ symbol: string; price: number; action: 'Watchlist' | 'CNC Buy' } | null>(null)
 
-  function addToWatchlist(symbol: string) {
+  function addToWatchlist(symbol: string, price?: number) {
     setWatchlist(prev => {
-      const next = prev.includes(symbol) ? prev : [...prev, symbol]
+      if (prev.includes(symbol)) return prev
+      const next = [...prev, symbol]
       localStorage.setItem('sw_watchlist', JSON.stringify(next))
       return next
     })
+    setPendingLog({ symbol, price: price ?? 0, action: 'Watchlist' })
   }
   function removeFromWatchlist(symbol: string) {
     setWatchlist(prev => {
@@ -66,6 +70,7 @@ export function StocksPage() {
               <TopStocksBucket
                 onAddToWatchlist={addToWatchlist}
                 watchlist={watchlist}
+                onLogEntry={(sym, price) => setPendingLog({ symbol: sym, price, action: 'CNC Buy' })}
               />
             </div>
             <div className="flex-[1.6] overflow-y-auto min-w-0">
@@ -80,6 +85,14 @@ export function StocksPage() {
 
         </div>
       </div>
+      {pendingLog && (
+        <LogEntryModal
+          symbol={pendingLog.symbol}
+          price={pendingLog.price}
+          action={pendingLog.action}
+          onClose={() => setPendingLog(null)}
+        />
+      )}
     </QueryClientProvider>
   )
 }

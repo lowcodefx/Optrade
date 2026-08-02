@@ -474,7 +474,7 @@ function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist, onBuy }:
 
 function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter, onBuy }: {
   data: AnalysisResult
-  onWatchlist: (s: string) => void
+  onWatchlist: (s: string, price?: number) => void
   watchlist: string[]
   heldSymbols: string[]
   sectorFilter: string | null
@@ -509,7 +509,7 @@ function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter, on
           rank={i + 1}
           cap={s.cap}
           onInfo={() => setInfoStock(s)}
-          onWatchlist={() => onWatchlist(s.symbol)}
+          onWatchlist={() => onWatchlist(s.symbol, s.last_price ?? 0)}
           inWatchlist={watchlist.includes(s.symbol)}
           onBuy={onBuy}
         />
@@ -525,7 +525,7 @@ function AccordionSection({ title, stocks, defaultOpen, onWatchlist, watchlist, 
   title: string
   stocks: StockScore[]
   defaultOpen?: boolean
-  onWatchlist: (s: string) => void
+  onWatchlist: (s: string, price?: number) => void
   watchlist: string[]
   sectorFilter: string | null
   onBuy: (symbol: string, price: number) => void
@@ -554,7 +554,7 @@ function AccordionSection({ title, stocks, defaultOpen, onWatchlist, watchlist, 
           key={s.symbol}
           stock={s}
           onInfo={() => setInfoStock(s)}
-          onWatchlist={() => onWatchlist(s.symbol)}
+          onWatchlist={() => onWatchlist(s.symbol, s.last_price ?? 0)}
           inWatchlist={watchlist.includes(s.symbol)}
           onBuy={onBuy}
         />
@@ -568,9 +568,10 @@ function AccordionSection({ title, stocks, defaultOpen, onWatchlist, watchlist, 
 
 type Tab = 'top10' | 'all'
 
-export function TopStocksBucket({ onAddToWatchlist, watchlist }: {
-  onAddToWatchlist: (s: string) => void
+export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
+  onAddToWatchlist: (s: string, price?: number) => void
   watchlist: string[]
+  onLogEntry?: (symbol: string, price: number, action: 'CNC Buy') => void
 }) {
   const [tab, setTab]                   = useState<Tab>('top10')
   const [selectedSector, setSelectedSector] = useState<string | null>(null)
@@ -757,6 +758,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist }: {
                   try {
                     const orderId = await placeCNCOrder(buyStock.symbol, buyStock.price, parseInt(buyQty, 10) || 1)
                     setBuySuccess(`Order ID ${orderId}`)
+                    onLogEntry?.(buyStock.symbol, buyStock.price, 'CNC Buy')
                     if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current)
                     autoCloseTimer.current = setTimeout(() => { setBuyStock(null); autoCloseTimer.current = null }, 2000)
                   } catch (err: unknown) {
