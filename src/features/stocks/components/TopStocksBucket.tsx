@@ -3,12 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import { API_BASE, kiteAuthHeaders } from '@/core/services/apiClient'
 import { ChevronDown, ChevronRight, Info, RefreshCw, Bookmark, BookmarkCheck } from 'lucide-react'
 
-// ── Stock universe ────────────────────────────────────────────────────────────
-
-const LARGE_CAP = ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'BHARTIARTL', 'ITC', 'KOTAKBANK', 'LT', 'WIPRO']
-const MID_CAP   = ['MPHASIS', 'PIIND', 'LTTS', 'COFORGE', 'PERSISTENT', 'ABCAPITAL', 'SONACOMS', 'LTIM', 'KALYANKJIL', 'AARTIIND']
-const SMALL_CAP = ['TEJASNET', 'CRAFTSMAN', 'HAPPYMIND', 'MEDANTA', 'BIKAJI', 'SENCO', 'NEWGEN', 'CYIENT', 'IRIS', 'GREENPANEL']
-
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface StockScore {

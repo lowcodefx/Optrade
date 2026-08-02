@@ -11,7 +11,7 @@ function navigate(path: string) {
 
 // Handles Zerodha OAuth redirect that lands back on '/'
 function useOAuthCallback() {
-  const { apiKey, setAccessToken } = useSettingsStore()
+  const { setAccessToken } = useSettingsStore()
   const [exchanging, setExchanging] = useState(false)
 
   useEffect(() => {
