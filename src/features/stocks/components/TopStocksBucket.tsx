@@ -25,6 +25,8 @@ interface CandleData { t: string; o: number; h: number; l: number; c: number; v:
 interface HistoryData { prices: number[]; volumes: number[]; candles: CandleData[] }
 interface KiteHolding { tradingsymbol: string }
 interface NewsArticle { title: string; source: string; publishedAt: string }
+interface NewsSentiment { verdict: 'BULLISH' | 'BEARISH' | 'NEUTRAL' | 'MIXED'; summary: string }
+interface NewsData { articles: NewsArticle[]; sentiment: NewsSentiment | null }
 interface AnalysisResult { largeCap: StockScore[]; midCap: StockScore[]; smallCap: StockScore[] }
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
@@ -45,9 +47,9 @@ async function fetchStockHistory(token: number): Promise<HistoryData> {
   return data[token] ?? { prices: [], volumes: [], candles: [] }
 }
 
-async function fetchStockNews(symbol: string): Promise<{ articles: NewsArticle[] }> {
+async function fetchStockNews(symbol: string): Promise<NewsData> {
   const res = await fetch(`${API_BASE}/api/stock-news?symbol=${encodeURIComponent(symbol)}`, { headers: kiteAuthHeaders() })
-  if (!res.ok) return { articles: [] }
+  if (!res.ok) return { articles: [], sentiment: null }
   return res.json()
 }
 
@@ -343,17 +345,41 @@ function InfoModal({ stock, onClose }: { stock: StockScore; onClose: () => void 
 
         <p className="text-[#94a3b8] text-[10px] leading-relaxed border-t border-[#1e293b] pt-3">{stock.summary}</p>
 
-        {/* News */}
+        {/* News + Claude sentiment */}
         <div className="border-t border-[#1e293b] pt-3 space-y-2">
           <div className="flex items-center gap-1.5">
             <Newspaper size={10} className="text-[#38bdf8]" />
-            <span className="text-[9px] font-bold uppercase tracking-widest text-[#94a3b8]">Recent News</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-[#94a3b8]">News Sentiment</span>
           </div>
-          {newsLoading && <div className="text-[#334155] text-[9px]">Loading…</div>}
+
+          {newsLoading && <div className="text-[#334155] text-[9px]">Analysing news with Claude…</div>}
+
+          {/* Claude verdict */}
+          {!newsLoading && newsData?.sentiment && (() => {
+            const v = newsData.sentiment!
+            const cfg = {
+              BULLISH: { bg: 'bg-[#22c55e]/10', text: 'text-[#22c55e]', border: 'border-[#22c55e]/30', icon: '↑' },
+              BEARISH: { bg: 'bg-[#ef4444]/10', text: 'text-[#ef4444]', border: 'border-[#ef4444]/30', icon: '↓' },
+              NEUTRAL: { bg: 'bg-[#475569]/10', text: 'text-[#475569]', border: 'border-[#475569]/30', icon: '—' },
+              MIXED:   { bg: 'bg-[#f59e0b]/10', text: 'text-[#f59e0b]', border: 'border-[#f59e0b]/30', icon: '↕' },
+            }[v.verdict] ?? { bg: 'bg-[#475569]/10', text: 'text-[#475569]', border: 'border-[#475569]/30', icon: '?' }
+            return (
+              <div className={`rounded-lg px-3 py-2.5 border ${cfg.bg} ${cfg.border} space-y-1`}>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-bold ${cfg.text}`}>{cfg.icon}</span>
+                  <span className={`text-[10px] font-bold ${cfg.text}`}>{v.verdict}</span>
+                  <span className="text-[8px] text-[#334155] ml-auto">Claude Haiku</span>
+                </div>
+                <p className="text-[#cbd5e1] text-[9px] leading-snug">{v.summary}</p>
+              </div>
+            )
+          })()}
+
+          {/* Raw headlines */}
           {!newsLoading && !newsData?.articles.length && <div className="text-[#334155] text-[9px]">No recent news found</div>}
           {newsData?.articles.map((a, i) => (
-            <div key={i} className="space-y-0.5">
-              <p className="text-[#cbd5e1] text-[9px] leading-snug">{a.title}</p>
+            <div key={i} className="space-y-0.5 pl-1 border-l border-[#1e293b]">
+              <p className="text-[#64748b] text-[9px] leading-snug">{a.title}</p>
               <div className="flex items-center gap-2">
                 <span className="text-[#334155] text-[8px]">{a.source}</span>
                 <span className="text-[#334155] text-[8px]">· {timeAgo(a.publishedAt)}</span>
