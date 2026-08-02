@@ -107,6 +107,15 @@ function detectPattern(candles: CandleData[]): string {
   return 'No clear pattern'
 }
 
+function sectorMomentum(sectorName: string, data: AnalysisResult): number | null {
+  const symbols   = SECTOR_STOCKS[sectorName] ?? []
+  const allStocks = [...data.largeCap, ...data.midCap, ...data.smallCap]
+  const matched   = allStocks.filter(s => symbols.includes(s.symbol) && s.rs1d !== null)
+  if (!matched.length) return null
+  const avg = matched.reduce((sum, s) => sum + (s.rs1d ?? 0), 0) / matched.length
+  return +avg.toFixed(2)
+}
+
 // ── Shared UI ─────────────────────────────────────────────────────────────────
 
 function SignalBadge({ signal }: { signal: 'BUY' | 'WATCH' | 'AVOID' }) {
@@ -653,13 +662,21 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist }: {
               <button
                 key={name}
                 onClick={() => setSelectedSector(active ? null : name)}
-                className={`shrink-0 rounded px-2 py-0.5 text-[8px] font-bold transition-colors ${
+                title={data ? `Avg RS vs NIFTY: ${sectorMomentum(name, data)?.toFixed(2) ?? 'n/a'}%` : name}
+                className={`shrink-0 rounded px-2 py-0.5 text-[8px] font-bold transition-colors flex items-center gap-0.5 ${
                   active
                     ? `${c.activeBg} ${c.text} ring-1 ring-current`
                     : `${c.bg} ${c.text}`
                 }`}
               >
                 {name}
+                {data && (() => {
+                  const mom = sectorMomentum(name, data)
+                  if (mom === null) return null
+                  if (mom >= 1.0) return <span className="text-[7px] text-[#22c55e] leading-none">↑</span>
+                  if (mom <= -1.0) return <span className="text-[7px] text-[#ef4444] leading-none">↓</span>
+                  return <span className="text-[7px] text-[#475569] leading-none">→</span>
+                })()}
               </button>
             )
           })}
