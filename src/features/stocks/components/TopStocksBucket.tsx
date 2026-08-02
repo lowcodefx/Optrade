@@ -659,11 +659,12 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
           {Object.keys(SECTOR_STOCKS).map(name => {
             const c      = SECTOR_COLORS[name]
             const active = selectedSector === name
+            const mom    = data ? sectorMomentum(name, data) : null
             return (
               <button
                 key={name}
                 onClick={() => setSelectedSector(active ? null : name)}
-                title={data ? `Avg RS vs NIFTY: ${sectorMomentum(name, data)?.toFixed(2) ?? 'n/a'}%` : name}
+                title={data ? `Avg RS vs NIFTY: ${mom?.toFixed(2) ?? 'n/a'}%` : name}
                 className={`shrink-0 rounded px-2 py-0.5 text-[8px] font-bold transition-colors flex items-center gap-0.5 ${
                   active
                     ? `${c.activeBg} ${c.text} ring-1 ring-current`
@@ -671,13 +672,13 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
                 }`}
               >
                 {name}
-                {data && (() => {
-                  const mom = sectorMomentum(name, data)
-                  if (mom === null) return null
-                  if (mom >= 1.0) return <span className="text-[7px] text-[#22c55e] leading-none">↑</span>
-                  if (mom <= -1.0) return <span className="text-[7px] text-[#ef4444] leading-none">↓</span>
-                  return <span className="text-[7px] text-[#475569] leading-none">→</span>
-                })()}
+                {mom !== null && (
+                  mom >= 1.0
+                    ? <span className="text-[7px] text-[#22c55e] leading-none">↑</span>
+                    : mom <= -1.0
+                      ? <span className="text-[7px] text-[#ef4444] leading-none">↓</span>
+                      : <span className="text-[7px] text-[#475569] leading-none">→</span>
+                )}
               </button>
             )
           })}
@@ -752,11 +753,11 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
             <div className="flex gap-2">
               <button onClick={() => setBuyStock(null)} className="flex-1 py-1.5 rounded border border-[#1e293b] text-[10px] text-[#475569] hover:text-white">Cancel</button>
               <button
-                disabled={buyLoading}
+                disabled={buyLoading || parseInt(buyQty, 10) < 1}
                 onClick={async () => {
                   setBuyError(null); setBuySuccess(null); setBuyLoading(true)
                   try {
-                    const orderId = await placeCNCOrder(buyStock.symbol, buyStock.price, parseInt(buyQty, 10) || 1)
+                    const orderId = await placeCNCOrder(buyStock.symbol, buyStock.price, Math.max(1, parseInt(buyQty, 10) || 1))
                     setBuySuccess(`Order ID ${orderId}`)
                     onLogEntry?.(buyStock.symbol, buyStock.price, 'buy')
                     if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current)

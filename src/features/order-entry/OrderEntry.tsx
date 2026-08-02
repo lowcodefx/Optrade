@@ -126,7 +126,7 @@ export function OrderEntry() {
   const strengthScore = tradeStrength?.score ?? 0
 
   const { isLocked, lockReason, checkCanTrade } = useDisciplineStore()
-  const canTrade = checkCanTrade()
+  const canTrade = checkCanTrade(strengthScore)
 
   // ── NIFTY 15min trend filter ───────────────────────────────────────────────
   const { data: trendData } = useQuery({
@@ -172,7 +172,7 @@ export function OrderEntry() {
     onSettled: () => setIsSubmitting(false),
   })
 
-  const canPlace = rrOk && !mutation.isPending && !isLocked && canTrade.allowed && !trendBlocks
+  const canPlace = rrOk && !mutation.isPending && canTrade.allowed && !trendBlocks
 
   return (
     <div className="flex flex-col border-b border-[#1e293b]">
