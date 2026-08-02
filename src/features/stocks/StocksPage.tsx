@@ -13,6 +13,7 @@ export function StocksPage() {
   const [watchlist, setWatchlist] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('sw_watchlist') ?? '[]') } catch { return [] }
   })
+  const [selectedSector, setSelectedSector] = useState<string | null>(null)
 
   function addToWatchlist(symbol: string) {
     setWatchlist(prev => {
@@ -40,9 +41,9 @@ export function StocksPage() {
           </button>
           <div className="flex items-center gap-2">
             <BarChart2 size={15} className="text-[#a78bfa]" />
-            <span className="text-white font-bold text-sm tracking-wide">Stock Investments</span>
+            <span className="text-white font-bold text-sm tracking-wide">Optrade Swing</span>
           </div>
-          <span className="text-[#334155] text-[10px] ml-1">Swing Trading</span>
+          <span className="text-[#334155] text-[10px] ml-1">AI-powered swing picks</span>
         </div>
 
         {/* ── Market indices header ── */}
@@ -57,13 +58,19 @@ export function StocksPage() {
               watchlist={watchlist}
               onRemove={removeFromWatchlist}
               onAdd={addToWatchlist}
+              selectedSector={selectedSector}
+              onSectorSelect={setSelectedSector}
             />
           </div>
 
           {/* Center: two independent-scroll buckets */}
           <div className="flex flex-1 min-w-0 gap-0 divide-x divide-[#1e293b]">
             <div className="flex-1 overflow-y-auto min-w-0">
-              <TopStocksBucket onAddToWatchlist={addToWatchlist} watchlist={watchlist} />
+              <TopStocksBucket
+                onAddToWatchlist={addToWatchlist}
+                watchlist={watchlist}
+                selectedSector={selectedSector}
+              />
             </div>
             <div className="flex-1 overflow-y-auto min-w-0">
               <HoldingsBucket />

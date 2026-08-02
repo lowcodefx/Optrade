@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { kiteAuthHeaders, API_BASE } from '@/core/services/apiClient'
-import { PieChart, Shield, Calendar } from 'lucide-react'
+import { PieChart, Shield } from 'lucide-react'
+import { EventsCalendar } from './EventsCalendar'
 
 interface KiteHolding {
   tradingsymbol: string
@@ -115,22 +116,8 @@ export function StockPortfolioSummary() {
         </div>
       </div>
 
-      {/* Earnings calendar placeholder */}
-      <div className="p-3">
-        <div className="flex items-center gap-1.5 mb-3">
-          <Calendar size={11} className="text-[#38bdf8]" />
-          <span className="text-[9px] font-bold uppercase tracking-widest text-[#94a3b8]">Earnings</span>
-        </div>
-        <div className="space-y-1.5">
-          {holdings.slice(0, 4).map(h => (
-            <div key={h.tradingsymbol} className="flex items-center justify-between">
-              <span className="text-[9px] text-white">{h.tradingsymbol}</span>
-              <span className="text-[8px] text-[#334155]">Q1 results TBD</span>
-            </div>
-          ))}
-          {holdings.length === 0 && <p className="text-[#334155] text-[9px]">No holdings</p>}
-        </div>
-      </div>
+      {/* Events calendar */}
+      <EventsCalendar />
 
     </div>
   )

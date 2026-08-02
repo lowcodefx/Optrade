@@ -27,20 +27,39 @@ function fetchJson(url, headers = {}) {
 }
 
 async function fetchKiteQuotes(apiKey, accessToken) {
-  if (!apiKey || !accessToken) return {}
-  const instruments = ALL_SYMBOLS.map(s => `NSE:${s}`)
+  if (!apiKey || !accessToken) return { stocks: {}, niftyChange: 0 }
+  const instruments = [...ALL_SYMBOLS.map(s => `NSE:${s}`), 'NSE:NIFTY 50']
   const qs = instruments.map(i => `i=${encodeURIComponent(i)}`).join('&')
   const url = `https://api.kite.trade/quote?${qs}`
   const res = await fetchJson(url, {
     'X-Kite-Version': '3',
     Authorization: `token ${apiKey}:${accessToken}`,
   })
-  return res.data || {}
+  const data = res.data || {}
+  const niftyQ = data['NSE:NIFTY 50']
+  const niftyChange = (niftyQ?.ohlc?.close && niftyQ.ohlc.close > 0)
+    ? ((niftyQ.last_price - niftyQ.ohlc.close) / niftyQ.ohlc.close) * 100
+    : 0
+  return { stocks: data, niftyChange }
 }
 
-function buildStockContext(quotes) {
+function computeRS(stocks, niftyChange) {
+  const rs = {}
+  for (const sym of ALL_SYMBOLS) {
+    const q = stocks[`NSE:${sym}`]
+    if (q?.ohlc?.close && q.ohlc.close > 0) {
+      const chg = ((q.last_price - q.ohlc.close) / q.ohlc.close) * 100
+      rs[sym] = +((chg - niftyChange).toFixed(2))
+    } else {
+      rs[sym] = null
+    }
+  }
+  return rs
+}
+
+function buildStockContext(stocks) {
   return ALL_SYMBOLS.map(sym => {
-    const q = quotes[`NSE:${sym}`]
+    const q = stocks[`NSE:${sym}`]
     if (!q) return `${sym}: no data`
     const chg = ((q.last_price - q.ohlc?.close) / (q.ohlc?.close || 1) * 100).toFixed(2)
     const vol = q.volume ? `vol ${(q.volume / 1000).toFixed(0)}K` : ''
@@ -170,19 +189,38 @@ router.get('/', async (req, res) => {
         : Promise.resolve({ articles: [] }),
     ])
 
-    const quoteData = quotes.status === 'fulfilled' ? quotes.value : {}
-    const articles  = (newsData.status === 'fulfilled' ? newsData.value.articles || [] : [])
+    const { stocks: stockQuotes = {}, niftyChange = 0 } =
+      quotes.status === 'fulfilled' ? quotes.value : {}
+    const articles = (newsData.status === 'fulfilled' ? newsData.value.articles || [] : [])
       .filter(a => a.title && !a.title.includes('[Removed]'))
       .slice(0, 8)
       .map(a => a.title)
 
-    const stockContext  = buildStockContext(quoteData)
+    const stockContext  = buildStockContext(stockQuotes)
     const newsHeadlines = articles.length > 0
       ? articles.join('\n')
       : 'No specific news available. Use general market knowledge.'
 
     const rawText = await callClaude(stockContext, newsHeadlines, claudeKey)
     const result  = parseClaudeJson(rawText)
+
+    // Attach live price + RS vs NIFTY (from quote data, not Claude)
+    const rsMap = computeRS(stockQuotes, niftyChange)
+    const addRS = arr => arr.map(s => {
+      const q = stockQuotes[`NSE:${s.symbol}`]
+      const pctChg = q?.ohlc?.close > 0 ? ((q.last_price - q.ohlc.close) / q.ohlc.close) * 100 : null
+      return {
+        ...s,
+        rs1d:             rsMap[s.symbol] ?? null,
+        last_price:       q?.last_price ?? null,
+        pct_change:       pctChg !== null ? +pctChg.toFixed(2) : null,
+        instrument_token: q?.instrument_token ?? null,
+      }
+    })
+    result.largeCap  = addRS(result.largeCap)
+    result.midCap    = addRS(result.midCap)
+    result.smallCap  = addRS(result.smallCap)
+
     result.updatedAt = new Date().toISOString()
     cache = result
     cacheTime = Date.now()
