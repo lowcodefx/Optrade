@@ -4,7 +4,7 @@ import { useSettingsStore } from '@/core/store'
 import { formatNumber, isMarketOpen } from '@/lib/utils'
 import { InfoTooltip } from '@/components/InfoTooltip'
 import { Settings, Plug, PlugZap, User, BookOpen } from 'lucide-react'
-import { getLoginURL, isTokenValid } from '@/core/services/zerodhaAuth'
+import { getLoginURL, isTokenValid, fetchUserProfile } from '@/core/services/zerodhaAuth'
 import { activateLiveService, activateMockService, useLiveModeStore } from '@/core/services/tradingService'
 
 const niftyTooltip = {
@@ -39,17 +39,22 @@ const [time, setTime] = useState(new Date())
   const live = useLiveModeStore(s => s.isLive)
   const marketOpen = isMarketOpen()
   const apiKey = useSettingsStore(s => s.apiKey)
+  const setAccessToken = useSettingsStore(s => s.setAccessToken)
 
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
 
-  function handleConnect() {
+  async function handleConnect() {
     if (!apiKey) { onSettingsClick(); return }
-    if (live) activateMockService()
-    else if (isTokenValid()) activateLiveService()
-    else window.location.href = getLoginURL()
+    if (live) { activateMockService(); return }
+    if (isTokenValid()) {
+      const name = await fetchUserProfile()
+      if (name) { activateLiveService(); return }
+      setAccessToken('') // Token expired — clear it so next click goes to login
+    }
+    window.location.href = getLoginURL()
   }
 
   const isPositive = (quote?.change ?? 0) >= 0

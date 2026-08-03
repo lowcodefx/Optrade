@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSettingsStore } from '@/core/store'
-import { exchangeRequestToken, getLoginURL, isTokenValid } from '@/core/services/zerodhaAuth'
-import { activateLiveService } from '@/core/services/tradingService'
+import { exchangeRequestToken, getLoginURL } from '@/core/services/zerodhaAuth'
+import { activateLiveService, useLiveModeStore } from '@/core/services/tradingService'
 import { API_BASE, vmHeaders } from '@/core/services/apiClient'
 import { TrendingUp, BarChart2, ArrowRight, Loader2 } from 'lucide-react'
 
@@ -44,7 +44,7 @@ function useOAuthCallback() {
 export function Home() {
   const exchanging = useOAuthCallback()
   const { apiKey } = useSettingsStore()
-  const live = isTokenValid()
+  const live = useLiveModeStore(s => s.isLive)
 
   if (exchanging) {
     return (

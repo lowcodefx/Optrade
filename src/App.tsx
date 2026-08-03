@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { exchangeRequestToken, fetchUserProfile, fetchUserMargins } from '@/core/services/zerodhaAuth'
 import { API_BASE, vmHeaders } from '@/core/services/apiClient'
-import { activateLiveService, useLiveModeStore } from '@/core/services/tradingService'
+import { activateLiveService } from '@/core/services/tradingService'
 import { prefetchInstruments } from '@/core/services/instrumentsCache'
 import { useSettingsStore, useMarketStore, useOrderStore } from '@/core/store'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
@@ -158,21 +158,31 @@ function ZerodhaCallback() {
   const setAccessToken = useSettingsStore(s => s.setAccessToken)
   const setUserName = useMarketStore(s => s.setUserName)
   const setMargins = useMarketStore(s => s.setMargins)
-  const isLive = useLiveModeStore(s => s.isLive)
 
   function loadLiveData() {
     fetchUserProfile().then(name => { if (name) setUserName(name) })
     fetchUserMargins().then(m => setMargins(m.available, m.used, m.net))
   }
 
-  // Load on mount if already live (stored credentials)
+  // On mount: verify any stored token against Kite before showing Live.
+  // isTokenValid() only checks string length — a stale expired token still passes.
+  // This call catches that case: 403 → clear token, stay disconnected.
   useEffect(() => {
-    if (isLive) {
-      loadLiveData()
-      prefetchInstruments() // start downloading NFO instruments in background
-    }
-  }, [isLive]) // eslint-disable-line react-hooks/exhaustive-deps
+    const { accessToken, apiKey } = useSettingsStore.getState()
+    if (!accessToken || !apiKey) return
+    fetchUserProfile().then(name => {
+      if (name) {
+        activateLiveService()
+        setUserName(name)
+        fetchUserMargins().then(m => setMargins(m.available, m.used, m.net))
+        prefetchInstruments()
+      } else {
+        setAccessToken('') // Expired — clear so UI shows "Connect Zerodha"
+      }
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // OAuth callback: exchange request_token → access_token
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const requestToken = params.get('request_token')
@@ -184,9 +194,8 @@ function ZerodhaCallback() {
         .then(accessToken => {
           setAccessToken(accessToken)
           activateLiveService()
-          prefetchInstruments() // start downloading NFO instruments in background
+          prefetchInstruments()
           loadLiveData()
-          // Push session to background monitor (fire-and-forget)
           const { apiKey } = useSettingsStore.getState()
           fetch(`${API_BASE}/api/set-token`, {
             method: 'POST',
