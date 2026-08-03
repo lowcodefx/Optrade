@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSettingsStore } from '@/core/store'
-import { exchangeRequestToken } from '@/core/services/zerodhaAuth'
+import { exchangeRequestToken, getLoginURL, isTokenValid } from '@/core/services/zerodhaAuth'
 import { activateLiveService } from '@/core/services/tradingService'
 import { API_BASE, vmHeaders } from '@/core/services/apiClient'
 import { TrendingUp, BarChart2, ArrowRight, Loader2 } from 'lucide-react'
@@ -44,6 +44,7 @@ function useOAuthCallback() {
 export function Home() {
   const exchanging = useOAuthCallback()
   const { apiKey } = useSettingsStore()
+  const live = isTokenValid()
 
   if (exchanging) {
     return (
@@ -57,7 +58,27 @@ export function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#060d1a] flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-[#060d1a] flex flex-col items-center justify-center p-6 relative">
+
+      {/* Top-right: Live status or Sign In */}
+      <div className="absolute top-5 right-6">
+        {live ? (
+          <div className="inline-flex items-center gap-1.5 bg-[#22c55e]/10 border border-[#22c55e]/30 rounded-full px-3 py-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />
+            <span className="text-[#22c55e] text-xs font-semibold">Live</span>
+          </div>
+        ) : (
+          <button
+            onClick={() => apiKey ? window.location.href = getLoginURL() : navigate('/settings')}
+            className="inline-flex items-center gap-1.5 bg-[#f59e0b]/10 border border-[#f59e0b]/30 hover:bg-[#f59e0b]/20 rounded-full px-3 py-1 transition-colors"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+            <span className="text-[#f59e0b] text-xs font-semibold">
+              {apiKey ? 'Sign In with Zerodha' : 'Set up Zerodha'}
+            </span>
+          </button>
+        )}
+      </div>
 
       {/* Logo + brand */}
       <div className="flex items-center gap-3 mb-3">
@@ -87,12 +108,6 @@ export function Home() {
             <span>Open Dashboard</span>
             <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
           </div>
-          {apiKey && (
-            <div className="mt-3 inline-flex items-center gap-1.5 bg-[#22c55e]/10 border border-[#22c55e]/30 rounded-full px-2.5 py-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
-              <span className="text-[#22c55e] text-[10px] font-semibold">Zerodha configured</span>
-            </div>
-          )}
         </button>
 
         {/* Stock Investments */}
@@ -111,12 +126,6 @@ export function Home() {
             <span>Open Portfolio</span>
             <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
           </div>
-          {apiKey && (
-            <div className="mt-3 inline-flex items-center gap-1.5 bg-[#22c55e]/10 border border-[#22c55e]/30 rounded-full px-2.5 py-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
-              <span className="text-[#22c55e] text-[10px] font-semibold">Zerodha configured</span>
-            </div>
-          )}
         </button>
 
       </div>
