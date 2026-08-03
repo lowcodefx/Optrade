@@ -59,7 +59,11 @@ router.all('/', async (req, res) => {
   for (const [key, value] of Object.entries(req.query)) {
     if (key === 'kite_path') continue
     if (key === 'instruments') {
+      // Legacy comma-separated instruments param → multiple i= params for Kite
       String(value).split(',').filter(Boolean).forEach(sym => kiteParams.append('i', sym))
+    } else if (Array.isArray(value)) {
+      // Express parses repeated query params (e.g. ?i=A&i=B) as arrays — forward each individually
+      value.forEach(v => kiteParams.append(key, String(v)))
     } else {
       kiteParams.append(key, String(value))
     }
