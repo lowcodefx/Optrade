@@ -9,7 +9,7 @@ async function fetchIndices() {
     'NSE:NIFTY MIDCAP 150', 'NSE:NIFTY SMALLCAP 250',
   ]
   const qs = symbols.map(s => `i=${encodeURIComponent(s)}`).join('&')
-  const res = await fetch(`${API_BASE}/api/kite?kite_path=quote/indices&${qs}`, { headers: kiteAuthHeaders() })
+  const res = await fetch(`${API_BASE}/api/kite?kite_path=quote&${qs}`, { headers: kiteAuthHeaders() })
   if (!res.ok) return null
   const json = await res.json()
   return json.data as Record<string, IndexQuote>
