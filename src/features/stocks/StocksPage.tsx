@@ -1,17 +1,28 @@
 import { useState } from 'react'
-import { ArrowLeft, BarChart2 } from 'lucide-react'
+import { ArrowLeft, BarChart2, Star, TrendingUp, Briefcase, Calendar, BookOpen } from 'lucide-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StocksHeader } from './components/StocksHeader'
 import { TopStocksBucket } from './components/TopStocksBucket'
 import { HoldingsBucket } from './components/HoldingsBucket'
 import { StocksWatchlist } from './components/StocksWatchlist'
-import { StockPortfolioSummary } from './components/StockPortfolioSummary'
-import { LogEntryModal } from './components/TradeLog'
+import { EventsCalendar } from './components/EventsCalendar'
+import { LogEntryModal, TradeLogPanel } from './components/TradeLog'
 import type { TradeLogEntry } from './components/TradeLog'
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } })
 
+type Tab = 'watchlist' | 'picks' | 'holdings' | 'events' | 'tradelog'
+
+const TABS: Array<{ id: Tab; label: string; Icon: React.ElementType }> = [
+  { id: 'watchlist', label: 'Watchlist',        Icon: Star },
+  { id: 'picks',    label: 'Stock Picks',       Icon: TrendingUp },
+  { id: 'holdings', label: 'My Holdings',       Icon: Briefcase },
+  { id: 'events',   label: 'Upcoming Events',   Icon: Calendar },
+  { id: 'tradelog', label: 'Trade Log',         Icon: BookOpen },
+]
+
 export function StocksPage() {
+  const [tab, setTab] = useState<Tab>('picks')
   const [watchlist, setWatchlist] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('sw_watchlist') ?? '[]') } catch { return [] }
   })
@@ -23,7 +34,6 @@ export function StocksPage() {
       if (prev.includes(symbol)) return prev
       const next = [...prev, symbol]
       localStorage.setItem('sw_watchlist', JSON.stringify(next))
-      // Only trigger log modal for new additions
       setPendingLog({ symbol, price: price ?? 0, action: 'watchlist' })
       return next
     })
@@ -61,39 +71,52 @@ export function StocksPage() {
         {/* ── Market indices header ── */}
         <StocksHeader />
 
-        {/* ── Main 3-column layout ── */}
-        <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* ── Tab bar ── */}
+        <div className="flex shrink-0 bg-[#0a1628] border-b border-[#1e293b] overflow-x-auto">
+          {TABS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`flex items-center gap-1.5 px-5 py-2.5 text-xs font-semibold tracking-wide whitespace-nowrap border-b-2 transition-colors ${
+                tab === id
+                  ? 'text-[#a78bfa] border-[#a78bfa] bg-[#a78bfa]/5'
+                  : 'text-[#475569] border-transparent hover:text-[#94a3b8] hover:bg-[#ffffff]/5'
+              }`}
+            >
+              <Icon size={12} />
+              {label}
+              {id === 'watchlist' && watchlist.length > 0 && (
+                <span className="ml-1 bg-[#a78bfa]/20 text-[#a78bfa] text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                  {watchlist.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
 
-          {/* Left dock */}
-          <div className="w-52 shrink-0 border-r border-[#1e293b] flex flex-col overflow-hidden">
+        {/* ── Tab content ── */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {tab === 'watchlist' && (
             <StocksWatchlist
               watchlist={watchlist}
               onRemove={removeFromWatchlist}
               onAdd={addToWatchlist}
             />
-          </div>
-
-          {/* Center: two independent-scroll buckets */}
-          <div className="flex flex-1 min-w-0 gap-0 divide-x divide-[#1e293b]">
-            <div className="flex-1 overflow-y-auto min-w-0">
-              <TopStocksBucket
-                onAddToWatchlist={addToWatchlist}
-                watchlist={watchlist}
-                onLogEntry={(sym, price) => setPendingLog({ symbol: sym, price, action: 'buy' })}
-              />
-            </div>
-            <div className="flex-[1.6] overflow-y-auto min-w-0">
-              <HoldingsBucket />
-            </div>
-          </div>
-
-          {/* Right dock */}
-          <div className="w-56 shrink-0 border-l border-[#1e293b] overflow-y-auto">
-            <StockPortfolioSummary tradeLogKey={tradeLogKey} />
-          </div>
-
+          )}
+          {tab === 'picks' && (
+            <TopStocksBucket
+              onAddToWatchlist={addToWatchlist}
+              watchlist={watchlist}
+              onLogEntry={(sym, price) => setPendingLog({ symbol: sym, price, action: 'buy' })}
+            />
+          )}
+          {tab === 'holdings' && <HoldingsBucket />}
+          {tab === 'events'   && <EventsCalendar />}
+          {tab === 'tradelog' && <TradeLogPanel refreshKey={tradeLogKey} />}
         </div>
+
       </div>
+
       {pendingLog && (
         <LogEntryModal
           symbol={pendingLog.symbol}
