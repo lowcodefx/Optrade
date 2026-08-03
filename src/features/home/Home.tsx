@@ -111,9 +111,12 @@ export function Home() {
             <span>Open Portfolio</span>
             <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
           </div>
-          <div className="mt-3 inline-flex items-center gap-1.5 bg-[#f59e0b]/10 border border-[#f59e0b]/30 rounded-full px-2.5 py-0.5">
-            <span className="text-[#f59e0b] text-[10px] font-semibold">Coming soon</span>
-          </div>
+          {apiKey && (
+            <div className="mt-3 inline-flex items-center gap-1.5 bg-[#22c55e]/10 border border-[#22c55e]/30 rounded-full px-2.5 py-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
+              <span className="text-[#22c55e] text-[10px] font-semibold">Zerodha configured</span>
+            </div>
+          )}
         </button>
 
       </div>
