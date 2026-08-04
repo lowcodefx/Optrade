@@ -1,9 +1,9 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { kiteAuthHeaders, API_BASE } from '@/core/services/apiClient'
 import { RefreshCw, ChevronDown, ChevronUp, ChevronsUpDown, CalendarDays } from 'lucide-react'
 
-// ── Aging helpers ─────────────────────────────────────────────────────────────
+// â”€â”€ Aging helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const BUY_DATES_KEY = 'sw_buy_dates'
 
@@ -22,14 +22,14 @@ function daysHeld(symbol: string, buyDates: Record<string, string>): number | nu
 }
 
 function agingColor(days: number | null): string {
-  if (days === null) return 'text-[#334155]'
-  if (days <= 5)  return 'text-[#38bdf8]'   // fresh — blue
-  if (days <= 14) return 'text-[#22c55e]'   // sweet spot — green
-  if (days <= 21) return 'text-[#f59e0b]'   // getting long — amber
-  return 'text-[#ef4444]'                    // overdue — red (>21d swing)
+  if (days === null) return 'text-[#64748b]'
+  if (days <= 5)  return 'text-[#38bdf8]'   // fresh â€” blue
+  if (days <= 14) return 'text-[#22c55e]'   // sweet spot â€” green
+  if (days <= 21) return 'text-[#f59e0b]'   // getting long â€” amber
+  return 'text-[#ef4444]'                    // overdue â€” red (>21d swing)
 }
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface KiteHolding {
   tradingsymbol: string
@@ -43,7 +43,7 @@ interface KiteHolding {
   close_price: number
 }
 
-// ── Fetch ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Fetch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function fetchHoldings(): Promise<KiteHolding[]> {
   const res = await fetch(`${API_BASE}/api/kite?kite_path=portfolio/holdings`, { headers: kiteAuthHeaders() })
@@ -52,7 +52,7 @@ async function fetchHoldings(): Promise<KiteHolding[]> {
   return (json.data ?? []) as KiteHolding[]
 }
 
-// ── Cap profile ───────────────────────────────────────────────────────────────
+// â”€â”€ Cap profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const LARGE_CAP_SYMS = new Set([
   'RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','BHARTIARTL','ITC',
@@ -70,7 +70,7 @@ function capProfile(symbol: string) {
   return                                  { slPct: 0.10, tgtPct: 0.22, label: 'SM' }
 }
 
-// ── Computed row ──────────────────────────────────────────────────────────────
+// â”€â”€ Computed row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface ComputedRow {
   h: KiteHolding
@@ -114,7 +114,7 @@ function compute(h: KiteHolding): ComputedRow {
   }
 }
 
-// ── Filter types ──────────────────────────────────────────────────────────────
+// â”€â”€ Filter types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type PrimaryFilter = 'all' | 'profit' | 'loss'
 type BucketFilter  = 'any' | 'small' | 'mid' | 'big'
@@ -122,12 +122,12 @@ type SortKey = 'symbol' | 'price' | 'pnl' | 'rr' | 'day' | 'age'
 type SortDir = 'asc' | 'desc'
 
 const BUCKETS = [
-  { key: 'small' as BucketFilter, label: '0–2%',  min: 0, max: 2  },
-  { key: 'mid'   as BucketFilter, label: '2–5%',  min: 2, max: 5  },
+  { key: 'small' as BucketFilter, label: '0â€“2%',  min: 0, max: 2  },
+  { key: 'mid'   as BucketFilter, label: '2â€“5%',  min: 2, max: 5  },
   { key: 'big'   as BucketFilter, label: '>5%',   min: 5, max: Infinity },
 ]
 
-// ── Column header ─────────────────────────────────────────────────────────────
+// â”€â”€ Column header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ColHeader({ label, sortKey, current, dir, onSort }: {
   label: string; sortKey: SortKey; current: SortKey; dir: SortDir
@@ -149,18 +149,18 @@ function ColHeader({ label, sortKey, current, dir, onSort }: {
   )
 }
 
-// ── Status badge ──────────────────────────────────────────────────────────────
+// â”€â”€ Status badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function StatusBadge({ r }: { r: ComputedRow }) {
   if (r.targetHit) return <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#22c55e]/15 text-[#22c55e] border border-[#22c55e]/30 whitespace-nowrap">TARGET</span>
   if (r.slHit)     return <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#ef4444]/15 text-[#ef4444] border border-[#ef4444]/30 whitespace-nowrap">SL HIT</span>
-  if (r.rrAlert)   return <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20 whitespace-nowrap">2.5R ✓</span>
+  if (r.rrAlert)   return <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20 whitespace-nowrap">2.5R âœ“</span>
   if (r.remainingRR >= 2) return <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20 whitespace-nowrap">HOLD</span>
   if (r.remainingRR >= 1) return <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20 whitespace-nowrap">CAUTION</span>
   return <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/20 whitespace-nowrap">EXIT?</span>
 }
 
-// ── RR color ──────────────────────────────────────────────────────────────────
+// â”€â”€ RR color â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function rrColor(r: ComputedRow) {
   if (r.slHit || r.achievedRR < 0) return 'text-[#ef4444]'
@@ -169,7 +169,7 @@ function rrColor(r: ComputedRow) {
   return 'text-[#f59e0b]'
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function HoldingsBucket() {
   const [primary, setPrimary] = useState<PrimaryFilter>('all')
@@ -237,7 +237,7 @@ export function HoldingsBucket() {
           <div className="flex items-center gap-1.5">
             <h2 className="text-[#e2e8f0] text-xs font-bold">My Holdings</h2>
           </div>
-          <p className="text-[#334155] text-[8px]">Live · refreshes every 60s</p>
+          <p className="text-[#64748b] text-[8px]">Live Â· refreshes every 60s</p>
         </div>
         <button onClick={() => refetch()} disabled={isFetching} className="text-[#475569] hover:text-[#94a3b8] disabled:opacity-40">
           <RefreshCw size={11} className={isFetching ? 'animate-spin' : ''} />
@@ -272,7 +272,7 @@ export function HoldingsBucket() {
                 const ac = primary === 'profit' ? 'bg-[#22c55e]/10 text-[#22c55e]' : 'bg-[#ef4444]/10 text-[#ef4444]'
                 return (
                   <button key={b.key} onClick={() => setBucket(b.key)}
-                    className={`flex-1 text-[8px] font-semibold py-0.5 rounded transition-colors ${isAct ? ac : 'text-[#334155] hover:text-[#64748b]'}`}>
+                    className={`flex-1 text-[8px] font-semibold py-0.5 rounded transition-colors ${isAct ? ac : 'text-[#64748b] hover:text-[#64748b]'}`}>
                     {b.label} <span className="opacity-60">({count})</span>
                   </button>
                 )
@@ -292,7 +292,7 @@ export function HoldingsBucket() {
       {!isLoading && isError && (
         <div className="py-10 text-center text-[10px] text-[#475569] px-4">
           <p className="text-[#ef4444] font-semibold mb-1">Could not load holdings</p>
-          <p className="text-[#334155]">Check that your API key and access token are set in Settings, then try again.</p>
+          <p className="text-[#64748b]">Check that your API key and access token are set in Settings, then try again.</p>
         </div>
       )}
 
@@ -300,9 +300,9 @@ export function HoldingsBucket() {
       {!isLoading && !isError && (
         <div className="flex-1 overflow-auto">
           {sorted.length === 0 && holdings.length === 0 ? (
-            <div className="py-10 text-center text-[#334155] text-[10px]">No equity holdings found</div>
+            <div className="py-10 text-center text-[#64748b] text-[10px]">No equity holdings found</div>
           ) : sorted.length === 0 ? (
-            <div className="py-10 text-center text-[#334155] text-[10px]">No holdings in this range</div>
+            <div className="py-10 text-center text-[#64748b] text-[10px]">No holdings in this range</div>
           ) : (
             <table className="w-full text-[10px] border-collapse" style={{ minWidth: 700 }}>
               <thead className="sticky top-0 z-10 bg-[#060d1a]">
@@ -314,7 +314,7 @@ export function HoldingsBucket() {
                   <ColHeader label="CMP"          sortKey="price"  current={sortKey} dir={sortDir} onSort={toggleSort} />
                   <th className="px-2 py-2 text-left text-[8px] font-bold uppercase tracking-widest text-[#475569] whitespace-nowrap">Avg. Buy</th>
                   <th className="px-2 py-2 text-left text-[8px] font-bold uppercase tracking-widest text-[#475569] whitespace-nowrap">Qty</th>
-                  <ColHeader label="P&L · Range"  sortKey="pnl"    current={sortKey} dir={sortDir} onSort={toggleSort} />
+                  <ColHeader label="P&L Â· Range"  sortKey="pnl"    current={sortKey} dir={sortDir} onSort={toggleSort} />
                   <ColHeader label="Achieved R:R" sortKey="rr"     current={sortKey} dir={sortDir} onSort={toggleSort} />
                   <ColHeader label="Day P&L"      sortKey="day"    current={sortKey} dir={sortDir} onSort={toggleSort} />
                   <th className="px-2 py-2 text-left text-[8px] font-bold uppercase tracking-widest text-[#475569] whitespace-nowrap">Status</th>
@@ -335,13 +335,13 @@ export function HoldingsBucket() {
                       </td>
                       <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">{r.h.average_price.toLocaleString('en-IN')}</td>
                       <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">{r.h.quantity}</td>
-                      {/* P&L · center-anchored dual bar (loss=red←, profit=→green) */}
+                      {/* P&L Â· center-anchored dual bar (loss=redâ†, profit=â†’green) */}
                       <td className="px-2 py-2 whitespace-nowrap" style={{ minWidth: 210 }}>
                         <div className="flex items-center gap-1">
                           <span className="text-[7px] text-[#ef4444] shrink-0">-{((r.h.average_price - r.slPrice) * r.h.quantity).toFixed(0)}</span>
                           {/* Full bar: left half = SL zone (red tint bg), right half = target zone (green tint bg) */}
                           <div className="relative flex-1 flex h-3 rounded overflow-hidden">
-                            {/* Left half: dark red bg; bright red fill grows right→left from center for loss */}
+                            {/* Left half: dark red bg; bright red fill grows rightâ†’left from center for loss */}
                             <div className="relative flex-1 bg-[#1c0808] overflow-hidden">
                               {r.totalPnL < 0 && (
                                 <div
@@ -350,7 +350,7 @@ export function HoldingsBucket() {
                                 />
                               )}
                             </div>
-                            {/* Right half: dark green bg; bright green fill grows left→right from center for profit */}
+                            {/* Right half: dark green bg; bright green fill grows leftâ†’right from center for profit */}
                             <div className="relative flex-1 bg-[#081c08] overflow-hidden">
                               {r.totalPnL >= 0 && (
                                 <div
@@ -402,7 +402,7 @@ export function HoldingsBucket() {
                                 }
                                 input.click()
                               }}
-                              className="text-[#334155] hover:text-[#38bdf8] transition-colors"
+                              className="text-[#64748b] hover:text-[#38bdf8] transition-colors"
                             >
                               <CalendarDays size={9} />
                             </button>

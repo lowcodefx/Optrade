@@ -1,4 +1,4 @@
-import { Calendar, TrendingUp, Building2, IndianRupee } from 'lucide-react'
+﻿import { Calendar, TrendingUp, Building2, IndianRupee } from 'lucide-react'
 
 interface CalEvent {
   date: string      // YYYY-MM-DD
@@ -7,7 +7,7 @@ interface CalEvent {
   symbol?: string
 }
 
-// Approximate schedule — update quarterly
+// Approximate schedule â€” update quarterly
 const EVENTS: CalEvent[] = [
   // RBI MPC (bi-monthly; next ~Aug 6, Oct 9, Dec 4)
   { date: '2026-08-06', label: 'RBI MPC Decision', type: 'rbi' },
@@ -66,7 +66,7 @@ export function EventsCalendar() {
 
       <div className="px-2 py-2 space-y-1">
         {upcoming.length === 0 && (
-          <p className="text-[#334155] text-[9px] px-1 py-4 text-center">No upcoming events</p>
+          <p className="text-[#64748b] text-[9px] px-1 py-4 text-center">No upcoming events</p>
         )}
         {upcoming.map((e, i) => {
           const cfg  = TYPE_CFG[e.type]
@@ -79,7 +79,7 @@ export function EventsCalendar() {
                 <div className="text-[9px] text-[#cbd5e1] font-semibold leading-snug truncate">{e.label}</div>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className={`text-[8px] font-bold ${cfg.text}`}>{dayLabel(e.date)}</span>
-                  <span className="text-[#334155] text-[7px]">
+                  <span className="text-[#64748b] text-[7px]">
                     {days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `in ${days}d`}
                   </span>
                 </div>

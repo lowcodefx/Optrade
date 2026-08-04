@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { API_BASE, kiteAuthHeaders } from '@/core/services/apiClient'
 import { ChevronDown, ChevronRight, Info, RefreshCw, Bookmark, BookmarkCheck, Flame, Newspaper, LineChart, ShoppingCart } from 'lucide-react'
 import { SECTOR_STOCKS, SECTOR_COLORS } from '../stockSectors'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface StockScore {
   symbol: string
@@ -29,7 +29,7 @@ interface NewsSentiment { verdict: 'BULLISH' | 'BEARISH' | 'NEUTRAL' | 'MIXED'; 
 interface NewsData { articles: NewsArticle[]; sentiment: NewsSentiment | null }
 interface AnalysisResult { largeCap: StockScore[]; midCap: StockScore[]; smallCap: StockScore[] }
 
-// ── Fetch ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Fetch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function fetchStockAnalysis(): Promise<AnalysisResult> {
   const res = await fetch(`${API_BASE}/api/stock-analysis`, { headers: kiteAuthHeaders() })
@@ -53,7 +53,7 @@ async function fetchStockNews(symbol: string): Promise<NewsData> {
   return res.json()
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function allStocksSorted(data: AnalysisResult): (StockScore & { cap: string })[] {
   return [
@@ -93,16 +93,16 @@ function detectPattern(candles: CandleData[]): string {
   if (prev.c > prev.o && last.c < last.o && last.o > prev.c && last.c < prev.o)
     return 'Bearish engulfing pattern'
 
-  // Doji (open ≈ close within 0.3% of day range)
+  // Doji (open â‰ˆ close within 0.3% of day range)
   const range = last.h - last.l
   if (range > 0 && Math.abs(last.c - last.o) / range < 0.1)
-    return 'Doji — indecision at this level'
+    return 'Doji â€” indecision at this level'
 
   // Hammer (long lower wick, small body near top)
   const body = Math.abs(last.c - last.o)
   const lowerWick = Math.min(last.c, last.o) - last.l
   if (lowerWick > body * 2 && last.c > last.o)
-    return 'Hammer — potential reversal signal'
+    return 'Hammer â€” potential reversal signal'
 
   return 'No clear pattern'
 }
@@ -116,7 +116,7 @@ function sectorMomentum(sectorName: string, data: AnalysisResult): number | null
   return +avg.toFixed(2)
 }
 
-// ── Shared UI ─────────────────────────────────────────────────────────────────
+// â”€â”€ Shared UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function SignalBadge({ signal }: { signal: 'BUY' | 'WATCH' | 'AVOID' }) {
   const cfg = {
@@ -141,12 +141,12 @@ function RSBadge({ rs }: { rs: number | null | undefined }) {
   )
 }
 
-// ── Price chart SVG ───────────────────────────────────────────────────────────
+// â”€â”€ Price chart SVG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function PriceChart({ hist }: { hist: HistoryData }) {
   const prices  = hist.prices
   const volumes = hist.volumes
-  if (prices.length < 2) return <div className="flex items-center justify-center h-32 text-[#334155] text-xs">No data</div>
+  if (prices.length < 2) return <div className="flex items-center justify-center h-32 text-[#64748b] text-xs">No data</div>
 
   const W = 320, H = 120, volH = 22, padL = 40, padR = 8, padT = 8, padB = 4
   const chartH = H - volH - padT - padB
@@ -203,7 +203,7 @@ function PriceChart({ hist }: { hist: HistoryData }) {
         const bH = (v / maxV) * (volH - 2)
         const bX = px(i) - bW / 2
         const bY = H - bH
-        const barColor = hist.candles[i] ? (hist.candles[i].c >= hist.candles[i].o ? '#22c55e' : '#ef4444') : '#334155'
+        const barColor = hist.candles[i] ? (hist.candles[i].c >= hist.candles[i].o ? '#22c55e' : '#ef4444') : '#64748b'
         return <rect key={i} x={bX.toFixed(1)} y={bY.toFixed(1)} width={bW.toFixed(1)} height={bH.toFixed(1)} fill={barColor} fillOpacity="0.5" />
       })}
 
@@ -214,7 +214,7 @@ function PriceChart({ hist }: { hist: HistoryData }) {
         const label = new Date(c.t).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
         if (i === arr.length - 1 && origIdx < n - 1) return null
         return (
-          <text key={i} x={x.toFixed(1)} y={(H - 1).toFixed(1)} textAnchor="middle" fontSize="7" fill="#334155">
+          <text key={i} x={x.toFixed(1)} y={(H - 1).toFixed(1)} textAnchor="middle" fontSize="7" fill="#64748b">
             {label}
           </text>
         )
@@ -223,7 +223,7 @@ function PriceChart({ hist }: { hist: HistoryData }) {
   )
 }
 
-// ── Chart modal ───────────────────────────────────────────────────────────────
+// â”€â”€ Chart modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function ChartModal({ stock, onClose }: { stock: StockScore; onClose: () => void }) {
   const token = stock.instrument_token
@@ -251,7 +251,7 @@ function ChartModal({ stock, onClose }: { stock: StockScore; onClose: () => void
             <SignalBadge signal={stock.signal} />
             {stock.last_price && (
               <span className="text-white text-xs font-semibold">
-                ₹{stock.last_price.toLocaleString('en-IN')}
+                â‚¹{stock.last_price.toLocaleString('en-IN')}
               </span>
             )}
           </div>
@@ -271,7 +271,7 @@ function ChartModal({ stock, onClose }: { stock: StockScore; onClose: () => void
           )}
           {!isLoading && hist && <PriceChart hist={hist} />}
           {!isLoading && !token && (
-            <div className="flex items-center justify-center h-28 text-[#334155] text-xs">
+            <div className="flex items-center justify-center h-28 text-[#64748b] text-xs">
               Connect Zerodha for live chart
             </div>
           )}
@@ -280,8 +280,8 @@ function ChartModal({ stock, onClose }: { stock: StockScore; onClose: () => void
         {/* Stats row */}
         {(hi10d || lo10d) && (
           <div className="flex gap-4 text-[10px]">
-            <span className="text-[#475569]">10d Hi <span className="text-[#22c55e] font-semibold">₹{hi10d}</span></span>
-            <span className="text-[#475569]">10d Lo <span className="text-[#ef4444] font-semibold">₹{lo10d}</span></span>
+            <span className="text-[#475569]">10d Hi <span className="text-[#22c55e] font-semibold">â‚¹{hi10d}</span></span>
+            <span className="text-[#475569]">10d Lo <span className="text-[#ef4444] font-semibold">â‚¹{lo10d}</span></span>
             {stock.rs1d != null && (
               <span className="text-[#475569]">vs NIFTY <span className={`font-semibold ${stock.rs1d >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>{stock.rs1d >= 0 ? '+' : ''}{stock.rs1d}%</span></span>
             )}
@@ -305,7 +305,7 @@ function ChartModal({ stock, onClose }: { stock: StockScore; onClose: () => void
   )
 }
 
-// ── Info modal (score + news) ─────────────────────────────────────────────────
+// â”€â”€ Info modal (score + news) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function InfoModal({ stock, onClose }: { stock: StockScore; onClose: () => void }) {
   const { data: newsData, isLoading: newsLoading } = useQuery({
@@ -361,23 +361,23 @@ function InfoModal({ stock, onClose }: { stock: StockScore; onClose: () => void 
             <span className="text-[9px] font-bold uppercase tracking-widest text-[#94a3b8]">News Sentiment</span>
           </div>
 
-          {newsLoading && <div className="text-[#334155] text-[9px]">Analysing news with Claude…</div>}
+          {newsLoading && <div className="text-[#64748b] text-[9px]">Analysing news with Claudeâ€¦</div>}
 
           {/* Claude verdict */}
           {!newsLoading && newsData?.sentiment && (() => {
             const v = newsData.sentiment!
             const cfg = {
-              BULLISH: { bg: 'bg-[#22c55e]/10', text: 'text-[#22c55e]', border: 'border-[#22c55e]/30', icon: '↑' },
-              BEARISH: { bg: 'bg-[#ef4444]/10', text: 'text-[#ef4444]', border: 'border-[#ef4444]/30', icon: '↓' },
-              NEUTRAL: { bg: 'bg-[#475569]/10', text: 'text-[#475569]', border: 'border-[#475569]/30', icon: '—' },
-              MIXED:   { bg: 'bg-[#f59e0b]/10', text: 'text-[#f59e0b]', border: 'border-[#f59e0b]/30', icon: '↕' },
+              BULLISH: { bg: 'bg-[#22c55e]/10', text: 'text-[#22c55e]', border: 'border-[#22c55e]/30', icon: 'â†‘' },
+              BEARISH: { bg: 'bg-[#ef4444]/10', text: 'text-[#ef4444]', border: 'border-[#ef4444]/30', icon: 'â†“' },
+              NEUTRAL: { bg: 'bg-[#475569]/10', text: 'text-[#475569]', border: 'border-[#475569]/30', icon: 'â€”' },
+              MIXED:   { bg: 'bg-[#f59e0b]/10', text: 'text-[#f59e0b]', border: 'border-[#f59e0b]/30', icon: 'â†•' },
             }[v.verdict] ?? { bg: 'bg-[#475569]/10', text: 'text-[#475569]', border: 'border-[#475569]/30', icon: '?' }
             return (
               <div className={`rounded-lg px-3 py-2.5 border ${cfg.bg} ${cfg.border} space-y-1`}>
                 <div className="flex items-center gap-2">
                   <span className={`text-sm font-bold ${cfg.text}`}>{cfg.icon}</span>
                   <span className={`text-[10px] font-bold ${cfg.text}`}>{v.verdict}</span>
-                  <span className="text-[8px] text-[#334155] ml-auto">Claude Haiku</span>
+                  <span className="text-[8px] text-[#64748b] ml-auto">Claude Haiku</span>
                 </div>
                 <p className="text-[#cbd5e1] text-[9px] leading-snug">{v.summary}</p>
               </div>
@@ -385,13 +385,13 @@ function InfoModal({ stock, onClose }: { stock: StockScore; onClose: () => void 
           })()}
 
           {/* Raw headlines */}
-          {!newsLoading && !newsData?.articles.length && <div className="text-[#334155] text-[9px]">No recent news found</div>}
+          {!newsLoading && !newsData?.articles.length && <div className="text-[#64748b] text-[9px]">No recent news found</div>}
           {newsData?.articles.map((a, i) => (
             <div key={i} className="space-y-0.5 pl-1 border-l border-[#1e293b]">
               <p className="text-[#64748b] text-[9px] leading-snug">{a.title}</p>
               <div className="flex items-center gap-2">
-                <span className="text-[#334155] text-[8px]">{a.source}</span>
-                <span className="text-[#334155] text-[8px]">· {timeAgo(a.publishedAt)}</span>
+                <span className="text-[#64748b] text-[8px]">{a.source}</span>
+                <span className="text-[#64748b] text-[8px]">Â· {timeAgo(a.publishedAt)}</span>
               </div>
             </div>
           ))}
@@ -403,7 +403,7 @@ function InfoModal({ stock, onClose }: { stock: StockScore; onClose: () => void 
   )
 }
 
-// ── Stock row ─────────────────────────────────────────────────────────────────
+// â”€â”€ Stock row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist, onBuy }: {
   stock: StockScore
@@ -423,7 +423,7 @@ function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist, onBuy }:
     <>
       <div className="flex items-center gap-2 px-3 py-2 border-b border-[#0f1f35] hover:bg-[#0a1628] transition-colors">
         {rank !== undefined && (
-          <span className="text-[9px] font-bold text-[#334155] w-4 shrink-0 text-right">{rank}</span>
+          <span className="text-[9px] font-bold text-[#64748b] w-4 shrink-0 text-right">{rank}</span>
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -434,7 +434,7 @@ function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist, onBuy }:
           <div className="flex items-center gap-2 mt-0.5">
             {stock.last_price != null ? (
               <>
-                <span className="text-[#e2e8f0] text-[10px] font-semibold">₹{stock.last_price.toLocaleString('en-IN')}</span>
+                <span className="text-[#e2e8f0] text-[10px] font-semibold">â‚¹{stock.last_price.toLocaleString('en-IN')}</span>
                 {stock.pct_change != null && (
                   <span className={`text-[9px] font-semibold ${pctPos ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
                     {pctPos ? '+' : ''}{stock.pct_change}%
@@ -442,19 +442,19 @@ function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist, onBuy }:
                 )}
               </>
             ) : (
-              <span className="text-[#334155] text-[9px]">price unavailable</span>
+              <span className="text-[#64748b] text-[9px]">price unavailable</span>
             )}
             {stock.rs1d != null && <RSBadge rs={stock.rs1d} />}
           </div>
         </div>
         <span className={`text-sm font-bold w-8 text-right shrink-0 ${scoreColor}`}>{stock.totalScore}</span>
-        <button onClick={() => setShowChart(true)} className="text-[#334155] hover:text-[#38bdf8] shrink-0 transition-colors" title="Price chart">
+        <button onClick={() => setShowChart(true)} className="text-[#64748b] hover:text-[#38bdf8] shrink-0 transition-colors" title="Price chart">
           <LineChart size={12} />
         </button>
-        <button onClick={onWatchlist} className={`shrink-0 transition-colors ${inWatchlist ? 'text-[#38bdf8]' : 'text-[#334155] hover:text-[#64748b]'}`}>
+        <button onClick={onWatchlist} className={`shrink-0 transition-colors ${inWatchlist ? 'text-[#38bdf8]' : 'text-[#64748b] hover:text-[#64748b]'}`}>
           {inWatchlist ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
         </button>
-        <button onClick={onInfo} className="text-[#334155] hover:text-[#64748b] shrink-0 transition-colors" title="Score details + news">
+        <button onClick={onInfo} className="text-[#64748b] hover:text-[#64748b] shrink-0 transition-colors" title="Score details + news">
           <Info size={12} />
         </button>
         <button
@@ -470,7 +470,7 @@ function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist, onBuy }:
   )
 }
 
-// ── Top 10 view ───────────────────────────────────────────────────────────────
+// â”€â”€ Top 10 view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter, onBuy }: {
   data: AnalysisResult
@@ -496,11 +496,11 @@ function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter, on
         </div>
       )}
       <div className="flex items-center px-3 py-1.5 border-b border-[#0f1f35] bg-[#060d1a]">
-        <span className="text-[8px] text-[#334155] flex-1">Symbol · Price · RS</span>
-        <span className="text-[8px] text-[#334155]">Score  Chart  Save  Info</span>
+        <span className="text-[8px] text-[#64748b] flex-1">Symbol Â· Price Â· RS</span>
+        <span className="text-[8px] text-[#64748b]">Score  Chart  Save  Info</span>
       </div>
       {top10.length === 0 && (
-        <div className="py-8 text-center text-[#334155] text-[10px]">No stocks in this sector</div>
+        <div className="py-8 text-center text-[#64748b] text-[10px]">No stocks in this sector</div>
       )}
       {top10.map((s, i) => (
         <StockRow
@@ -519,7 +519,7 @@ function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter, on
   )
 }
 
-// ── By-category accordion view ────────────────────────────────────────────────
+// â”€â”€ By-category accordion view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function AccordionSection({ title, stocks, defaultOpen, onWatchlist, watchlist, sectorFilter, onBuy }: {
   title: string
@@ -546,7 +546,7 @@ function AccordionSection({ title, stocks, defaultOpen, onWatchlist, watchlist, 
         <div className="flex items-center gap-2">
           {open ? <ChevronDown size={12} className="text-[#475569]" /> : <ChevronRight size={12} className="text-[#475569]" />}
           <span className="text-[10px] font-bold uppercase tracking-widest text-[#94a3b8]">{title}</span>
-          <span className="text-[8px] text-[#334155]">{visible.length} stocks</span>
+          <span className="text-[8px] text-[#64748b]">{visible.length} stocks</span>
         </div>
       </button>
       {open && visible.map(s => (
@@ -564,7 +564,7 @@ function AccordionSection({ title, stocks, defaultOpen, onWatchlist, watchlist, 
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type Tab = 'top10' | 'all'
 
@@ -674,10 +674,10 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
                 {name}
                 {mom !== null && (
                   mom >= 1.0
-                    ? <span className="text-[7px] text-[#22c55e] leading-none">↑</span>
+                    ? <span className="text-[7px] text-[#22c55e] leading-none">â†‘</span>
                     : mom <= -1.0
-                      ? <span className="text-[7px] text-[#ef4444] leading-none">↓</span>
-                      : <span className="text-[7px] text-[#475569] leading-none">→</span>
+                      ? <span className="text-[7px] text-[#ef4444] leading-none">â†“</span>
+                      : <span className="text-[7px] text-[#475569] leading-none">â†’</span>
                 )}
               </button>
             )
@@ -687,7 +687,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
               onClick={() => setSelectedSector(null)}
               className="shrink-0 rounded px-2 py-0.5 text-[8px] font-bold text-[#475569] bg-[#1e293b] hover:text-[#ef4444] hover:bg-[#ef4444]/10 transition-colors ml-1"
             >
-              ✕ Clear
+              âœ• Clear
             </button>
           )}
         </div>
@@ -696,7 +696,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
       {isLoading && (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <RefreshCw size={20} className="animate-spin text-[#a78bfa]" />
-          <p className="text-[#475569] text-xs text-center max-w-[200px]">Analysing with AI…<br/>~30 seconds</p>
+          <p className="text-[#475569] text-xs text-center max-w-[200px]">Analysing with AIâ€¦<br/>~30 seconds</p>
         </div>
       )}
 
@@ -729,11 +729,11 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
       {buyStock && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setBuyStock(null)}>
           <div className="bg-[#0a1628] border border-[#1e293b] rounded-xl p-5 w-72 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-white font-bold text-sm mb-3">Place CNC Buy — {buyStock.symbol}</h3>
+            <h3 className="text-white font-bold text-sm mb-3">Place CNC Buy â€” {buyStock.symbol}</h3>
             <div className="space-y-2 mb-4">
               <div className="flex justify-between text-[10px]">
                 <span className="text-[#475569]">Limit Price</span>
-                <span className="text-white font-semibold">₹{buyStock.price.toFixed(2)}</span>
+                <span className="text-white font-semibold">â‚¹{buyStock.price.toFixed(2)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-[#475569]">Quantity</span>
@@ -745,11 +745,11 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
               </div>
               <div className="flex justify-between text-[10px]">
                 <span className="text-[#475569]">Order Value</span>
-                <span className="text-white font-semibold">₹{(buyStock.price * (parseInt(buyQty, 10) || 1)).toLocaleString('en-IN')}</span>
+                <span className="text-white font-semibold">â‚¹{(buyStock.price * (parseInt(buyQty, 10) || 1)).toLocaleString('en-IN')}</span>
               </div>
             </div>
             {buyError && <p className="text-[9px] text-[#ef4444] mb-2">{buyError}</p>}
-            {buySuccess && <p className="text-[9px] text-[#22c55e] mb-2">✓ Order placed — {buySuccess}</p>}
+            {buySuccess && <p className="text-[9px] text-[#22c55e] mb-2">âœ“ Order placed â€” {buySuccess}</p>}
             <div className="flex gap-2">
               <button onClick={() => setBuyStock(null)} className="flex-1 py-1.5 rounded border border-[#1e293b] text-[10px] text-[#475569] hover:text-white">Cancel</button>
               <button
@@ -770,10 +770,10 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
                 }}
                 className="flex-1 py-1.5 rounded bg-[#22c55e]/90 hover:bg-[#22c55e] disabled:opacity-50 text-white text-[10px] font-bold"
               >
-                {buyLoading ? 'Placing…' : 'Confirm Buy'}
+                {buyLoading ? 'Placingâ€¦' : 'Confirm Buy'}
               </button>
             </div>
-            <p className="text-[7px] text-[#334155] text-center mt-2">CNC · LIMIT · NSE · DAY</p>
+            <p className="text-[7px] text-[#64748b] text-center mt-2">CNC Â· LIMIT Â· NSE Â· DAY</p>
           </div>
         </div>
       )}

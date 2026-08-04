@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { kiteAuthHeaders, API_BASE } from '@/core/services/apiClient'
 import { Plus, X, Eye, Bell, BellOff, Zap } from 'lucide-react'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface KiteQuote {
   instrument_token: number
@@ -17,7 +17,7 @@ type AlertsMap = Record<string, PriceAlert>
 
 interface HistoryData { prices: number[]; volumes: number[] }
 
-// ── API ───────────────────────────────────────────────────────────────────────
+// â”€â”€ API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function fetchQuotes(symbols: string[]): Promise<Record<string, KiteQuote>> {
   if (symbols.length === 0) return {}
@@ -38,7 +38,7 @@ async function fetchHistory(tokens: number[]): Promise<Record<number, HistoryDat
   return res.json()
 }
 
-// ── Sparkline ─────────────────────────────────────────────────────────────────
+// â”€â”€ Sparkline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Sparkline({ prices }: { prices: number[] }) {
   if (prices.length < 2) return <div className="w-14 h-5 bg-[#1e293b]/40 rounded shrink-0" />
@@ -59,7 +59,7 @@ function Sparkline({ prices }: { prices: number[] }) {
   )
 }
 
-// ── Alert editor ──────────────────────────────────────────────────────────────
+// â”€â”€ Alert editor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function AlertEditor({ symbol, alert, onSave, onClose }: {
   symbol: string
@@ -75,7 +75,7 @@ function AlertEditor({ symbol, alert, onSave, onClose }: {
         <div className="text-white text-xs font-bold">{symbol} Alerts</div>
         <div className="space-y-2">
           <div>
-            <label className="text-[#94a3b8] text-[9px] uppercase tracking-widest">Target (₹)</label>
+            <label className="text-[#94a3b8] text-[9px] uppercase tracking-widest">Target (â‚¹)</label>
             <input
               value={target}
               onChange={e => setTarget(e.target.value)}
@@ -84,7 +84,7 @@ function AlertEditor({ symbol, alert, onSave, onClose }: {
             />
           </div>
           <div>
-            <label className="text-[#94a3b8] text-[9px] uppercase tracking-widest">Stop-Loss (₹)</label>
+            <label className="text-[#94a3b8] text-[9px] uppercase tracking-widest">Stop-Loss (â‚¹)</label>
             <input
               value={sl}
               onChange={e => setSl(e.target.value)}
@@ -106,7 +106,7 @@ function AlertEditor({ symbol, alert, onSave, onClose }: {
         </div>
         <button
           onClick={() => { onSave({ target: null, sl: null }); onClose() }}
-          className="w-full text-[#334155] text-[9px] hover:text-[#ef4444] transition-colors"
+          className="w-full text-[#64748b] text-[9px] hover:text-[#ef4444] transition-colors"
         >
           Clear alerts
         </button>
@@ -115,7 +115,7 @@ function AlertEditor({ symbol, alert, onSave, onClose }: {
   )
 }
 
-// ── Alert state helpers ───────────────────────────────────────────────────────
+// â”€â”€ Alert state helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function loadAlerts(): AlertsMap {
   try { return JSON.parse(localStorage.getItem('sw_alerts') ?? '{}') } catch { return {} }
@@ -124,7 +124,7 @@ function saveAlerts(a: AlertsMap) {
   localStorage.setItem('sw_alerts', JSON.stringify(a))
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function StocksWatchlist({ watchlist, onRemove, onAdd }: {
   watchlist: string[]
@@ -136,7 +136,7 @@ export function StocksWatchlist({ watchlist, onRemove, onAdd }: {
   const [editingAlert, setEditAlert] = useState<string | null>(null)
   const [triggered, setTriggered]   = useState<Record<string, 'target' | 'sl'>>({})
 
-  // ── Quotes ────────────────────────────────────────────────────────────────
+  // â”€â”€ Quotes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const { data: quotes = {} } = useQuery({
     queryKey: ['watchlistQuotes', watchlist],
     queryFn: () => fetchQuotes(watchlist),
@@ -144,7 +144,7 @@ export function StocksWatchlist({ watchlist, onRemove, onAdd }: {
     refetchInterval: 30000,
   })
 
-  // ── Instrument tokens from quotes → history ───────────────────────────────
+  // â”€â”€ Instrument tokens from quotes â†’ history â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const tokenMap: Record<string, number> = {}
   for (const sym of watchlist) {
     const q = quotes[`NSE:${sym}`]
@@ -159,7 +159,7 @@ export function StocksWatchlist({ watchlist, onRemove, onAdd }: {
     staleTime: 20 * 60 * 1000,
   })
 
-  // ── Alert triggering ──────────────────────────────────────────────────────
+  // â”€â”€ Alert triggering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const next: Record<string, 'target' | 'sl'> = {}
     for (const sym of watchlist) {
@@ -186,7 +186,7 @@ export function StocksWatchlist({ watchlist, onRemove, onAdd }: {
   return (
     <div className="flex flex-col h-full">
 
-      {/* ── Add symbol input ── */}
+      {/* â”€â”€ Add symbol input â”€â”€ */}
       <div className="px-3 py-2.5 border-b border-[#1e293b]">
         <div className="flex items-center gap-1.5 mb-2">
           <Eye size={11} className="text-[#38bdf8]" />
@@ -197,8 +197,8 @@ export function StocksWatchlist({ watchlist, onRemove, onAdd }: {
             value={input}
             onChange={e => setInput(e.target.value.toUpperCase())}
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
-            placeholder="Add symbol…"
-            className="flex-1 bg-[#060d1a] border border-[#1e3a5f] rounded px-2 py-1 text-[10px] text-white placeholder:text-[#334155] focus:outline-none focus:border-[#38bdf8]/50"
+            placeholder="Add symbolâ€¦"
+            className="flex-1 bg-[#060d1a] border border-[#1e3a5f] rounded px-2 py-1 text-[10px] text-white placeholder:text-[#64748b] focus:outline-none focus:border-[#38bdf8]/50"
           />
           <button onClick={handleAdd} className="bg-[#1e3a5f] hover:bg-[#38bdf8]/20 text-[#38bdf8] rounded px-1.5 transition-colors">
             <Plus size={11} />
@@ -206,10 +206,10 @@ export function StocksWatchlist({ watchlist, onRemove, onAdd }: {
         </div>
       </div>
 
-      {/* ── Watchlist rows ── */}
+      {/* â”€â”€ Watchlist rows â”€â”€ */}
       <div className="flex-1 overflow-y-auto">
         {watchlist.length === 0 && (
-          <div className="px-3 py-6 text-center text-[#334155] text-[9px]">
+          <div className="px-3 py-6 text-center text-[#64748b] text-[9px]">
             Add symbols to track
           </div>
         )}
@@ -257,10 +257,10 @@ export function StocksWatchlist({ watchlist, onRemove, onAdd }: {
                   </div>
                   {q ? (
                     <div className={`text-[9px] font-semibold ${pos ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                      ₹{q.last_price.toFixed(1)} <span className="text-[8px]">{chg !== null ? `${pos ? '+' : ''}${chg.toFixed(2)}%` : ''}</span>
+                      â‚¹{q.last_price.toFixed(1)} <span className="text-[8px]">{chg !== null ? `${pos ? '+' : ''}${chg.toFixed(2)}%` : ''}</span>
                     </div>
                   ) : (
-                    <div className="text-[#334155] text-[9px]">—</div>
+                    <div className="text-[#64748b] text-[9px]">â€”</div>
                   )}
                 </div>
                 <div className="flex items-center gap-0.5 shrink-0">
