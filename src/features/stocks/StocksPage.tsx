@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, BarChart2, Star, TrendingUp, Briefcase, Calendar, BookOpen } from 'lucide-react'
+import { ArrowLeft, BarChart2, Calendar, BookOpen } from 'lucide-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StocksHeader } from './components/StocksHeader'
 import { TopStocksBucket } from './components/TopStocksBucket'
@@ -11,18 +11,10 @@ import type { TradeLogEntry } from './components/TradeLog'
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } })
 
-type Tab = 'watchlist' | 'picks' | 'holdings' | 'events' | 'tradelog'
-
-const TABS: Array<{ id: Tab; label: string; Icon: React.ElementType }> = [
-  { id: 'watchlist', label: 'Watchlist',        Icon: Star },
-  { id: 'picks',    label: 'Stock Picks',       Icon: TrendingUp },
-  { id: 'holdings', label: 'My Holdings',       Icon: Briefcase },
-  { id: 'events',   label: 'Upcoming Events',   Icon: Calendar },
-  { id: 'tradelog', label: 'Trade Log',         Icon: BookOpen },
-]
+type RightTab = 'events' | 'tradelog'
 
 export function StocksPage() {
-  const [tab, setTab] = useState<Tab>('picks')
+  const [rightTab, setRightTab] = useState<RightTab>('events')
   const [watchlist, setWatchlist] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('sw_watchlist') ?? '[]') } catch { return [] }
   })
@@ -71,50 +63,76 @@ export function StocksPage() {
         {/* ── Market indices header ── */}
         <StocksHeader />
 
-        {/* ── Tab bar ── */}
-        <div className="flex shrink-0 bg-[#0a1628] border-b border-[#1e293b] overflow-x-auto">
-          {TABS.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={`flex items-center gap-1.5 px-5 py-2.5 text-xs font-semibold tracking-wide whitespace-nowrap border-b-2 transition-colors ${
-                tab === id
-                  ? 'text-[#a78bfa] border-[#a78bfa] bg-[#a78bfa]/5'
-                  : 'text-[#475569] border-transparent hover:text-[#94a3b8] hover:bg-[#ffffff]/5'
-              }`}
-            >
-              <Icon size={12} />
-              {label}
-              {id === 'watchlist' && watchlist.length > 0 && (
-                <span className="ml-1 bg-[#a78bfa]/20 text-[#a78bfa] text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                  {watchlist.length}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        {/* ── Main layout: Left dock | Center | Right panel ── */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
 
-        {/* ── Tab content ── */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {tab === 'watchlist' && (
+          {/* ── Left: Watchlist (fixed 190px) ── */}
+          <div className="w-[190px] shrink-0 border-r border-[#1e293b] flex flex-col overflow-hidden bg-[#060d1a]">
             <StocksWatchlist
               watchlist={watchlist}
               onRemove={removeFromWatchlist}
               onAdd={addToWatchlist}
             />
-          )}
-          {tab === 'picks' && (
-            <TopStocksBucket
-              onAddToWatchlist={addToWatchlist}
-              watchlist={watchlist}
-              onLogEntry={(sym, price) => setPendingLog({ symbol: sym, price, action: 'buy' })}
-            />
-          )}
-          {tab === 'holdings' && <HoldingsBucket />}
-          {tab === 'events'   && <EventsCalendar />}
-          {tab === 'tradelog' && <TradeLogPanel refreshKey={tradeLogKey} />}
-        </div>
+          </div>
 
+          {/* ── Center: Stock Picks (flex-1, most space) ── */}
+          <div className="flex-1 min-w-0 flex flex-col overflow-hidden border-r border-[#1e293b]">
+            <div className="flex-1 overflow-y-auto">
+              <TopStocksBucket
+                onAddToWatchlist={addToWatchlist}
+                watchlist={watchlist}
+                onLogEntry={(sym, price) => setPendingLog({ symbol: sym, price, action: 'buy' })}
+              />
+            </div>
+          </div>
+
+          {/* ── Right panel (320px): Holdings top + Events/Log bottom ── */}
+          <div className="w-[320px] shrink-0 flex flex-col overflow-hidden bg-[#060d1a]">
+
+            {/* Holdings — top 55% */}
+            <div className="flex-[55] min-h-0 border-b border-[#1e293b] overflow-hidden flex flex-col">
+              <HoldingsBucket />
+            </div>
+
+            {/* Events / Trade Log — bottom 45% */}
+            <div className="flex-[45] min-h-0 flex flex-col overflow-hidden">
+
+              {/* Mini tab bar */}
+              <div className="flex shrink-0 border-b border-[#1e293b] bg-[#0a1628]">
+                <button
+                  onClick={() => setRightTab('events')}
+                  className={`flex items-center gap-1 px-3 py-2 text-[9px] font-bold uppercase tracking-widest border-b-2 transition-colors ${
+                    rightTab === 'events'
+                      ? 'text-[#a78bfa] border-[#a78bfa]'
+                      : 'text-[#475569] border-transparent hover:text-[#94a3b8]'
+                  }`}
+                >
+                  <Calendar size={9} />
+                  Events
+                </button>
+                <button
+                  onClick={() => setRightTab('tradelog')}
+                  className={`flex items-center gap-1 px-3 py-2 text-[9px] font-bold uppercase tracking-widest border-b-2 transition-colors ${
+                    rightTab === 'tradelog'
+                      ? 'text-[#a78bfa] border-[#a78bfa]'
+                      : 'text-[#475569] border-transparent hover:text-[#94a3b8]'
+                  }`}
+                >
+                  <BookOpen size={9} />
+                  Trade Log
+                </button>
+              </div>
+
+              {/* Tab content */}
+              <div className="flex-1 overflow-y-auto">
+                {rightTab === 'events'   && <EventsCalendar />}
+                {rightTab === 'tradelog' && <TradeLogPanel refreshKey={tradeLogKey} />}
+              </div>
+
+            </div>
+          </div>
+
+        </div>
       </div>
 
       {pendingLog && (
