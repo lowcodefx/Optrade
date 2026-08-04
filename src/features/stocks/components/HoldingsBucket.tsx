@@ -338,7 +338,7 @@ export function HoldingsBucket() {
                       {/* P&L · center-anchored dual bar (loss=red←, profit=→green) */}
                       <td className="px-2 py-2 whitespace-nowrap" style={{ minWidth: 210 }}>
                         <div className="flex items-center gap-1">
-                          <span className="text-[7px] text-[#ef4444] shrink-0">{r.slPrice.toFixed(0)}</span>
+                          <span className="text-[7px] text-[#ef4444] shrink-0">-{((r.h.average_price - r.slPrice) * r.h.quantity).toFixed(0)}</span>
                           {/* Full bar: left half = SL zone (red tint bg), right half = target zone (green tint bg) */}
                           <div className="relative flex-1 flex h-3 rounded overflow-hidden">
                             {/* Left half: dark red bg; bright red fill grows right→left from center for loss */}
@@ -369,7 +369,7 @@ export function HoldingsBucket() {
                               </span>
                             </div>
                           </div>
-                          <span className="text-[7px] text-[#22c55e] shrink-0">{r.tgtPrice.toFixed(0)}</span>
+                          <span className="text-[7px] text-[#22c55e] shrink-0">+{((r.tgtPrice - r.h.average_price) * r.h.quantity).toFixed(0)}</span>
                         </div>
                       </td>
                       <td className={`px-2 py-2 font-bold whitespace-nowrap ${rrColor(r)}`}>
