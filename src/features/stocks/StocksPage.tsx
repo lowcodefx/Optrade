@@ -55,33 +55,38 @@ export function StocksPage() {
         {/* ── Market indices ── */}
         <StocksHeader />
 
-        {/* ── Main 3-column layout ── */}
+        {/* ── Main 2-column layout ── */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
 
-          {/* ── Left: AI Chatbot (260px) ── */}
-          <div className="w-[260px] shrink-0 border-r border-[#1e293b] flex flex-col overflow-hidden">
-            <StockChatbot />
+          {/* ── Left: Stock Picks (flex-1) + Chatbot strip below ── */}
+          <div className="flex-1 min-w-0 border-r border-[#1e293b] flex flex-col overflow-hidden">
+
+            {/* Stock Picks — upper portion */}
+            <div className="flex-1 min-h-0 overflow-y-auto border-b border-[#1e293b]">
+              <TopStocksBucket
+                onAddToWatchlist={addToWatchlist}
+                watchlist={watchlist}
+                onLogEntry={(sym, price) => setPendingLog({ symbol: sym, price, action: 'buy' })}
+              />
+            </div>
+
+            {/* AI Chatbot — fixed-height strip at bottom of left column */}
+            <div className="h-[260px] shrink-0 flex flex-col overflow-hidden">
+              <StockChatbot />
+            </div>
+
           </div>
 
-          {/* ── Center: Stock Picks (flex-1) ── */}
-          <div className="flex-1 min-w-0 border-r border-[#1e293b] overflow-y-auto">
-            <TopStocksBucket
-              onAddToWatchlist={addToWatchlist}
-              watchlist={watchlist}
-              onLogEntry={(sym, price) => setPendingLog({ symbol: sym, price, action: 'buy' })}
-            />
-          </div>
+          {/* ── Right: Holdings (large) + Events/Log ── */}
+          <div className="w-[580px] shrink-0 flex flex-col overflow-hidden">
 
-          {/* ── Right: Holdings (top) + Events/Log (bottom) ── */}
-          <div className="w-[360px] shrink-0 flex flex-col overflow-hidden">
-
-            {/* Holdings — upper 60% */}
-            <div className="flex-[60] min-h-0 border-b border-[#1e293b] overflow-hidden flex flex-col">
+            {/* Holdings — upper 65% */}
+            <div className="flex-[65] min-h-0 border-b border-[#1e293b] overflow-hidden flex flex-col">
               <HoldingsBucket />
             </div>
 
-            {/* Events / Trade Log — lower 40% */}
-            <div className="flex-[40] min-h-0 flex flex-col overflow-hidden">
+            {/* Events / Trade Log — lower 35% */}
+            <div className="flex-[35] min-h-0 flex flex-col overflow-hidden">
               <div className="flex shrink-0 bg-[#0a1628] border-b border-[#1e293b]">
                 {([
                   { id: 'events' as const,   Icon: Calendar,  label: 'Events'    },
