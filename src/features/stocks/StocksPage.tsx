@@ -12,7 +12,10 @@ import type { TradeLogEntry } from './components/TradeLog'
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } })
 
+type RightTab = 'events' | 'tradelog'
+
 export function StocksPage() {
+  const [rightTab, setRightTab] = useState<RightTab>('events')
   const [chatbotPicks, setChatbotPicks] = useState<ScoredStock[]>([])
   const [pendingLog, setPendingLog] = useState<{ symbol: string; price: number; action: 'buy' | 'watchlist' } | null>(null)
   const [tradeLogKey, setTradeLogKey] = useState(0)
@@ -85,25 +88,29 @@ export function StocksPage() {
             </div>
           </div>
 
-          {/* Col 4a: Events (170px) */}
-          <div className="w-[170px] shrink-0 border-r border-[#1e293b] flex flex-col overflow-hidden">
-            <div className="flex items-center gap-1 px-2 py-1.5 border-b border-[#1e293b] bg-[#0a1628] shrink-0">
-              <Calendar size={9} className="text-[#64748b]" />
-              <span className="text-[8px] font-bold uppercase tracking-widest text-[#64748b]">Events</span>
+          {/* Col 4: Events + Trade Log (200px, tabbed) */}
+          <div className="w-[200px] shrink-0 flex flex-col overflow-hidden">
+            <div className="flex shrink-0 bg-[#0a1628] border-b border-[#1e293b]">
+              {([
+                { id: 'events'   as const, Icon: Calendar, label: 'Events'    },
+                { id: 'tradelog' as const, Icon: BookOpen, label: 'Trade Log' },
+              ] as const).map(({ id, Icon, label }) => (
+                <button
+                  key={id}
+                  onClick={() => setRightTab(id)}
+                  className={`flex-1 flex items-center justify-center gap-1 py-1.5 text-[9px] font-bold border-b-2 transition-colors ${
+                    rightTab === id
+                      ? 'text-[#a78bfa] border-[#a78bfa]'
+                      : 'text-[#64748b] border-transparent hover:text-[#94a3b8]'
+                  }`}
+                >
+                  <Icon size={9} />{label}
+                </button>
+              ))}
             </div>
             <div className="flex-1 overflow-y-auto">
-              <EventsCalendar />
-            </div>
-          </div>
-
-          {/* Col 4b: Trade Log (170px) */}
-          <div className="w-[170px] shrink-0 flex flex-col overflow-hidden">
-            <div className="flex items-center gap-1 px-2 py-1.5 border-b border-[#1e293b] bg-[#0a1628] shrink-0">
-              <BookOpen size={9} className="text-[#64748b]" />
-              <span className="text-[8px] font-bold uppercase tracking-widest text-[#64748b]">Trade Log</span>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <TradeLogPanel refreshKey={tradeLogKey} />
+              {rightTab === 'events'   && <EventsCalendar />}
+              {rightTab === 'tradelog' && <TradeLogPanel refreshKey={tradeLogKey} />}
             </div>
           </div>
 
