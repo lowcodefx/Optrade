@@ -20,7 +20,7 @@ interface AnalysisResult {
   smallCap: StockScore[]
 }
 
-type ScoredStock = StockScore & { cap: 'LG' | 'MD' | 'SM' }
+export type ScoredStock = StockScore & { cap: 'LG' | 'MD' | 'SM' }
 
 // â”€â”€ Chat message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -148,7 +148,7 @@ const SUGGESTIONS = [
 
 // â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-export function StockChatbot() {
+export function StockChatbot({ onPicks }: { onPicks?: (stocks: ScoredStock[]) => void }) {
   const qc = useQueryClient()
   const [messages, setMessages] = useState<Message[]>([{
     id: 0,
@@ -179,6 +179,7 @@ export function StockChatbot() {
     }
 
     const { stocks, reply } = filterStocks(msg, data)
+    onPicks?.(stocks)
     setMessages(m => [...m, userMsg, { id: Date.now() + 1, role: 'bot', text: reply, stocks }])
   }
 

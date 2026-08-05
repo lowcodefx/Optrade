@@ -1,8 +1,9 @@
 ﻿import { useState, useRef, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { API_BASE, kiteAuthHeaders } from '@/core/services/apiClient'
-import { ChevronDown, ChevronRight, Info, RefreshCw, Bookmark, BookmarkCheck, Flame, Newspaper, LineChart, ShoppingCart } from 'lucide-react'
+import { ChevronDown, ChevronRight, Info, RefreshCw, Bookmark, BookmarkCheck, Flame, Newspaper, LineChart, ShoppingCart, Bot } from 'lucide-react'
 import { SECTOR_STOCKS, SECTOR_COLORS } from '../stockSectors'
+import type { ScoredStock as ChatbotStock } from './StockChatbot'
 
 // â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -566,12 +567,13 @@ function AccordionSection({ title, stocks, defaultOpen, onWatchlist, watchlist, 
 
 // â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-type Tab = 'top10' | 'all'
+type Tab = 'top10' | 'all' | 'chatbot'
 
-export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
+export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatbotPicks = [] }: {
   onAddToWatchlist: (s: string, price?: number) => void
   watchlist: string[]
   onLogEntry?: (symbol: string, price: number, action: 'buy') => void
+  chatbotPicks?: ChatbotStock[]
 }) {
   const [tab, setTab]                   = useState<Tab>('top10')
   const [selectedSector, setSelectedSector] = useState<string | null>(null)
@@ -652,6 +654,15 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
           >
             All Stocks
           </button>
+          <button
+            onClick={() => setTab('chatbot')}
+            className={`flex items-center gap-1 px-3 py-1.5 text-[10px] font-bold border-b-2 transition-colors ${
+              tab === 'chatbot' ? 'border-[#a78bfa] text-[#a78bfa]' : 'border-transparent text-[#475569] hover:text-[#94a3b8]'
+            }`}
+          >
+            <Bot size={9} />
+            Chatbot{chatbotPicks.length > 0 && <span className="ml-0.5 text-[8px] bg-[#a78bfa]/20 text-[#a78bfa] px-1 rounded-full">{chatbotPicks.length}</span>}
+          </button>
         </div>
 
         {/* Sector filter pills */}
@@ -724,6 +735,44 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry }: {
           <AccordionSection title="Mid Cap"   stocks={data.midCap}             onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} onBuy={handleBuy} />
           <AccordionSection title="Small Cap" stocks={data.smallCap}           onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} onBuy={handleBuy} />
         </>
+      )}
+
+      {tab === 'chatbot' && (
+        chatbotPicks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-2 text-center px-4">
+            <Bot size={24} className="text-[#a78bfa]/40" />
+            <p className="text-[#64748b] text-[10px]">No chatbot picks yet</p>
+            <p className="text-[#475569] text-[9px]">Ask the chatbot a question — the matching stocks will appear here</p>
+          </div>
+        ) : (
+          <div>
+            <div className="flex items-center px-3 py-1.5 border-b border-[#0f1f35] bg-[#060d1a]">
+              <span className="text-[8px] text-[#64748b] flex-1">Symbol · Price · RS</span>
+              <span className="text-[8px] text-[#64748b]">Score  Chart  Save  Info</span>
+            </div>
+            {chatbotPicks.map((s, i) => {
+              const capChar = s.cap === 'LG' ? 'L' : s.cap === 'MD' ? 'M' : 'S'
+              const asStock: StockScore = {
+                symbol: s.symbol, totalScore: s.totalScore, signal: s.signal,
+                rs1d: s.rs1d, last_price: s.last_price, pct_change: s.pct_change,
+                technical: 0, fundamental: 0, sentiment: 0, growth: 0,
+                summary: 'Filtered by AI chatbot',
+              }
+              return (
+                <StockRow
+                  key={s.symbol}
+                  stock={asStock}
+                  rank={i + 1}
+                  cap={capChar}
+                  onInfo={() => {}}
+                  onWatchlist={() => onAddToWatchlist(s.symbol, s.last_price ?? 0)}
+                  inWatchlist={watchlist.includes(s.symbol)}
+                  onBuy={handleBuy}
+                />
+              )
+            })}
+          </div>
+        )
       )}
 
       {buyStock && (

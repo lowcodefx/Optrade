@@ -5,16 +5,15 @@ import { StocksHeader } from './components/StocksHeader'
 import { TopStocksBucket } from './components/TopStocksBucket'
 import { HoldingsBucket } from './components/HoldingsBucket'
 import { StockChatbot } from './components/StockChatbot'
+import type { ScoredStock } from './components/StockChatbot'
 import { EventsCalendar } from './components/EventsCalendar'
 import { LogEntryModal, TradeLogPanel } from './components/TradeLog'
 import type { TradeLogEntry } from './components/TradeLog'
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } })
 
-type RightBottomTab = 'events' | 'tradelog'
-
 export function StocksPage() {
-  const [bottomTab, setBottomTab] = useState<RightBottomTab>('events')
+  const [chatbotPicks, setChatbotPicks] = useState<ScoredStock[]>([])
   const [pendingLog, setPendingLog] = useState<{ symbol: string; price: number; action: 'buy' | 'watchlist' } | null>(null)
   const [tradeLogKey, setTradeLogKey] = useState(0)
   const [watchlist, setWatchlist] = useState<string[]>(() => {
@@ -55,63 +54,57 @@ export function StocksPage() {
         {/* ── Market indices ── */}
         <StocksHeader />
 
-        {/* ── Main 2-column layout ── */}
+        {/* ── 4-column layout ── */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
 
-          {/* ── Left: Stock Picks (flex-1) + Chatbot strip below ── */}
-          <div className="flex-1 min-w-0 border-r border-[#1e293b] flex flex-col overflow-hidden">
-
-            {/* Stock Picks — upper portion */}
-            <div className="flex-1 min-h-0 overflow-y-auto border-b border-[#1e293b]">
-              <TopStocksBucket
-                onAddToWatchlist={addToWatchlist}
-                watchlist={watchlist}
-                onLogEntry={(sym, price) => setPendingLog({ symbol: sym, price, action: 'buy' })}
-              />
+          {/* Col 1: Chat Bot (190px) */}
+          <div className="w-[190px] shrink-0 border-r border-[#1e293b] flex flex-col overflow-hidden">
+            <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-[#1e293b] bg-[#0a1628] shrink-0">
+              <span className="text-[8px] font-bold uppercase tracking-widest text-[#64748b]">Chat Bot</span>
             </div>
-
-            {/* AI Chatbot — fixed-height strip at bottom of left column */}
-            <div className="h-[260px] shrink-0 flex flex-col overflow-hidden">
-              <StockChatbot />
-            </div>
-
+            <StockChatbot onPicks={setChatbotPicks} />
           </div>
 
-          {/* ── Right: Holdings (large) + Events/Log ── */}
-          <div className="w-[580px] shrink-0 flex flex-col overflow-hidden">
+          {/* Col 2: Stock Picks (330px) */}
+          <div className="w-[330px] shrink-0 border-r border-[#1e293b] flex flex-col overflow-hidden">
+            <TopStocksBucket
+              onAddToWatchlist={addToWatchlist}
+              watchlist={watchlist}
+              onLogEntry={(sym, price) => setPendingLog({ symbol: sym, price, action: 'buy' })}
+              chatbotPicks={chatbotPicks}
+            />
+          </div>
 
-            {/* Holdings — upper 65% */}
-            <div className="flex-[65] min-h-0 border-b border-[#1e293b] overflow-hidden flex flex-col">
+          {/* Col 3: My Holdings (flex-1, largest) */}
+          <div className="flex-1 min-w-0 border-r border-[#1e293b] flex flex-col overflow-hidden">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-[#1e293b] bg-[#0a1628] shrink-0">
+              <span className="text-[8px] font-bold uppercase tracking-widest text-[#64748b]">My Holdings</span>
+            </div>
+            <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
               <HoldingsBucket />
             </div>
+          </div>
 
-            {/* Events / Trade Log — lower 35% */}
-            <div className="flex-[35] min-h-0 flex flex-col overflow-hidden">
-              <div className="flex shrink-0 bg-[#0a1628] border-b border-[#1e293b]">
-                {([
-                  { id: 'events' as const,   Icon: Calendar,  label: 'Events'    },
-                  { id: 'tradelog' as const, Icon: BookOpen,  label: 'Trade Log' },
-                ] as const).map(({ id, Icon, label }) => (
-                  <button
-                    key={id}
-                    onClick={() => setBottomTab(id)}
-                    className={`flex items-center gap-1 px-3 py-2 text-[9px] font-bold uppercase tracking-widest border-b-2 transition-colors ${
-                      bottomTab === id
-                        ? 'text-[#a78bfa] border-[#a78bfa]'
-                        : 'text-[#64748b] border-transparent hover:text-[#94a3b8]'
-                    }`}
-                  >
-                    <Icon size={9} />
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                {bottomTab === 'events'   && <EventsCalendar />}
-                {bottomTab === 'tradelog' && <TradeLogPanel refreshKey={tradeLogKey} />}
-              </div>
+          {/* Col 4a: Events (170px) */}
+          <div className="w-[170px] shrink-0 border-r border-[#1e293b] flex flex-col overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 border-b border-[#1e293b] bg-[#0a1628] shrink-0">
+              <Calendar size={9} className="text-[#64748b]" />
+              <span className="text-[8px] font-bold uppercase tracking-widest text-[#64748b]">Events</span>
             </div>
+            <div className="flex-1 overflow-y-auto">
+              <EventsCalendar />
+            </div>
+          </div>
 
+          {/* Col 4b: Trade Log (170px) */}
+          <div className="w-[170px] shrink-0 flex flex-col overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 border-b border-[#1e293b] bg-[#0a1628] shrink-0">
+              <BookOpen size={9} className="text-[#64748b]" />
+              <span className="text-[8px] font-bold uppercase tracking-widest text-[#64748b]">Trade Log</span>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <TradeLogPanel refreshKey={tradeLogKey} />
+            </div>
           </div>
 
         </div>
