@@ -45,8 +45,47 @@ function filterStocks(prompt: string, data: AnalysisResult): { stocks: ScoredSto
   const p = prompt.toLowerCase()
   let stocks = allSorted(data)
   const tags: string[] = []
+  const unsupported: string[] = []
 
-  // Sector match
+  // ── Price range: "between 100 to 500", "ranging between 100 to 150" ──────
+  const rangeMatch = p.match(/(?:rang(?:e|ing)?\s+between|between|from)\s+(\d+(?:\.\d+)?)\s+(?:to|and)\s+(\d+(?:\.\d+)?)/i)
+  if (rangeMatch) {
+    const lo = parseFloat(rangeMatch[1]), hi = parseFloat(rangeMatch[2])
+    if (!isNaN(lo) && !isNaN(hi) && hi > lo) {
+      stocks = stocks.filter(s => s.last_price != null && s.last_price >= lo && s.last_price <= hi)
+      tags.push(`price ₹${lo}–₹${hi}`)
+    }
+  }
+
+  // Under / below price
+  const underMatch = !rangeMatch && p.match(/(?:under|below|less than)\s+(?:rs\.?|₹)?(\d+(?:\.\d+)?)/i)
+  if (underMatch) {
+    const lim = parseFloat(underMatch[1])
+    if (!isNaN(lim)) { stocks = stocks.filter(s => (s.last_price ?? Infinity) < lim); tags.push(`price <₹${lim}`) }
+  }
+
+  // Above / over price
+  const aboveMatch = !rangeMatch && p.match(/(?:above|over|more than)\s+(?:rs\.?|₹)?(\d+(?:\.\d+)?)/i)
+  if (aboveMatch) {
+    const lim = parseFloat(aboveMatch[1])
+    if (!isNaN(lim)) { stocks = stocks.filter(s => (s.last_price ?? 0) > lim); tags.push(`price >₹${lim}`) }
+  }
+
+  // ── Unsupported technical criteria ────────────────────────────────────────
+  if (/\b(?:ema|sma|dma)\s*\d+|\d+\s*(?:ema|sma|dma)/i.test(prompt)) unsupported.push('EMA/MA touch')
+  if (/retest/i.test(p)) unsupported.push('retest pattern')
+  if (/\b(?:1|daily|weekly|hourly|monthly)\s*(?:d|day|week|hour|tf|timeframe)/i.test(p)) unsupported.push('timeframe filter')
+  if (/breakout|support|resistance|consolidat/i.test(p)) unsupported.push('price-action pattern')
+
+  // If only unsupported criteria were given, explain and bail
+  if (tags.length === 0 && unsupported.length > 0) {
+    return {
+      stocks: [],
+      reply: `I can't filter by ${unsupported.join(' / ')}. I can filter by: price range (₹X to ₹Y), sector, cap size, BUY/WATCH/AVOID signal, RS momentum, and AI score. Use the chart icon on any stock for technical analysis.`,
+    }
+  }
+
+  // ── Sector ────────────────────────────────────────────────────────────────
   for (const [name, syms] of Object.entries(SECTOR_STOCKS)) {
     if (p.includes(name.toLowerCase())) {
       stocks = stocks.filter(s => syms.includes(s.symbol))
@@ -55,40 +94,40 @@ function filterStocks(prompt: string, data: AnalysisResult): { stocks: ScoredSto
     }
   }
 
-  // Signal
-  if (p.includes('buy')) { stocks = stocks.filter(s => s.signal === 'BUY'); tags.push('BUY signal') }
-  else if (p.includes('watch')) { stocks = stocks.filter(s => s.signal === 'WATCH'); tags.push('WATCH') }
-  else if (p.includes('avoid')) { stocks = stocks.filter(s => s.signal === 'AVOID'); tags.push('AVOID') }
+  // ── Signal ────────────────────────────────────────────────────────────────
+  if (/\bbuy\b/.test(p)) { stocks = stocks.filter(s => s.signal === 'BUY'); tags.push('BUY signal') }
+  else if (/\bwatch\b/.test(p)) { stocks = stocks.filter(s => s.signal === 'WATCH'); tags.push('WATCH') }
+  else if (/\bavoid\b/.test(p)) { stocks = stocks.filter(s => s.signal === 'AVOID'); tags.push('AVOID') }
 
-  // Cap size
-  if (/large.?cap|largecap/i.test(p)) {
-    stocks = stocks.filter(s => s.cap === 'LG'); tags.push('large cap')
-  } else if (/mid.?cap|midcap/i.test(p)) {
-    stocks = stocks.filter(s => s.cap === 'MD'); tags.push('mid cap')
-  } else if (/small.?cap|smallcap/i.test(p)) {
-    stocks = stocks.filter(s => s.cap === 'SM'); tags.push('small cap')
-  }
+  // ── Cap size ──────────────────────────────────────────────────────────────
+  if (/large.?cap|largecap/i.test(p)) { stocks = stocks.filter(s => s.cap === 'LG'); tags.push('large cap') }
+  else if (/mid.?cap|midcap/i.test(p)) { stocks = stocks.filter(s => s.cap === 'MD'); tags.push('mid cap') }
+  else if (/small.?cap|smallcap/i.test(p)) { stocks = stocks.filter(s => s.cap === 'SM'); tags.push('small cap') }
 
-  // Momentum / RS
+  // ── RS momentum ───────────────────────────────────────────────────────────
   if (/momentum|high rs|strong rs|outperform/i.test(p)) {
     stocks = stocks.filter(s => (s.rs1d ?? 0) >= 1.0)
     stocks = [...stocks].sort((a, b) => (b.rs1d ?? 0) - (a.rs1d ?? 0))
     tags.push('RS momentum')
   }
 
-  // High score
+  // ── Score ─────────────────────────────────────────────────────────────────
   if (/high score|best score|top score|score/i.test(p)) {
-    stocks = stocks.filter(s => s.totalScore >= 70); tags.push('score â‰¥70')
+    stocks = stocks.filter(s => s.totalScore >= 70); tags.push('score ≥70')
   }
 
-  // Limit
+  // ── Limit ─────────────────────────────────────────────────────────────────
   const numMatch = p.match(/top\s*(\d+)|best\s*(\d+)|show\s*(\d+)/i)
   const limit = numMatch ? parseInt(numMatch[1] ?? numMatch[2] ?? numMatch[3]) : 8
   stocks = stocks.slice(0, Math.min(limit, 10))
 
-  const reply = tags.length
+  // ── Reply ─────────────────────────────────────────────────────────────────
+  let reply = tags.length
     ? `${stocks.length} stock${stocks.length !== 1 ? 's' : ''} matching: ${tags.join(', ')}`
     : `Top ${stocks.length} stocks by AI score`
+
+  if (stocks.length === 0 && tags.length) reply = `No stocks matched: ${tags.join(', ')}. Try broadening your filters.`
+  if (unsupported.length) reply += `. Note: ${unsupported.join(', ')} — use chart view for patterns.`
 
   return { stocks, reply }
 }

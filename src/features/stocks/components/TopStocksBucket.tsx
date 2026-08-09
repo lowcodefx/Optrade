@@ -808,6 +808,12 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
                   try {
                     const orderId = await placeCNCOrder(buyStock.symbol, buyStock.price, Math.max(1, parseInt(buyQty, 10) || 1))
                     setBuySuccess(`Order ID ${orderId}`)
+                    // Auto-record today as buy date so age column populates immediately
+                    try {
+                      const dates = JSON.parse(localStorage.getItem('sw_buy_dates') ?? '{}')
+                      dates[buyStock.symbol] = new Date().toISOString().slice(0, 10)
+                      localStorage.setItem('sw_buy_dates', JSON.stringify(dates))
+                    } catch { /* ignore */ }
                     onLogEntry?.(buyStock.symbol, buyStock.price, 'buy')
                     if (autoCloseTimer.current) clearTimeout(autoCloseTimer.current)
                     autoCloseTimer.current = setTimeout(() => { setBuyStock(null); autoCloseTimer.current = null }, 2000)

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, BarChart2, Calendar, BookOpen } from 'lucide-react'
+import { ArrowLeft, BarChart2, Bot, BookOpen, X, Sparkles } from 'lucide-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StocksHeader } from './components/StocksHeader'
 import { TopStocksBucket } from './components/TopStocksBucket'
@@ -12,14 +12,13 @@ import type { TradeLogEntry } from './components/TradeLog'
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } })
 
-type RightTab = 'events' | 'tradelog'
-
 export function StocksPage() {
-  const [rightTab, setRightTab] = useState<RightTab>('events')
+  const [chatbotOpen, setChatbotOpen]   = useState(false)
+  const [tradeLogOpen, setTradeLogOpen] = useState(false)
   const [chatbotPicks, setChatbotPicks] = useState<ScoredStock[]>([])
-  const [pendingLog, setPendingLog] = useState<{ symbol: string; price: number; action: 'buy' | 'watchlist' } | null>(null)
-  const [tradeLogKey, setTradeLogKey] = useState(0)
-  const [watchlist, setWatchlist] = useState<string[]>(() => {
+  const [pendingLog, setPendingLog]     = useState<{ symbol: string; price: number; action: 'buy' | 'watchlist' } | null>(null)
+  const [tradeLogKey, setTradeLogKey]   = useState(0)
+  const [watchlist, setWatchlist]       = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('sw_watchlist') ?? '[]') } catch { return [] }
   })
 
@@ -52,24 +51,36 @@ export function StocksPage() {
             <span className="text-white font-bold text-sm tracking-wide">Optrade Swing</span>
           </div>
           <span className="text-[#64748b] text-[10px] ml-1">AI-powered swing picks</span>
+
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={() => setChatbotOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors border bg-[#a78bfa]/10 text-[#a78bfa] border-[#a78bfa]/25 hover:bg-[#a78bfa]/20"
+            >
+              <Bot size={11} />
+              Chat Bot
+              {chatbotPicks.length > 0 && (
+                <span className="ml-0.5 text-[8px] bg-[#a78bfa]/30 px-1.5 py-0.5 rounded-full">{chatbotPicks.length}</span>
+              )}
+            </button>
+            <button
+              onClick={() => setTradeLogOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors border bg-[#38bdf8]/10 text-[#38bdf8] border-[#38bdf8]/25 hover:bg-[#38bdf8]/20"
+            >
+              <BookOpen size={11} />
+              Trade Log
+            </button>
+          </div>
         </div>
 
         {/* ── Market indices ── */}
         <StocksHeader />
 
-        {/* ── 4-column layout ── */}
+        {/* ── 3-column layout ── */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
 
-          {/* Col 1: Chat Bot (190px) */}
-          <div className="w-[190px] shrink-0 border-r border-[#1e293b] flex flex-col overflow-hidden">
-            <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-[#1e293b] bg-[#0a1628] shrink-0">
-              <span className="text-[8px] font-bold uppercase tracking-widest text-[#64748b]">Chat Bot</span>
-            </div>
-            <StockChatbot onPicks={setChatbotPicks} />
-          </div>
-
-          {/* Col 2: Stock Picks (330px) */}
-          <div className="w-[330px] shrink-0 border-r border-[#1e293b] flex flex-col overflow-hidden">
+          {/* Col 1: Stock Picks */}
+          <div className="w-[370px] shrink-0 border-r border-[#1e293b] flex flex-col overflow-hidden">
             <TopStocksBucket
               onAddToWatchlist={addToWatchlist}
               watchlist={watchlist}
@@ -78,9 +89,9 @@ export function StocksPage() {
             />
           </div>
 
-          {/* Col 3: My Holdings (flex-1, largest) */}
+          {/* Col 2: My Holdings (flex-1, largest) */}
           <div className="flex-1 min-w-0 border-r border-[#1e293b] flex flex-col overflow-hidden">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-[#1e293b] bg-[#0a1628] shrink-0">
+            <div className="flex items-center px-3 py-1.5 border-b border-[#1e293b] bg-[#0a1628] shrink-0">
               <span className="text-[8px] font-bold uppercase tracking-widest text-[#64748b]">My Holdings</span>
             </div>
             <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
@@ -88,34 +99,62 @@ export function StocksPage() {
             </div>
           </div>
 
-          {/* Col 4: Events + Trade Log (200px, tabbed) */}
-          <div className="w-[200px] shrink-0 flex flex-col overflow-hidden">
-            <div className="flex shrink-0 bg-[#0a1628] border-b border-[#1e293b]">
-              {([
-                { id: 'events'   as const, Icon: Calendar, label: 'Events'    },
-                { id: 'tradelog' as const, Icon: BookOpen, label: 'Trade Log' },
-              ] as const).map(({ id, Icon, label }) => (
-                <button
-                  key={id}
-                  onClick={() => setRightTab(id)}
-                  className={`flex-1 flex items-center justify-center gap-1 py-1.5 text-[9px] font-bold border-b-2 transition-colors ${
-                    rightTab === id
-                      ? 'text-[#a78bfa] border-[#a78bfa]'
-                      : 'text-[#64748b] border-transparent hover:text-[#94a3b8]'
-                  }`}
-                >
-                  <Icon size={9} />{label}
-                </button>
-              ))}
+          {/* Col 3: Events (220px) */}
+          <div className="w-[220px] shrink-0 flex flex-col overflow-hidden">
+            <div className="flex items-center px-3 py-1.5 border-b border-[#1e293b] bg-[#0a1628] shrink-0">
+              <span className="text-[8px] font-bold uppercase tracking-widest text-[#64748b]">Events</span>
             </div>
             <div className="flex-1 overflow-y-auto">
-              {rightTab === 'events'   && <EventsCalendar />}
-              {rightTab === 'tradelog' && <TradeLogPanel refreshKey={tradeLogKey} />}
+              <EventsCalendar />
             </div>
           </div>
 
         </div>
       </div>
+
+      {/* ── Chat Bot popup (left-side drawer) ── */}
+      {chatbotOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="w-[320px] bg-[#0a1628] border-r border-[#1e3a5f] flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#1e293b] bg-[#060d1a] shrink-0">
+              <div className="flex items-center gap-2">
+                <Sparkles size={11} className="text-[#a78bfa]" />
+                <span className="text-white text-[11px] font-bold">Stock Assistant</span>
+              </div>
+              <button onClick={() => setChatbotOpen(false)} className="text-[#64748b] hover:text-white transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+            <StockChatbot onPicks={setChatbotPicks} />
+          </div>
+          {/* Backdrop */}
+          <div className="flex-1 bg-black/40" onClick={() => setChatbotOpen(false)} />
+        </div>
+      )}
+
+      {/* ── Trade Log popup (centered modal) ── */}
+      {tradeLogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setTradeLogOpen(false)}>
+          <div
+            className="bg-[#0a1628] border border-[#1e3a5f] rounded-xl w-[640px] max-w-[95vw] flex flex-col shadow-2xl"
+            style={{ height: '75vh' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#1e293b] shrink-0">
+              <div className="flex items-center gap-2">
+                <BookOpen size={13} className="text-[#38bdf8]" />
+                <span className="text-white text-sm font-bold">Trade Log</span>
+              </div>
+              <button onClick={() => setTradeLogOpen(false)} className="text-[#64748b] hover:text-white transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <TradeLogPanel refreshKey={tradeLogKey} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {pendingLog && (
         <LogEntryModal
