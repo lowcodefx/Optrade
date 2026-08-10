@@ -97,13 +97,13 @@ function detectPattern(candles: CandleData[]): string {
   // Doji (open â‰ˆ close within 0.3% of day range)
   const range = last.h - last.l
   if (range > 0 && Math.abs(last.c - last.o) / range < 0.1)
-    return 'Doji â€” indecision at this level'
+    return 'Doji - indecision at this level'
 
   // Hammer (long lower wick, small body near top)
   const body = Math.abs(last.c - last.o)
   const lowerWick = Math.min(last.c, last.o) - last.l
   if (lowerWick > body * 2 && last.c > last.o)
-    return 'Hammer â€” potential reversal signal'
+    return 'Hammer - potential reversal signal'
 
   return 'No clear pattern'
 }
@@ -362,16 +362,16 @@ function InfoModal({ stock, onClose }: { stock: StockScore; onClose: () => void 
             <span className="text-[9px] font-bold uppercase tracking-widest text-[#94a3b8]">News Sentiment</span>
           </div>
 
-          {newsLoading && <div className="text-[#64748b] text-[9px]">Analysing news with Claudeâ€¦</div>}
+          {newsLoading && <div className="text-[#64748b] text-[9px]">Analysing news with Claude...</div>}
 
           {/* Claude verdict */}
           {!newsLoading && newsData?.sentiment && (() => {
             const v = newsData.sentiment!
             const cfg = {
-              BULLISH: { bg: 'bg-[#22c55e]/10', text: 'text-[#22c55e]', border: 'border-[#22c55e]/30', icon: 'â†‘' },
-              BEARISH: { bg: 'bg-[#ef4444]/10', text: 'text-[#ef4444]', border: 'border-[#ef4444]/30', icon: 'â†“' },
-              NEUTRAL: { bg: 'bg-[#475569]/10', text: 'text-[#475569]', border: 'border-[#475569]/30', icon: 'â€”' },
-              MIXED:   { bg: 'bg-[#f59e0b]/10', text: 'text-[#f59e0b]', border: 'border-[#f59e0b]/30', icon: 'â†•' },
+              BULLISH: { bg: 'bg-[#22c55e]/10', text: 'text-[#22c55e]', border: 'border-[#22c55e]/30', icon: '^' },
+              BEARISH: { bg: 'bg-[#ef4444]/10', text: 'text-[#ef4444]', border: 'border-[#ef4444]/30', icon: 'v' },
+              NEUTRAL: { bg: 'bg-[#475569]/10', text: 'text-[#475569]', border: 'border-[#475569]/30', icon: '-' },
+              MIXED:   { bg: 'bg-[#f59e0b]/10', text: 'text-[#f59e0b]', border: 'border-[#f59e0b]/30', icon: '~' },
             }[v.verdict] ?? { bg: 'bg-[#475569]/10', text: 'text-[#475569]', border: 'border-[#475569]/30', icon: '?' }
             return (
               <div className={`rounded-lg px-3 py-2.5 border ${cfg.bg} ${cfg.border} space-y-1`}>
@@ -685,10 +685,10 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
                 {name}
                 {mom !== null && (
                   mom >= 1.0
-                    ? <span className="text-[7px] text-[#22c55e] leading-none">â†‘</span>
+                    ? <span className="text-[7px] text-[#22c55e] leading-none">+</span>
                     : mom <= -1.0
-                      ? <span className="text-[7px] text-[#ef4444] leading-none">â†“</span>
-                      : <span className="text-[7px] text-[#475569] leading-none">â†’</span>
+                      ? <span className="text-[7px] text-[#ef4444] leading-none">-</span>
+                      : <span className="text-[7px] text-[#475569] leading-none">=</span>
                 )}
               </button>
             )
@@ -698,7 +698,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
               onClick={() => setSelectedSector(null)}
               className="shrink-0 rounded px-2 py-0.5 text-[8px] font-bold text-[#475569] bg-[#1e293b] hover:text-[#ef4444] hover:bg-[#ef4444]/10 transition-colors ml-1"
             >
-              âœ• Clear
+              x Clear
             </button>
           )}
         </div>
@@ -707,7 +707,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
       {isLoading && (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <RefreshCw size={20} className="animate-spin text-[#a78bfa]" />
-          <p className="text-[#475569] text-xs text-center max-w-[200px]">Analysing with AIâ€¦<br/>~30 seconds</p>
+          <p className="text-[#475569] text-xs text-center max-w-[200px]">Analysing with AI...<br/>~30 seconds</p>
         </div>
       )}
 
@@ -778,7 +778,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
       {buyStock && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setBuyStock(null)}>
           <div className="bg-[#0a1628] border border-[#1e293b] rounded-xl p-5 w-72 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-white font-bold text-sm mb-3">Place CNC Buy â€” {buyStock.symbol}</h3>
+            <h3 className="text-white font-bold text-sm mb-3">Place CNC Buy - {buyStock.symbol}</h3>
             <div className="space-y-2 mb-4">
               <div className="flex justify-between text-[10px]">
                 <span className="text-[#475569]">Limit Price</span>
@@ -798,7 +798,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
               </div>
             </div>
             {buyError && <p className="text-[9px] text-[#ef4444] mb-2">{buyError}</p>}
-            {buySuccess && <p className="text-[9px] text-[#22c55e] mb-2">âœ“ Order placed â€” {buySuccess}</p>}
+            {buySuccess && <p className="text-[9px] text-[#22c55e] mb-2">Order placed - {buySuccess}</p>}
             <div className="flex gap-2">
               <button onClick={() => setBuyStock(null)} className="flex-1 py-1.5 rounded border border-[#1e293b] text-[10px] text-[#475569] hover:text-white">Cancel</button>
               <button
@@ -825,7 +825,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
                 }}
                 className="flex-1 py-1.5 rounded bg-[#22c55e]/90 hover:bg-[#22c55e] disabled:opacity-50 text-white text-[10px] font-bold"
               >
-                {buyLoading ? 'Placingâ€¦' : 'Confirm Buy'}
+                {buyLoading ? 'Placing...' : 'Confirm Buy'}
               </button>
             </div>
             <p className="text-[7px] text-[#64748b] text-center mt-2">CNC &middot; LIMIT &middot; NSE &middot; DAY</p>

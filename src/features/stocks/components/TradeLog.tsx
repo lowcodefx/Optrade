@@ -71,7 +71,7 @@ export function LogEntryModal({ symbol, price, action, onSave, onCancel }: LogEn
             <label className="text-[8px] text-[#475569] uppercase tracking-wider block mb-1">Note (optional)</label>
             <textarea
               value={note} onChange={e => setNote(e.target.value)} rows={2}
-              placeholder="Why this stock, why nowâ€¦"
+              placeholder="Why this stock, why now..."
               className="w-full bg-[#060d1a] border border-[#1e293b] rounded px-2 py-1 text-white text-[9px] resize-none focus:outline-none focus:border-[#38bdf8] placeholder-[#64748b]"
             />
           </div>

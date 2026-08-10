@@ -146,8 +146,8 @@ type SortKey = 'symbol' | 'price' | 'pnl' | 'rr' | 'day' | 'age'
 type SortDir = 'asc' | 'desc'
 
 const BUCKETS = [
-  { key: 'small' as BucketFilter, label: '0â€“2%',  min: 0, max: 2  },
-  { key: 'mid'   as BucketFilter, label: '2â€“5%',  min: 2, max: 5  },
+  { key: 'small' as BucketFilter, label: '0-2%',  min: 0, max: 2  },
+  { key: 'mid'   as BucketFilter, label: '2-5%',  min: 2, max: 5  },
   { key: 'big'   as BucketFilter, label: '>5%',   min: 5, max: Infinity },
 ]
 
@@ -178,7 +178,7 @@ function ColHeader({ label, sortKey, current, dir, onSort }: {
 function StatusBadge({ r }: { r: ComputedRow }) {
   if (r.targetHit) return <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#22c55e]/15 text-[#22c55e] border border-[#22c55e]/30 whitespace-nowrap">TARGET</span>
   if (r.slHit)     return <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#ef4444]/15 text-[#ef4444] border border-[#ef4444]/30 whitespace-nowrap">SL HIT</span>
-  if (r.rrAlert)   return <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20 whitespace-nowrap">2.5R âœ“</span>
+  if (r.rrAlert)   return <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20 whitespace-nowrap">2.5R +</span>
   if (r.remainingRR >= 2) return <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20 whitespace-nowrap">HOLD</span>
   if (r.remainingRR >= 1) return <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20 whitespace-nowrap">CAUTION</span>
   return <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/20 whitespace-nowrap">EXIT?</span>
@@ -224,19 +224,17 @@ export function HoldingsBucket() {
           todayBuys.set(t.tradingsymbol, t.order_timestamp.slice(0, 10))
         }
       }
-      const today = new Date().toISOString().slice(0, 10)
       let changed = false
       const next = { ...buyDates }
       for (const h of missing) {
         if (todayBuys.has(h.tradingsymbol)) {
           next[h.tradingsymbol] = todayBuys.get(h.tradingsymbol)!
+          changed = true
         } else if ((h.t1_quantity ?? 0) > 0) {
           next[h.tradingsymbol] = prevTradingDay()
-        } else {
-          // No history available — stamp today so the counter starts now
-          next[h.tradingsymbol] = today
+          changed = true
         }
-        changed = true
+        // Older holdings: leave unset — user picks via inline date input
       }
       if (changed) { saveBuyDates(next); setBuyDates(next) }
     })
@@ -441,46 +439,39 @@ export function HoldingsBucket() {
                       <td className="px-2 py-2 whitespace-nowrap">
                         {(() => {
                           const d = daysHeld(r.h.tradingsymbol, buyDates)
+                          const sym = r.h.tradingsymbol
+                          const today = new Date().toISOString().slice(0, 10)
                           if (d !== null) {
                             return (
-                              <span
-                                className={`font-semibold cursor-pointer ${agingColor(d)}`}
-                                title="Click to change buy date"
-                                onClick={() => {
-                                  const inp = document.createElement('input')
-                                  inp.type = 'date'
-                                  inp.max = new Date().toISOString().split('T')[0]
-                                  inp.value = buyDates[r.h.tradingsymbol] ?? ''
-                                  inp.onchange = () => {
-                                    if (!inp.value) return
-                                    const next = { ...buyDates, [r.h.tradingsymbol]: inp.value }
+                              <div className="flex items-center gap-1 group">
+                                <span className={`font-semibold ${agingColor(d)}`}>{d}d</span>
+                                <button
+                                  title="Clear date"
+                                  onClick={() => {
+                                    const next = { ...buyDates }
+                                    delete next[sym]
                                     setBuyDates(next); saveBuyDates(next)
-                                  }
-                                  inp.click()
-                                }}
-                              >
-                                {d}d
-                              </span>
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 text-[#334155] hover:text-[#ef4444] transition-all"
+                                >
+                                  <CalendarDays size={8} />
+                                </button>
+                              </div>
                             )
                           }
                           return (
-                            <button
-                              onClick={() => {
-                                const inp = document.createElement('input')
-                                inp.type = 'date'
-                                inp.max = new Date().toISOString().split('T')[0]
-                                inp.onchange = () => {
-                                  if (!inp.value) return
-                                  const next = { ...buyDates, [r.h.tradingsymbol]: inp.value }
+                            <label className="cursor-pointer flex items-center gap-1">
+                              <input
+                                type="date"
+                                max={today}
+                                className="w-[90px] bg-[#0a1628] border border-[#1e3a5f] rounded px-1.5 py-0.5 text-[9px] text-[#94a3b8] outline-none focus:border-[#38bdf8]/60 focus:text-white cursor-pointer"
+                                onChange={e => {
+                                  if (!e.target.value) return
+                                  const next = { ...buyDates, [sym]: e.target.value }
                                   setBuyDates(next); saveBuyDates(next)
-                                }
-                                inp.click()
-                              }}
-                              className="flex items-center gap-1 text-[#38bdf8] hover:text-[#7dd3fc] transition-colors"
-                            >
-                              <CalendarDays size={9} />
-                              <span className="text-[9px] font-semibold underline underline-offset-2">Set date</span>
-                            </button>
+                                }}
+                              />
+                            </label>
                           )
                         })()}
                       </td>

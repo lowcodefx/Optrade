@@ -197,7 +197,7 @@ export function StocksWatchlist({ watchlist, onRemove, onAdd }: {
             value={input}
             onChange={e => setInput(e.target.value.toUpperCase())}
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
-            placeholder="Add symbolâ€¦"
+            placeholder="Add symbol..."
             className="flex-1 bg-[#060d1a] border border-[#1e3a5f] rounded px-2 py-1 text-[10px] text-white placeholder:text-[#64748b] focus:outline-none focus:border-[#38bdf8]/50"
           />
           <button onClick={handleAdd} className="bg-[#1e3a5f] hover:bg-[#38bdf8]/20 text-[#38bdf8] rounded px-1.5 transition-colors">
@@ -260,7 +260,7 @@ export function StocksWatchlist({ watchlist, onRemove, onAdd }: {
                       Rs.{q.last_price.toFixed(1)} <span className="text-[8px]">{chg !== null ? `${pos ? '+' : ''}${chg.toFixed(2)}%` : ''}</span>
                     </div>
                   ) : (
-                    <div className="text-[#64748b] text-[9px]">â€”</div>
+                    <div className="text-[#64748b] text-[9px]">--</div>
                   )}
                 </div>
                 <div className="flex items-center gap-0.5 shrink-0">

@@ -192,7 +192,7 @@ export function StockChatbot({ onPicks }: { onPicks?: (stocks: ScoredStock[]) =>
   const [messages, setMessages] = useState<Message[]>([{
     id: 0,
     role: 'bot',
-    text: "Hi! Ask me about stocks â€” sector, cap size, signal type, or momentum. I'll filter today's AI picks for you.",
+    text: "Hi! Ask me about stocks - sector, cap size, signal type, or momentum. I'll filter today's AI picks for you.",
   }])
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -212,7 +212,7 @@ export function StockChatbot({ onPicks }: { onPicks?: (stocks: ScoredStock[]) =>
     if (!data) {
       setMessages(m => [...m, userMsg, {
         id: Date.now() + 1, role: 'bot',
-        text: 'Stock data is still loading â€” give it a moment and try again.',
+        text: 'Stock data is still loading - give it a moment and try again.',
       }])
       return
     }
@@ -260,7 +260,7 @@ export function StockChatbot({ onPicks }: { onPicks?: (stocks: ScoredStock[]) =>
               </div>
             )}
             {msg.stocks && msg.stocks.length === 0 && (
-              <p className="text-[8px] text-[#64748b] pl-6">No stocks matched â€” try a different filter.</p>
+              <p className="text-[8px] text-[#64748b] pl-6">No stocks matched - try a different filter.</p>
             )}
           </div>
         ))}
@@ -290,7 +290,7 @@ export function StockChatbot({ onPicks }: { onPicks?: (stocks: ScoredStock[]) =>
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && send()}
-            placeholder="Ask about stocksâ€¦"
+            placeholder="Ask about stocks..."
             className="flex-1 bg-[#060d1a] border border-[#1e3a5f] rounded-lg px-2.5 py-1.5 text-[10px] text-white placeholder:text-[#64748b] focus:outline-none focus:border-[#a78bfa]/50"
           />
           <button
