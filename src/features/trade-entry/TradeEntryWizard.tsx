@@ -8,12 +8,12 @@ import { cn } from '@/lib/utils'
 
 // ── constants ─────────────────────────────────────────────────────────────────
 const RISK_PCT         = 0.05       // 5% of balance per trade
-const SL_POINTS        = 20         // fixed ₹20 SL
+const SL_POINTS        = 20         // fixed Rs.20 SL
 const LOT              = 75         // NIFTY lot size
 const MAX_LOTS         = 10
 const DAILY_LOSS_LIMIT = 10_000
 const fmt  = (n: number) => Math.abs(n).toLocaleString('en-IN')
-const fmtS = (n: number) => (n >= 0 ? '+' : '−') + '₹' + fmt(n)
+const fmtS = (n: number) => (n >= 0 ? '+' : '−') + 'Rs.' + fmt(n)
 
 // ── types ─────────────────────────────────────────────────────────────────────
 interface CheckItem {
@@ -101,7 +101,7 @@ function useChecklist(direction: 'CE' | 'PE', dailyPnL: number): { items: CheckI
     },
     {
       id: 'daily-loss', required: true,
-      label: `Daily Loss < ₹${fmt(DAILY_LOSS_LIMIT)}`,
+      label: `Daily Loss < Rs.${fmt(DAILY_LOSS_LIMIT)}`,
       detail: `Today P&L: ${fmtS(dailyPnL)}`,
       passed: lossOk,
     },
@@ -313,7 +313,7 @@ function Stage2({ direction, balance, onSelect, onBack }: {
   return (
     <div className="space-y-3">
       <div className="text-[9px] text-[#64748b] leading-relaxed">
-        Select a setup. Entry ₹180–200 range highlighted. SL = Entry − ₹{SL_POINTS}. Lots from 5% risk on ₹{fmt(balance)} balance.
+        Select a setup. Entry Rs.180–200 range highlighted. SL = Entry − Rs.{SL_POINTS}. Lots from 5% risk on Rs.{fmt(balance)} balance.
       </div>
       <div className="space-y-2">
         {setups.map(s => (
@@ -354,15 +354,15 @@ function SetupCard({ setup: s, balance, onSelect }: { setup: TradeSetup; balance
         <ChevronRight size={12} className="text-[#475569]" />
       </div>
       <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-[9px]">
-        <div><span className="text-[#64748b]">Entry</span><div className="text-[#38bdf8] font-bold">₹{s.entry}</div></div>
-        <div><span className="text-[#64748b]">SL</span><div className="text-[#ef4444] font-bold">₹{s.sl}</div></div>
+        <div><span className="text-[#64748b]">Entry</span><div className="text-[#38bdf8] font-bold">Rs.{s.entry}</div></div>
+        <div><span className="text-[#64748b]">SL</span><div className="text-[#ef4444] font-bold">Rs.{s.sl}</div></div>
         <div><span className="text-[#64748b]">Lots</span><div className="text-white font-bold">{s.lots} ({s.lots * LOT})</div></div>
-        <div><span className="text-[#64748b]">Risk</span><div className="text-[#f59e0b] font-bold">₹{fmt(s.totalRisk)}</div></div>
-        <div><span className="text-[#64748b]">Capital</span><div className="text-white font-bold">₹{fmt(s.capitalRequired)}</div></div>
+        <div><span className="text-[#64748b]">Risk</span><div className="text-[#f59e0b] font-bold">Rs.{fmt(s.totalRisk)}</div></div>
+        <div><span className="text-[#64748b]">Capital</span><div className="text-white font-bold">Rs.{fmt(s.capitalRequired)}</div></div>
         <div><span className="text-[#64748b]">Δ / IV</span><div className="text-[#94a3b8]">{s.delta.toFixed(2)} / {s.iv}%</div></div>
       </div>
       {!canAfford && (
-        <p className="text-[9px] text-[#ef4444] mt-1">Insufficient balance (need ₹{fmt(s.capitalRequired)})</p>
+        <p className="text-[9px] text-[#ef4444] mt-1">Insufficient balance (need Rs.{fmt(s.capitalRequired)})</p>
       )}
     </button>
   )
@@ -385,13 +385,13 @@ function Stage3({ setup, balance, direction, dailyPnL, onConfirm, onBack, isLoad
 
   const rows = [
     ['Instrument',         `NIFTY ${setup.strike} ${setup.optionType} ${chain?.expiry ?? ''}`],
-    ['Entry Price',        `₹${setup.entry} (LIMIT)`],
+    ['Entry Price',        `Rs.${setup.entry} (LIMIT)`],
     ['Order Type',         'MIS · LIMIT'],
     ['Lot Size',           `${setup.lots} lots · ${setup.lots * LOT} qty`],
-    ['Stop Loss',          `₹${setup.sl}  (−₹${SL_POINTS}/share)`],
-    ['Total Risk',         `₹${fmt(setup.totalRisk)}`],
-    ['Capital Required',   `₹${fmt(setup.capitalRequired)}`],
-    ['Remaining Balance',  `₹${fmt(remaining)}`],
+    ['Stop Loss',          `Rs.${setup.sl}  (−Rs.${SL_POINTS}/share)`],
+    ['Total Risk',         `Rs.${fmt(setup.totalRisk)}`],
+    ['Capital Required',   `Rs.${fmt(setup.capitalRequired)}`],
+    ['Remaining Balance',  `Rs.${fmt(remaining)}`],
   ] as const
 
   return (
@@ -418,14 +418,14 @@ function Stage3({ setup, balance, direction, dailyPnL, onConfirm, onBack, isLoad
         <div className="flex items-center gap-2 bg-[#2b0000] border border-[#ef4444] rounded px-3 py-2">
           <AlertTriangle size={12} className="text-[#ef4444] shrink-0" />
           <p className="text-[9px] text-[#ef4444] font-semibold">
-            Daily loss limit of ₹{fmt(DAILY_LOSS_LIMIT)} exceeded. New entries are blocked for today.
+            Daily loss limit of Rs.{fmt(DAILY_LOSS_LIMIT)} exceeded. New entries are blocked for today.
           </p>
         </div>
       )}
       {!balanceOk && (
         <div className="flex items-center gap-2 bg-[#2b0000] border border-[#ef4444] rounded px-3 py-2">
           <AlertTriangle size={12} className="text-[#ef4444] shrink-0" />
-          <p className="text-[9px] text-[#ef4444]">Insufficient balance. Need ₹{fmt(setup.capitalRequired)}.</p>
+          <p className="text-[9px] text-[#ef4444]">Insufficient balance. Need Rs.{fmt(setup.capitalRequired)}.</p>
         </div>
       )}
       {!requiredPassed && lossOk && balanceOk && (
@@ -450,7 +450,7 @@ function Stage3({ setup, balance, direction, dailyPnL, onConfirm, onBack, isLoad
           )}
         >
           <Zap size={14} />
-          {isLoading ? 'Placing Order…' : `BUY ${setup.lots} LOT — ₹${fmt(setup.capitalRequired)}`}
+          {isLoading ? 'Placing Order…' : `BUY ${setup.lots} LOT — Rs.${fmt(setup.capitalRequired)}`}
         </button>
       </div>
     </div>
@@ -484,8 +484,8 @@ function Stage4({ result, setup, onClose }: { result: OrderResult; setup: TradeS
             ['Order ID',    result.orderId],
             ['Status',      result.status],
             ['Instrument',  `NIFTY ${setup.strike} ${setup.optionType}`],
-            ['Entry',       `₹${setup.entry} × ${setup.lots * LOT} qty`],
-            ['SL (Manual)', `₹${setup.sl} — place your SL immediately`],
+            ['Entry',       `Rs.${setup.entry} × ${setup.lots * LOT} qty`],
+            ['SL (Manual)', `Rs.${setup.sl} — place your SL immediately`],
           ].map(([k, v], i) => (
             <div key={i} className={cn(
               'flex justify-between px-3 py-1.5 text-[10px]',
@@ -504,7 +504,7 @@ function Stage4({ result, setup, onClose }: { result: OrderResult; setup: TradeS
         <div className="flex items-start gap-2 bg-[#1a1000] border border-[#f59e0b]/50 rounded px-3 py-2 text-left">
           <AlertTriangle size={11} className="text-[#f59e0b] mt-0.5 shrink-0" />
           <p className="text-[9px] text-[#f59e0b]">
-            Immediately place a Stop Loss order at ₹{setup.sl} for {setup.lots * LOT} qty to protect your trade.
+            Immediately place a Stop Loss order at Rs.{setup.sl} for {setup.lots * LOT} qty to protect your trade.
           </p>
         </div>
       )}
@@ -592,7 +592,7 @@ export function TradeEntryWizard({ onClose }: Props) {
             )}>{direction}</span>
           </div>
           <p className="text-[#475569] text-[9px] mt-0.5">
-            Balance ₹{fmt(balance)} · Today {fmtS(dailyPnL)}
+            Balance Rs.{fmt(balance)} · Today {fmtS(dailyPnL)}
           </p>
         </div>
         <button onClick={onClose} className="text-[#475569] hover:text-white transition-colors p-1">

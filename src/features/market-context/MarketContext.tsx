@@ -89,7 +89,7 @@ export function MarketContext() {
             <div className="bg-[#060d1a] rounded p-2">
               <div className="text-[9px] text-[#64748b] mb-0.5">FII</div>
               <div className={`text-xs font-bold ${fiiDii.fiiNet >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                {fiiDii.fiiNet >= 0 ? '+' : ''}₹{(fiiDii.fiiNet / 100).toFixed(0)}Cr
+                {fiiDii.fiiNet >= 0 ? '+' : ''}Rs.{(fiiDii.fiiNet / 100).toFixed(0)}Cr
               </div>
               <div className="flex items-center gap-0.5 mt-0.5">
                 {fiiDii.fiiNet >= 0 ? <TrendingUp size={8} className="text-[#22c55e]" /> : <TrendingDown size={8} className="text-[#ef4444]" />}
@@ -99,7 +99,7 @@ export function MarketContext() {
             <div className="bg-[#060d1a] rounded p-2">
               <div className="text-[9px] text-[#64748b] mb-0.5">DII</div>
               <div className={`text-xs font-bold ${fiiDii.diiNet >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                {fiiDii.diiNet >= 0 ? '+' : ''}₹{(fiiDii.diiNet / 100).toFixed(0)}Cr
+                {fiiDii.diiNet >= 0 ? '+' : ''}Rs.{(fiiDii.diiNet / 100).toFixed(0)}Cr
               </div>
               <div className="flex items-center gap-0.5 mt-0.5">
                 {fiiDii.diiNet >= 0 ? <TrendingUp size={8} className="text-[#22c55e]" /> : <TrendingDown size={8} className="text-[#ef4444]" />}

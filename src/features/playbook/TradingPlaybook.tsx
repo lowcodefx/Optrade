@@ -140,7 +140,7 @@ export function TradingPlaybook({ onClose }: Props) {
 
           {/* Option to pick */}
           <Section title="Which Option to Pick" color="border-[#f59e0b]/30">
-            <Row label="LTP Range" value="₹150 – ₹250" note="Use Smart Option Selection — it picks automatically" />
+            <Row label="LTP Range" value="Rs.150 – Rs.250" note="Use Smart Option Selection — it picks automatically" />
             <Row label="Strike type" value="ATM or 1 ITM" note="Avoids low-delta OTM options" />
             <Row label="Delta" value="0.40 – 0.60" note="Higher delta = moves more with NIFTY" />
             <Row label="OI Change" value="Positive (↑)" note="Rising OI = fresh positions building" />

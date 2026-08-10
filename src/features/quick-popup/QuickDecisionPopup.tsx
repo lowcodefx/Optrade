@@ -170,7 +170,7 @@ export function QuickDecisionPopup({ onClose }: Props) {
                 <span className="text-sm font-bold" style={{ color: actionColor }}>{suggestedAction}</span>
               </div>
               <div className="text-[10px] text-[#64748b]">
-                Entry <span className="text-white">₹{ceEntry}</span> · SL <span className="text-[#ef4444]">₹{peSL}</span> · Target <span className="text-[#22c55e]">₹{ceTgt}</span> · RR <span className="text-[#38bdf8]">{rr}:1</span>
+                Entry <span className="text-white">Rs.{ceEntry}</span> · SL <span className="text-[#ef4444]">Rs.{peSL}</span> · Target <span className="text-[#22c55e]">Rs.{ceTgt}</span> · RR <span className="text-[#38bdf8]">{rr}:1</span>
               </div>
             </div>
           ) : (

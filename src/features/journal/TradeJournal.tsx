@@ -62,7 +62,7 @@ export function TradeJournal() {
           value={summary.total > 0 ? `${summary.winRate.toFixed(0)}%` : '—'}
           color={summary.winRate >= 50 ? '#22c55e' : '#ef4444'} />
         <StatCard label="Net P&L"
-          value={`${summary.netPnL >= 0 ? '+' : ''}₹${Math.round(summary.netPnL).toLocaleString('en-IN')}`}
+          value={`${summary.netPnL >= 0 ? '+' : ''}Rs.${Math.round(summary.netPnL).toLocaleString('en-IN')}`}
           color={summary.netPnL >= 0 ? '#22c55e' : '#ef4444'} />
         <StatCard label="Avg RR"
           value={summary.total > 0 ? `${summary.avgRR.toFixed(1)}:1` : '—'}
@@ -104,7 +104,7 @@ export function TradeJournal() {
                     <td className="py-1.5 px-1 text-[#94a3b8]">{e.entryPrice}</td>
                     <td className="py-1.5 px-1 text-[#94a3b8]">{e.exitPrice}</td>
                     <td className={cn('py-1.5 px-1 font-bold', isWin ? 'text-[#22c55e]' : isLoss ? 'text-[#ef4444]' : 'text-[#94a3b8]')}>
-                      {e.pnl >= 0 ? '+' : ''}₹{Math.round(e.pnl).toLocaleString('en-IN')}
+                      {e.pnl >= 0 ? '+' : ''}Rs.{Math.round(e.pnl).toLocaleString('en-IN')}
                     </td>
                     <td className="py-1.5 px-1">
                       <span className={cn('text-[9px] px-1.5 py-0.5 rounded',

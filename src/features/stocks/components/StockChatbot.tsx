@@ -53,22 +53,22 @@ function filterStocks(prompt: string, data: AnalysisResult): { stocks: ScoredSto
     const lo = parseFloat(rangeMatch[1]), hi = parseFloat(rangeMatch[2])
     if (!isNaN(lo) && !isNaN(hi) && hi > lo) {
       stocks = stocks.filter(s => s.last_price != null && s.last_price >= lo && s.last_price <= hi)
-      tags.push(`price ₹${lo}–₹${hi}`)
+      tags.push(`price Rs.${lo}–Rs.${hi}`)
     }
   }
 
   // Under / below price
-  const underMatch = !rangeMatch && p.match(/(?:under|below|less than)\s+(?:rs\.?|₹)?(\d+(?:\.\d+)?)/i)
+  const underMatch = !rangeMatch && p.match(/(?:under|below|less than)\s+(?:rs\.?|Rs.)?(\d+(?:\.\d+)?)/i)
   if (underMatch) {
     const lim = parseFloat(underMatch[1])
-    if (!isNaN(lim)) { stocks = stocks.filter(s => (s.last_price ?? Infinity) < lim); tags.push(`price <₹${lim}`) }
+    if (!isNaN(lim)) { stocks = stocks.filter(s => (s.last_price ?? Infinity) < lim); tags.push(`price <Rs.${lim}`) }
   }
 
   // Above / over price
-  const aboveMatch = !rangeMatch && p.match(/(?:above|over|more than)\s+(?:rs\.?|₹)?(\d+(?:\.\d+)?)/i)
+  const aboveMatch = !rangeMatch && p.match(/(?:above|over|more than)\s+(?:rs\.?|Rs.)?(\d+(?:\.\d+)?)/i)
   if (aboveMatch) {
     const lim = parseFloat(aboveMatch[1])
-    if (!isNaN(lim)) { stocks = stocks.filter(s => (s.last_price ?? 0) > lim); tags.push(`price >₹${lim}`) }
+    if (!isNaN(lim)) { stocks = stocks.filter(s => (s.last_price ?? 0) > lim); tags.push(`price >Rs.${lim}`) }
   }
 
   // ── Unsupported technical criteria ────────────────────────────────────────
@@ -81,7 +81,7 @@ function filterStocks(prompt: string, data: AnalysisResult): { stocks: ScoredSto
   if (tags.length === 0 && unsupported.length > 0) {
     return {
       stocks: [],
-      reply: `I can't filter by ${unsupported.join(' / ')}. I can filter by: price range (₹X to ₹Y), sector, cap size, BUY/WATCH/AVOID signal, RS momentum, and AI score. Use the chart icon on any stock for technical analysis.`,
+      reply: `I can't filter by ${unsupported.join(' / ')}. I can filter by: price range (Rs.X to Rs.Y), sector, cap size, BUY/WATCH/AVOID signal, RS momentum, and AI score. Use the chart icon on any stock for technical analysis.`,
     }
   }
 

@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { ArrowLeft, BarChart2, Bot, BookOpen, X, Sparkles } from 'lucide-react'
+import { ArrowLeft, BarChart2, Bot, BookOpen, X, Sparkles, MessageCircle } from 'lucide-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StocksHeader } from './components/StocksHeader'
 import { TopStocksBucket } from './components/TopStocksBucket'
 import { HoldingsBucket } from './components/HoldingsBucket'
 import { StockChatbot } from './components/StockChatbot'
 import type { ScoredStock } from './components/StockChatbot'
+import { GeneralChatbot } from './components/GeneralChatbot'
 import { EventsCalendar } from './components/EventsCalendar'
 import { LogEntryModal, TradeLogPanel } from './components/TradeLog'
 import type { TradeLogEntry } from './components/TradeLog'
@@ -15,6 +16,7 @@ const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWin
 export function StocksPage() {
   const [chatbotOpen, setChatbotOpen]   = useState(false)
   const [tradeLogOpen, setTradeLogOpen] = useState(false)
+  const [aiChatOpen, setAiChatOpen]     = useState(false)
   const [chatbotPicks, setChatbotPicks] = useState<ScoredStock[]>([])
   const [pendingLog, setPendingLog]     = useState<{ symbol: string; price: number; action: 'buy' | 'watchlist' } | null>(null)
   const [tradeLogKey, setTradeLogKey]   = useState(0)
@@ -69,6 +71,13 @@ export function StocksPage() {
             >
               <BookOpen size={11} />
               Trade Log
+            </button>
+            <button
+              onClick={() => setAiChatOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors border bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/25 hover:bg-[#22c55e]/20"
+            >
+              <MessageCircle size={11} />
+              AI Chat
             </button>
           </div>
         </div>
@@ -154,6 +163,28 @@ export function StocksPage() {
             <div className="flex-1 overflow-y-auto">
               <TradeLogPanel refreshKey={tradeLogKey} />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── AI Chat popup (centered modal) ── */}
+      {aiChatOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setAiChatOpen(false)}>
+          <div
+            className="bg-[#060d1a] border border-[#1e3a5f] rounded-xl w-[380px] max-w-[95vw] flex flex-col shadow-2xl"
+            style={{ height: '75vh' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#1e293b] bg-[#0a1628] rounded-t-xl shrink-0">
+              <div className="flex items-center gap-2">
+                <MessageCircle size={11} className="text-[#22c55e]" />
+                <span className="text-white text-[11px] font-bold">AI Trading Assistant</span>
+              </div>
+              <button onClick={() => setAiChatOpen(false)} className="text-[#64748b] hover:text-white transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+            <GeneralChatbot />
           </div>
         </div>
       )}

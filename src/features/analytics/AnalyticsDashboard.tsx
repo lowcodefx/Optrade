@@ -6,7 +6,7 @@ import { usePositions } from '@/core/hooks/useMarketData'
 import type { TradeEntry } from '@/core/types/discipline'
 
 function formatCur(n: number) {
-  return (n >= 0 ? '+' : '') + '₹' + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 })
+  return (n >= 0 ? '+' : '') + 'Rs.' + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 })
 }
 
 function StatCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
@@ -48,7 +48,7 @@ function DailyPnLChart({ entries }: { entries: TradeEntry[] }) {
               <div
                 className={`w-full rounded-t ${isPos ? 'bg-[#22c55e]' : 'bg-[#ef4444]'}`}
                 style={{ height: h }}
-                title={`${date}: ₹${pnl.toFixed(0)}`}
+                title={`${date}: Rs.${pnl.toFixed(0)}`}
               />
               <div className="text-[8px] text-[#475569] leading-none">{label}</div>
             </div>
@@ -191,7 +191,7 @@ function TradeRow({ e }: { e: TradeEntry }) {
       <span className="text-[#475569] w-10 shrink-0">{e.date.slice(5)}</span>
       <span className={`font-bold shrink-0 w-8 ${e.optionType === 'CE' ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>{e.optionType}</span>
       <span className="text-white shrink-0">{e.strike}</span>
-      <span className="text-[#64748b] shrink-0">₹{e.entryPrice}→₹{e.exitPrice}</span>
+      <span className="text-[#64748b] shrink-0">Rs.{e.entryPrice}→Rs.{e.exitPrice}</span>
       <span className={`ml-auto font-bold ${pnlColor}`}>{formatCur(e.pnl)}</span>
       <span className={`shrink-0 text-[9px] px-1.5 py-0.5 rounded font-bold ${
         e.result === 'WIN' ? 'bg-[#0d2b0d] text-[#22c55e]' :
@@ -262,7 +262,7 @@ export function AnalyticsDashboard() {
           <div className="bg-[#0a1628] border border-[#22c55e]/30 rounded p-3 text-center">
             <div className="text-[9px] text-[#64748b] uppercase mb-1">Available</div>
             <div className="text-[#22c55e] font-bold text-base">
-              ₹{availableMargin >= 100000
+              Rs.{availableMargin >= 100000
                 ? `${(availableMargin / 100000).toFixed(2)}L`
                 : `${(availableMargin / 1000).toFixed(1)}K`}
             </div>
@@ -270,7 +270,7 @@ export function AnalyticsDashboard() {
           <div className="bg-[#0a1628] border border-[#f59e0b]/30 rounded p-3 text-center">
             <div className="text-[9px] text-[#64748b] uppercase mb-1">Used Margin</div>
             <div className="text-[#f59e0b] font-bold text-base">
-              ₹{usedMargin >= 100000
+              Rs.{usedMargin >= 100000
                 ? `${(usedMargin / 100000).toFixed(2)}L`
                 : `${(usedMargin / 1000).toFixed(1)}K`}
             </div>
@@ -278,7 +278,7 @@ export function AnalyticsDashboard() {
           <div className={`bg-[#0a1628] border rounded p-3 text-center ${openPnL >= 0 ? 'border-[#22c55e]/30' : 'border-[#ef4444]/30'}`}>
             <div className="text-[9px] text-[#64748b] uppercase mb-1">Open P&L</div>
             <div className={`font-bold text-base ${openPnL >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-              {openPnL >= 0 ? '+' : ''}₹{Math.abs(openPnL).toFixed(0)}
+              {openPnL >= 0 ? '+' : ''}Rs.{Math.abs(openPnL).toFixed(0)}
             </div>
           </div>
         </div>
@@ -289,7 +289,7 @@ export function AnalyticsDashboard() {
         <div>
           <div className="text-[9px] text-[#64748b] uppercase mb-0.5">Today's Realised P&L</div>
           <div className={`text-xl font-bold ${todayPnL >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-            {todayPnL >= 0 ? '+' : ''}₹{Math.abs(todayPnL).toLocaleString('en-IN')}
+            {todayPnL >= 0 ? '+' : ''}Rs.{Math.abs(todayPnL).toLocaleString('en-IN')}
           </div>
         </div>
         <div className="text-right">
@@ -310,13 +310,13 @@ export function AnalyticsDashboard() {
         />
         <StatCard
           label="Avg Win"
-          value={`₹${Math.round(stats!.avgWin)}`}
+          value={`Rs.${Math.round(stats!.avgWin)}`}
           sub={`${stats!.wins} wins`}
           color="text-[#22c55e]"
         />
         <StatCard
           label="Avg Loss"
-          value={`₹${Math.round(Math.abs(stats!.avgLoss))}`}
+          value={`Rs.${Math.round(Math.abs(stats!.avgLoss))}`}
           sub={`${stats!.losses} losses`}
           color="text-[#ef4444]"
         />
@@ -333,11 +333,11 @@ export function AnalyticsDashboard() {
         <WinRateRing wins={stats!.wins} losses={stats!.losses} />
         <div className="space-y-1 text-right">
           <div className="text-[9px] text-[#64748b] uppercase">Best Trade</div>
-          <div className="text-[#22c55e] font-bold text-sm">₹{stats!.best.pnl.toFixed(0)}</div>
+          <div className="text-[#22c55e] font-bold text-sm">Rs.{stats!.best.pnl.toFixed(0)}</div>
           <div className="text-[9px] text-[#475569]">{stats!.best.strike} {stats!.best.optionType} · {stats!.best.date}</div>
           <div className="h-px bg-[#1e293b] my-1" />
           <div className="text-[9px] text-[#64748b] uppercase">Worst Trade</div>
-          <div className="text-[#ef4444] font-bold text-sm">₹{stats!.worst.pnl.toFixed(0)}</div>
+          <div className="text-[#ef4444] font-bold text-sm">Rs.{stats!.worst.pnl.toFixed(0)}</div>
           <div className="text-[9px] text-[#475569]">{stats!.worst.strike} {stats!.worst.optionType} · {stats!.worst.date}</div>
         </div>
       </div>

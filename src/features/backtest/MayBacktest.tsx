@@ -9,7 +9,7 @@ import { Play, AlertCircle } from 'lucide-react'
 
 const LOT_SIZE   = 65
 const DELTA      = 0.5
-const PL_FACTOR  = LOT_SIZE * DELTA  // ₹37.5 per NIFTY point per lot
+const PL_FACTOR  = LOT_SIZE * DELTA  // Rs.37.5 per NIFTY point per lot
 const INITIAL_CAPITAL = 30_000
 
 // ── types ─────────────────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ export function MayBacktest() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-[#e2e8f0] text-xs font-semibold">May 2026 Backtest</h3>
-          <p className="text-[#475569] text-[9px]">Pivot R1/S1 breakout · 1 lot (75) · Capital ₹{fmt(INITIAL_CAPITAL)} · Delta 0.5</p>
+          <p className="text-[#475569] text-[9px]">Pivot R1/S1 breakout · 1 lot (75) · Capital Rs.{fmt(INITIAL_CAPITAL)} · Delta 0.5</p>
         </div>
         <button
           onClick={run} disabled={loading}
@@ -164,8 +164,8 @@ export function MayBacktest() {
             <StatCard label="Win Rate"        value={`${winRate.toFixed(0)}%`} sub={`${wins.length} of ${trades.length}`} />
             <StatCard
               label="Net P&L"
-              value={`₹${sign(totalPnl)}`}
-              sub={`${returnPct}% return on ₹${fmt(INITIAL_CAPITAL)}`}
+              value={`Rs.${sign(totalPnl)}`}
+              sub={`${returnPct}% return on Rs.${fmt(INITIAL_CAPITAL)}`}
               color={totalPnl >= 0 ? '#22c55e' : '#ef4444'}
             />
           </div>
@@ -174,26 +174,26 @@ export function MayBacktest() {
           <div className="bg-[#0d1f3c] border border-[#1e3a5f] rounded p-3 flex items-center justify-between">
             <div>
               <div className="text-[#64748b] text-[9px]">Starting Capital</div>
-              <div className="text-white text-sm font-bold">₹{fmt(INITIAL_CAPITAL)}</div>
+              <div className="text-white text-sm font-bold">Rs.{fmt(INITIAL_CAPITAL)}</div>
             </div>
             <div className="text-[#475569] text-sm">→</div>
             <div className="text-right">
               <div className="text-[#64748b] text-[9px]">End of May</div>
-              <div className={`text-sm font-bold ${finalCap >= INITIAL_CAPITAL ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>₹{fmt(finalCap)}</div>
+              <div className={`text-sm font-bold ${finalCap >= INITIAL_CAPITAL ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>Rs.{fmt(finalCap)}</div>
             </div>
             <div className="text-right">
               <div className="text-[#64748b] text-[9px]">Best Day</div>
-              <div className="text-[#22c55e] text-xs font-semibold">{bestDay ? `+₹${fmt(bestDay.pnl)} (${bestDay.label})` : '—'}</div>
+              <div className="text-[#22c55e] text-xs font-semibold">{bestDay ? `+Rs.${fmt(bestDay.pnl)} (${bestDay.label})` : '—'}</div>
             </div>
             <div className="text-right">
               <div className="text-[#64748b] text-[9px]">Worst Day</div>
-              <div className="text-[#ef4444] text-xs font-semibold">{worstDay ? `₹${fmt(worstDay.pnl)} (${worstDay.label})` : '—'}</div>
+              <div className="text-[#ef4444] text-xs font-semibold">{worstDay ? `Rs.${fmt(worstDay.pnl)} (${worstDay.label})` : '—'}</div>
             </div>
           </div>
 
           {/* Daily P&L bar chart */}
           <div>
-            <div className="text-[#64748b] text-[9px] mb-1 uppercase tracking-widest">Daily P&L (₹)</div>
+            <div className="text-[#64748b] text-[9px] mb-1 uppercase tracking-widest">Daily P&L (Rs.)</div>
             <ResponsiveContainer width="100%" height={110}>
               <BarChart data={trades} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                 <XAxis dataKey="label" tick={{ fontSize: 7, fill: '#475569' }} />
@@ -203,7 +203,7 @@ export function MayBacktest() {
                   contentStyle={{ background: '#0a1628', border: '1px solid #1e3a5f', borderRadius: 4, fontSize: 10 }}
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formatter={(v: number, _: string, item: any) => [
-                    `₹${sign(v as number)}  (${item?.payload?.signal ?? ''})`,
+                    `Rs.${sign(v as number)}  (${item?.payload?.signal ?? ''})`,
                     item?.payload?.outcome ?? '',
                   ]}
                 />
@@ -217,7 +217,7 @@ export function MayBacktest() {
 
           {/* Capital growth line chart */}
           <div>
-            <div className="text-[#64748b] text-[9px] mb-1 uppercase tracking-widest">Capital Growth (₹)</div>
+            <div className="text-[#64748b] text-[9px] mb-1 uppercase tracking-widest">Capital Growth (Rs.)</div>
             <ResponsiveContainer width="100%" height={90}>
               <LineChart
                 data={[{ label: 'Start', capital: INITIAL_CAPITAL }, ...results]}
@@ -226,11 +226,11 @@ export function MayBacktest() {
                 <CartesianGrid strokeDasharray="2 4" stroke="#1e293b" />
                 <XAxis dataKey="label" tick={{ fontSize: 7, fill: '#475569' }} />
                 <YAxis tick={{ fontSize: 7, fill: '#475569' }} width={52}
-                  tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`}
+                  tickFormatter={v => `Rs.${(v / 1000).toFixed(0)}k`}
                   domain={['auto', 'auto']} />
                 <Tooltip
                   contentStyle={{ background: '#0a1628', border: '1px solid #1e3a5f', borderRadius: 4, fontSize: 10 }}
-                  formatter={(v: number) => [`₹${fmt(v)}`, 'Capital']}
+                  formatter={(v: number) => [`Rs.${fmt(v)}`, 'Capital']}
                 />
                 <ReferenceLine y={INITIAL_CAPITAL} stroke="#475569" strokeDasharray="4 3" />
                 <Line type="monotone" dataKey="capital" stroke="#38bdf8" dot={false} strokeWidth={1.5} />
@@ -268,7 +268,7 @@ export function MayBacktest() {
                     {d.outcome === 'NO_TRADE' ? '—' : d.outcome}
                   </span>
                   <span className={`text-right font-mono font-semibold ${d.pnl > 0 ? 'text-[#22c55e]' : d.pnl < 0 ? 'text-[#ef4444]' : 'text-[#475569]'}`}>
-                    {d.pnl === 0 ? '—' : `₹${sign(d.pnl)}`}
+                    {d.pnl === 0 ? '—' : `Rs.${sign(d.pnl)}`}
                   </span>
                 </div>
               ))}

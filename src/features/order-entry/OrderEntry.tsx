@@ -309,14 +309,14 @@ export function OrderEntry() {
         {/* Limit Price + SL */}
         <div className="flex gap-2">
           <div className="flex-1">
-            <div className="text-[#38bdf8] text-[9px] mb-1">Limit Price ₹</div>
+            <div className="text-[#38bdf8] text-[9px] mb-1">Limit Price Rs.</div>
             <input type="number" value={limitPrice || premium || ''}
               onChange={e => setLimitPrice(Number(e.target.value))}
               className="w-full bg-[#060d1a] border border-[#1e3a5f] rounded px-2 py-1.5 text-white text-xs"
               placeholder="0.00" />
           </div>
           <div className="flex-1">
-            <div className="text-[#ef4444] text-[9px] mb-1">Stop Loss ₹</div>
+            <div className="text-[#ef4444] text-[9px] mb-1">Stop Loss Rs.</div>
             <input type="number" value={stopLoss || ''}
               onChange={e => setStopLoss(Number(e.target.value))}
               className="w-full bg-[#060d1a] border border-[#ef4444]/40 rounded px-2 py-1.5 text-white text-xs"
@@ -328,7 +328,7 @@ export function OrderEntry() {
         <div className="bg-[#132036] rounded px-3 py-2 flex justify-between items-center">
           <div>
             <span className="text-[#64748b] text-[9px]">Premium</span>
-            <span className="ml-2 text-[#38bdf8] text-base font-bold">₹{premium.toFixed(2)}</span>
+            <span className="ml-2 text-[#38bdf8] text-base font-bold">Rs.{premium.toFixed(2)}</span>
           </div>
           <div className="text-right">
             <span className="text-[#64748b] text-[9px]">R:R</span>

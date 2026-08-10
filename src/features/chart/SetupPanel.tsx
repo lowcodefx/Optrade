@@ -61,10 +61,10 @@ export function SetupPanel({ setup, onDismiss }: Props) {
 
       <div className="grid grid-cols-4 gap-2 mb-2">
         {[
-          { label: 'Entry (NIFTY)', value: formatNumber(setup.entry, 0), sub: `Option: ₹${setup.optionEntry}`, color: '#22c55e', border: '#22c55e' },
-          { label: 'Stop Loss',    value: formatNumber(setup.sl, 0),    sub: `Option SL: ₹${setup.optionSL}`,    color: '#ef4444', border: '#ef4444' },
-          { label: 'Target',       value: formatNumber(setup.target, 0), sub: `Option TGT: ₹${setup.optionTarget}`, color: '#38bdf8', border: '#38bdf8' },
-          { label: 'Risk : Reward', value: `1 : ${setup.rr}`, sub: `Risk ₹1,500 → ₹${Math.round(1500 * setup.rr)}`, color: '#a855f7', border: '#a855f7' },
+          { label: 'Entry (NIFTY)', value: formatNumber(setup.entry, 0), sub: `Option: Rs.${setup.optionEntry}`, color: '#22c55e', border: '#22c55e' },
+          { label: 'Stop Loss',    value: formatNumber(setup.sl, 0),    sub: `Option SL: Rs.${setup.optionSL}`,    color: '#ef4444', border: '#ef4444' },
+          { label: 'Target',       value: formatNumber(setup.target, 0), sub: `Option TGT: Rs.${setup.optionTarget}`, color: '#38bdf8', border: '#38bdf8' },
+          { label: 'Risk : Reward', value: `1 : ${setup.rr}`, sub: `Risk Rs.1,500 → Rs.${Math.round(1500 * setup.rr)}`, color: '#a855f7', border: '#a855f7' },
         ].map(card => (
           <div key={card.label} className="bg-[#0a1628] rounded p-2" style={{ borderLeft: `2px solid ${card.border}` }}>
             <div className="text-[#64748b] text-[8px] uppercase tracking-wider mb-0.5">{card.label}</div>

@@ -7,8 +7,8 @@ const tooltip = {
   what: 'Suggests ATM and ITM options aligned with market prediction.',
   why: 'ATM/ITM options have higher delta (0.5–0.9) so they gain value faster on NIFTY moves.',
   how: 'Click any card to auto-fill Order Entry. CE options shown when BULLISH, PE when BEARISH.',
-  bullish: 'ATM/ITM CE options move ₹0.50–₹0.90 per NIFTY point.',
-  bearish: 'ATM/ITM PE options move ₹0.50–₹0.90 per NIFTY point.',
+  bullish: 'ATM/ITM CE options move Rs.0.50–Rs.0.90 per NIFTY point.',
+  bearish: 'ATM/ITM PE options move Rs.0.50–Rs.0.90 per NIFTY point.',
 }
 
 interface Candidate {
@@ -62,12 +62,12 @@ function OptionCard({ c }: CardProps) {
       <div className={`text-[9px] font-bold mb-1 ${labelColor}`}>{label}</div>
       <div className="text-white text-xs font-bold">{strike.strike} {side.toUpperCase()}</div>
       <div className={`text-sm font-bold ${hasLtp ? 'text-[#38bdf8]' : 'text-[#475569]'}`}>
-        {hasLtp ? `₹${data.ltp.toFixed(2)}` : 'No quote'}
+        {hasLtp ? `Rs.${data.ltp.toFixed(2)}` : 'No quote'}
       </div>
       <div className="grid grid-cols-2 gap-x-2 mt-1.5 text-[9px] text-[#64748b]">
         <span>Δ {data.delta.toFixed(2)}</span>
         <span>IV {data.iv}%</span>
-        <span>SL ₹{Math.max(0, data.ltp - 20).toFixed(0)}</span>
+        <span>SL Rs.{Math.max(0, data.ltp - 20).toFixed(0)}</span>
         <span>OI {data.oiChange > 0 ? <span className="text-[#22c55e]">↑</span> : <span className="text-[#ef4444]">↓</span>}</span>
       </div>
     </div>

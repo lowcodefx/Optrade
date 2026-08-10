@@ -29,15 +29,15 @@ export function Settings({ onClose }: Props) {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <p className="text-[9px] text-[#475569] mb-0.5">Available</p>
-                  <p className="text-[#22c55e] font-bold text-sm">₹{availableMargin.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                  <p className="text-[#22c55e] font-bold text-sm">Rs.{availableMargin.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                 </div>
                 <div>
                   <p className="text-[9px] text-[#475569] mb-0.5">Used</p>
-                  <p className="text-[#f59e0b] font-bold text-sm">₹{usedMargin.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                  <p className="text-[#f59e0b] font-bold text-sm">Rs.{usedMargin.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                 </div>
                 <div>
                   <p className="text-[9px] text-[#475569] mb-0.5">Net</p>
-                  <p className="text-white font-bold text-sm">₹{netMargin.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                  <p className="text-white font-bold text-sm">Rs.{netMargin.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                 </div>
               </div>
             </section>
@@ -48,9 +48,9 @@ export function Settings({ onClose }: Props) {
             <h3 className="text-[#64748b] text-[10px] uppercase tracking-widest mb-3">Risk Management</h3>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { label: 'Capital (₹)', value: s.capital, set: s.setCapital, step: 10000 },
+                { label: 'Capital (Rs.)', value: s.capital, set: s.setCapital, step: 10000 },
                 { label: 'Risk Per Trade (%)', value: s.riskPerTrade, set: s.setRiskPerTrade, step: 0.5 },
-                { label: 'Max Daily Loss (₹)', value: s.maxDailyLoss, set: s.setMaxDailyLoss, step: 500 },
+                { label: 'Max Daily Loss (Rs.)', value: s.maxDailyLoss, set: s.setMaxDailyLoss, step: 500 },
                 { label: 'Max Trades / Day', value: s.maxTradesPerDay, set: s.setMaxTradesPerDay, step: 1 },
                 { label: 'Max Consecutive Losses', value: s.maxConsecutiveLosses, set: s.setMaxConsecutiveLosses, step: 1 },
                 { label: 'Min Trade Score', value: s.minTradeScore, set: s.setMinTradeScore, step: 5 },

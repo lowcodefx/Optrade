@@ -139,7 +139,7 @@ export function AddTradeModal({ onClose }: Props) {
           <div className={`text-center py-2 rounded ${pnl >= 0 ? 'bg-[#0a1f0a]' : 'bg-[#1a0a0a]'}`}>
             <span className="text-[10px] text-[#475569]">Calculated P&L · </span>
             <span className={`text-sm font-bold ${pnl >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-              {pnl >= 0 ? '+' : ''}₹{Math.round(pnl).toLocaleString('en-IN')}
+              {pnl >= 0 ? '+' : ''}Rs.{Math.round(pnl).toLocaleString('en-IN')}
             </span>
             <span className="text-[9px] text-[#334155] ml-1">({form.lots} lot{form.lots > 1 ? 's' : ''} × {LOT_SIZE})</span>
           </div>

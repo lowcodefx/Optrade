@@ -74,10 +74,10 @@ export function OrderHistory() {
                   <span>Qty: <span className="text-white">{order.quantity}</span></span>
                   <span>Type: <span className="text-white">{order.orderType}</span></span>
                   {order.price > 0 && (
-                    <span>Price: <span className="text-white">₹{order.price.toFixed(2)}</span></span>
+                    <span>Price: <span className="text-white">Rs.{order.price.toFixed(2)}</span></span>
                   )}
                   {order.averagePrice > 0 && order.status === 'COMPLETE' && (
-                    <span>Avg: <span className="text-[#22c55e] font-semibold">₹{order.averagePrice.toFixed(2)}</span></span>
+                    <span>Avg: <span className="text-[#22c55e] font-semibold">Rs.{order.averagePrice.toFixed(2)}</span></span>
                   )}
                   <span className="ml-auto">{order.orderTimestamp.slice(11, 16)}</span>
                 </div>
