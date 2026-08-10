@@ -1,4 +1,4 @@
-require('dotenv').config()   // loads ~/optrade-api/.env on the VM
+try { require('dotenv').config() } catch {}   // loads .env on VM; no-op if dotenv not yet installed
 const express = require('express')
 const cors    = require('cors')
 
