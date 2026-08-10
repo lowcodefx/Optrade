@@ -392,7 +392,7 @@ function InfoModal({ stock, onClose }: { stock: StockScore; onClose: () => void 
               <p className="text-[#64748b] text-[9px] leading-snug">{a.title}</p>
               <div className="flex items-center gap-2">
                 <span className="text-[#64748b] text-[8px]">{a.source}</span>
-                <span className="text-[#64748b] text-[8px]">Â· {timeAgo(a.publishedAt)}</span>
+                <span className="text-[#64748b] text-[8px]">&middot; {timeAgo(a.publishedAt)}</span>
               </div>
             </div>
           ))}
@@ -497,7 +497,7 @@ function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter, on
         </div>
       )}
       <div className="flex items-center px-3 py-1.5 border-b border-[#0f1f35] bg-[#060d1a]">
-        <span className="text-[8px] text-[#64748b] flex-1">Symbol Â· Price Â· RS</span>
+        <span className="text-[8px] text-[#64748b] flex-1">Symbol &middot; Price &middot; RS</span>
         <span className="text-[8px] text-[#64748b]">Score  Chart  Save  Info</span>
       </div>
       {top10.length === 0 && (
@@ -828,7 +828,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
                 {buyLoading ? 'Placingâ€¦' : 'Confirm Buy'}
               </button>
             </div>
-            <p className="text-[7px] text-[#64748b] text-center mt-2">CNC Â· LIMIT Â· NSE Â· DAY</p>
+            <p className="text-[7px] text-[#64748b] text-center mt-2">CNC &middot; LIMIT &middot; NSE &middot; DAY</p>
           </div>
         </div>
       )}

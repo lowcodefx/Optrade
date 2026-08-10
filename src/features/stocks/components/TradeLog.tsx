@@ -117,7 +117,7 @@ export function TradeLogPanel({ refreshKey }: { refreshKey: number }) {
             </button>
             <div className="flex items-center gap-1 mb-0.5">
               <span className="text-[9px] font-bold text-white">{e.symbol}</span>
-              <span className="text-[7px] text-[#64748b]">Â·</span>
+              <span className="text-[7px] text-[#64748b]">&middot;</span>
               <span className={`text-[7px] font-semibold ${e.action === 'buy' ? 'text-[#22c55e]' : 'text-[#38bdf8]'}`}>
                 {e.action === 'buy' ? 'CNC Buy' : 'Watchlist'}
               </span>

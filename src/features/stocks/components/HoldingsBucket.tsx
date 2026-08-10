@@ -224,17 +224,19 @@ export function HoldingsBucket() {
           todayBuys.set(t.tradingsymbol, t.order_timestamp.slice(0, 10))
         }
       }
+      const today = new Date().toISOString().slice(0, 10)
       let changed = false
       const next = { ...buyDates }
       for (const h of missing) {
         if (todayBuys.has(h.tradingsymbol)) {
           next[h.tradingsymbol] = todayBuys.get(h.tradingsymbol)!
-          changed = true
         } else if ((h.t1_quantity ?? 0) > 0) {
-          // T+1 means bought on the previous trading day
           next[h.tradingsymbol] = prevTradingDay()
-          changed = true
+        } else {
+          // No history available — stamp today so the counter starts now
+          next[h.tradingsymbol] = today
         }
+        changed = true
       }
       if (changed) { saveBuyDates(next); setBuyDates(next) }
     })
@@ -292,7 +294,7 @@ export function HoldingsBucket() {
           <div className="flex items-center gap-1.5">
             <h2 className="text-[#e2e8f0] text-xs font-bold">My Holdings</h2>
           </div>
-          <p className="text-[#64748b] text-[8px]">Live Â· refreshes every 60s</p>
+          <p className="text-[#64748b] text-[8px]">Live &middot; refreshes every 60s</p>
         </div>
         <button onClick={() => refetch()} disabled={isFetching} className="text-[#475569] hover:text-[#94a3b8] disabled:opacity-40">
           <RefreshCw size={11} className={isFetching ? 'animate-spin' : ''} />
@@ -369,7 +371,7 @@ export function HoldingsBucket() {
                   <ColHeader label="CMP"          sortKey="price"  current={sortKey} dir={sortDir} onSort={toggleSort} />
                   <th className="px-2 py-2 text-left text-[8px] font-bold uppercase tracking-widest text-[#475569] whitespace-nowrap">Avg. Buy</th>
                   <th className="px-2 py-2 text-left text-[8px] font-bold uppercase tracking-widest text-[#475569] whitespace-nowrap">Qty</th>
-                  <ColHeader label="P&L Â· Range"  sortKey="pnl"    current={sortKey} dir={sortDir} onSort={toggleSort} />
+                  <ColHeader label="P&L &middot; Range"  sortKey="pnl"    current={sortKey} dir={sortDir} onSort={toggleSort} />
                   <ColHeader label="Achieved R:R" sortKey="rr"     current={sortKey} dir={sortDir} onSort={toggleSort} />
                   <ColHeader label="Day P&L"      sortKey="day"    current={sortKey} dir={sortDir} onSort={toggleSort} />
                   <th className="px-2 py-2 text-left text-[8px] font-bold uppercase tracking-widest text-[#475569] whitespace-nowrap">Status</th>
@@ -390,7 +392,7 @@ export function HoldingsBucket() {
                       </td>
                       <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">{r.h.average_price.toLocaleString('en-IN')}</td>
                       <td className="px-2 py-2 text-[#94a3b8] whitespace-nowrap">{r.h.quantity}</td>
-                      {/* P&L Â· center-anchored dual bar (loss=redâ†, profit=â†’green) */}
+                      {/* P&L &middot; center-anchored dual bar (loss=redâ†, profit=â†’green) */}
                       <td className="px-2 py-2 whitespace-nowrap" style={{ minWidth: 210 }}>
                         <div className="flex items-center gap-1">
                           <span className="text-[7px] text-[#ef4444] shrink-0">-{((r.h.average_price - r.slPrice) * r.h.quantity).toFixed(0)}</span>
