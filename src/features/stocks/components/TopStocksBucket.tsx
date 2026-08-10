@@ -1,6 +1,7 @@
 ﻿import { useState, useRef, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { API_BASE, kiteAuthHeaders } from '@/core/services/apiClient'
+import { useSettingsStore } from '@/core/store'
 import { ChevronDown, ChevronRight, Info, RefreshCw, Bookmark, BookmarkCheck, Flame, Newspaper, LineChart, ShoppingCart, Bot } from 'lucide-react'
 import { SECTOR_STOCKS, SECTOR_COLORS } from '../stockSectors'
 import type { ScoredStock as ChatbotStock } from './StockChatbot'
@@ -575,6 +576,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
   onLogEntry?: (symbol: string, price: number, action: 'buy') => void
   chatbotPicks?: ChatbotStock[]
 }) {
+  const { maxPerStock } = useSettingsStore()
   const [tab, setTab]                   = useState<Tab>('top10')
   const [selectedSector, setSelectedSector] = useState<string | null>(null)
   const [buyStock, setBuyStock]         = useState<{ symbol: string; price: number } | null>(null)
@@ -587,8 +589,9 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
   const autoCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleBuy = (symbol: string, price: number) => {
+    const suggestedQty = price > 0 ? Math.max(1, Math.floor(maxPerStock / price)) : 1
     setBuyStock({ symbol, price })
-    setBuyQty('1')
+    setBuyQty(String(suggestedQty))
     setBuyError(null)
     setBuySuccess(null)
   }
@@ -792,10 +795,27 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
                   className="flex-1 bg-[#060d1a] border border-[#1e293b] rounded px-2 py-1 text-white text-[10px] text-right focus:outline-none focus:border-[#38bdf8]"
                 />
               </div>
-              <div className="flex justify-between text-[10px]">
-                <span className="text-[#475569]">Order Value</span>
-                <span className="text-white font-semibold">Rs.{(buyStock.price * (parseInt(buyQty, 10) || 1)).toLocaleString('en-IN')}</span>
-              </div>
+              {(() => {
+                const orderValue = buyStock.price * (parseInt(buyQty, 10) || 1)
+                const overBudget = orderValue > maxPerStock * 1.2
+                const underBudget = orderValue < maxPerStock * 0.5
+                const valueColor = overBudget ? 'text-[#ef4444]' : underBudget ? 'text-[#f59e0b]' : 'text-[#22c55e]'
+                return (
+                  <>
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-[#475569]">Order Value</span>
+                      <span className={`font-semibold ${valueColor}`}>Rs.{orderValue.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-[#475569]">Budget limit</span>
+                      <span className="text-[#475569]">Rs.{maxPerStock.toLocaleString('en-IN')}</span>
+                    </div>
+                    {overBudget && (
+                      <p className="text-[8px] text-[#ef4444]">Order value exceeds budget limit — reduce quantity</p>
+                    )}
+                  </>
+                )
+              })()}
             </div>
             {buyError && <p className="text-[9px] text-[#ef4444] mb-2">{buyError}</p>}
             {buySuccess && <p className="text-[9px] text-[#22c55e] mb-2">Order placed - {buySuccess}</p>}

@@ -54,6 +54,7 @@ export function Settings({ onClose }: Props) {
                 { label: 'Max Trades / Day', value: s.maxTradesPerDay, set: s.setMaxTradesPerDay, step: 1 },
                 { label: 'Max Consecutive Losses', value: s.maxConsecutiveLosses, set: s.setMaxConsecutiveLosses, step: 1 },
                 { label: 'Min Trade Score', value: s.minTradeScore, set: s.setMinTradeScore, step: 5 },
+                { label: 'Max per Stock (Rs.)', value: s.maxPerStock, set: s.setMaxPerStock, step: 5000 },
               ].map(({ label, value, set, step }) => (
                 <div key={label}>
                   <label className="text-[#64748b] text-[10px] block mb-1">{label}</label>
