@@ -55,25 +55,17 @@ jobs:
           envs: NEWS_API_KEY,DB_SERVER,DB_NAME,DB_USER,DB_PASSWORD
           script: |
             ~/deploy.sh
-            ECO=~/optrade-api/ecosystem.config.js
-            update_env() {
-              local key=$1 val=$2
-              if grep -q "${key}:" "$ECO"; then
-                sed -i "s|${key}:.*|${key}: '${val}',|" "$ECO"
-              else
-                sed -i "s|ANTHROPIC_API_KEY:|${key}: '${val}',\n        ANTHROPIC_API_KEY:|" "$ECO"
-              fi
-            }
-            RESTART=0
-            [ -n "$NEWS_API_KEY" ] && update_env NEWS_API_KEY "$NEWS_API_KEY" && RESTART=1
-            [ -n "$DB_SERVER" ]    && update_env DB_SERVER    "$DB_SERVER"    && RESTART=1
-            [ -n "$DB_NAME" ]      && update_env DB_NAME      "$DB_NAME"      && RESTART=1
-            [ -n "$DB_USER" ]      && update_env DB_USER      "$DB_USER"      && RESTART=1
-            [ -n "$DB_PASSWORD" ]  && update_env DB_PASSWORD  "$DB_PASSWORD"  && RESTART=1
-            if [ "$RESTART" = "1" ]; then
-              pm2 delete optrade-api
-              cd ~/optrade-api && npm install && pm2 start ecosystem.config.js
-            fi
+            # Write secrets to .env file using printf (no shell metachar interpretation).
+            # Server loads this via dotenv at startup — secrets never enter sed/JS source.
+            ENV_FILE=~/optrade-api/.env
+            : > "$ENV_FILE" && chmod 600 "$ENV_FILE"
+            [ -n "$NEWS_API_KEY" ] && printf 'NEWS_API_KEY=%s\n' "$NEWS_API_KEY" >> "$ENV_FILE"
+            [ -n "$DB_SERVER" ]    && printf 'DB_SERVER=%s\n'    "$DB_SERVER"    >> "$ENV_FILE"
+            [ -n "$DB_NAME" ]      && printf 'DB_NAME=%s\n'      "$DB_NAME"      >> "$ENV_FILE"
+            [ -n "$DB_USER" ]      && printf 'DB_USER=%s\n'      "$DB_USER"      >> "$ENV_FILE"
+            [ -n "$DB_PASSWORD" ]  && printf 'DB_PASSWORD=%s\n'  "$DB_PASSWORD"  >> "$ENV_FILE"
+            pm2 delete optrade-api 2>/dev/null || true
+            cd ~/optrade-api && npm install && pm2 start ecosystem.config.js
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -86,3 +78,4 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_BLACK_POND_09BBB5B00 }}
           action: "close"
+          app_location: "/"

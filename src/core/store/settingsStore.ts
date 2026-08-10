@@ -19,7 +19,6 @@ interface SettingsState {
   apiKey: string
   apiSecret: string
   accessToken: string
-  userId: string        // Zerodha user_id (e.g. "ZE1234"), set after login
   minTradeScore: number
 
   // Email alert settings (credentials stored in Azure App Settings, not here)
@@ -36,7 +35,6 @@ interface SettingsState {
   setApiKey: (v: string) => void
   setApiSecret: (v: string) => void
   setAccessToken: (v: string) => void
-  setUserId: (v: string) => void
   setMinTradeScore: (v: number) => void
   setEnableEmailAlerts: (v: boolean) => void
   setEmailAlertOnOpportunity: (v: boolean) => void
@@ -55,7 +53,6 @@ export const useSettingsStore = create<SettingsState>()(
       apiKey: '',
       apiSecret: '',
       accessToken: getSessionToken(), // reads from sessionStorage on init
-      userId: '',
       minTradeScore: 60,
       enableEmailAlerts: false,
       emailAlertOnOpportunity: true,
@@ -70,7 +67,6 @@ export const useSettingsStore = create<SettingsState>()(
       setApiKey: (apiKey) => set({ apiKey }),
       setApiSecret: (apiSecret) => set({ apiSecret }),
       setAccessToken: (accessToken) => { setSessionToken(accessToken); set({ accessToken }) },
-      setUserId: (userId) => set({ userId }),
       setMinTradeScore: (minTradeScore) => set({ minTradeScore }),
       setEnableEmailAlerts: (enableEmailAlerts) => set({ enableEmailAlerts }),
       setEmailAlertOnOpportunity: (emailAlertOnOpportunity) => set({ emailAlertOnOpportunity }),

@@ -5,8 +5,7 @@ const router = Router()
 
 // GET /api/tradelog  →  [{ id, symbol, action, price, signal, note, trade_date, created_at }]
 router.get('/', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  if (!userId) return res.status(400).json({ error: 'X-User-Id header required' })
+  const userId = req.userId
   try {
     const pool = await poolPromise
     if (!pool) return res.status(503).json({ error: 'DB unavailable' })
@@ -26,8 +25,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/tradelog  body: { symbol, action, price, signal, note }
 router.post('/', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  if (!userId) return res.status(400).json({ error: 'X-User-Id header required' })
+  const userId = req.userId
   const { symbol, action, price, signal, note } = req.body
   if (!symbol || !action || price == null) return res.status(400).json({ error: 'symbol, action, price required' })
   try {
@@ -55,8 +53,7 @@ router.post('/', async (req, res) => {
 
 // DELETE /api/tradelog/:id
 router.delete('/:id', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  if (!userId) return res.status(400).json({ error: 'X-User-Id header required' })
+  const userId = req.userId
   const id = parseInt(req.params.id, 10)
   if (isNaN(id)) return res.status(400).json({ error: 'invalid id' })
   try {

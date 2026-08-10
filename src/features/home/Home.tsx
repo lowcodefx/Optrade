@@ -49,7 +49,7 @@ export function Home() {
 
   useEffect(() => {
     if (accessToken) {
-      fetchUserProfile().then(({ name }) => setUserName(name))
+      fetchUserProfile().then(name => setUserName(name))
     } else {
       setUserName('')
     }

@@ -5,8 +5,7 @@ const router = Router()
 
 // GET /api/watchlist  →  ["INFY", "TCS", ...]
 router.get('/', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  if (!userId) return res.status(400).json({ error: 'X-User-Id header required' })
+  const userId = req.userId
   try {
     const pool = await poolPromise
     if (!pool) return res.status(503).json({ error: 'DB unavailable' })
@@ -21,8 +20,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/watchlist  body: { symbol, price? }
 router.post('/', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  if (!userId) return res.status(400).json({ error: 'X-User-Id header required' })
+  const userId = req.userId
   const { symbol, price } = req.body
   if (!symbol) return res.status(400).json({ error: 'symbol required' })
   try {
@@ -44,8 +42,7 @@ router.post('/', async (req, res) => {
 
 // DELETE /api/watchlist/:symbol
 router.delete('/:symbol', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  if (!userId) return res.status(400).json({ error: 'X-User-Id header required' })
+  const userId = req.userId
   const { symbol } = req.params
   try {
     const pool = await poolPromise

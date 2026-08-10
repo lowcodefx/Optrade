@@ -25,8 +25,7 @@ export function kiteAuthHeaders(): Record<string, string> {
   })
 }
 
-// Returns headers for DB-backed routes (holdings, watchlist, tradelog)
+// Returns headers for DB-backed routes — identity derived server-side from Kite token
 export function dbHeaders(extra: Record<string, string> = {}): Record<string, string> {
-  const { userId } = useSettingsStore.getState()
-  return vmHeaders({ ...extra, ...(userId ? { 'X-User-Id': userId } : {}) })
+  return { ...kiteAuthHeaders(), ...extra }
 }

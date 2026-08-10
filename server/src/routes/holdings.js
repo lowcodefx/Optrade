@@ -5,8 +5,7 @@ const router = Router()
 
 // GET /api/holdings/buy-dates  →  { SYMBOL: "YYYY-MM-DD", ... }
 router.get('/buy-dates', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  if (!userId) return res.status(400).json({ error: 'X-User-Id header required' })
+  const userId = req.userId
   try {
     const pool = await poolPromise
     if (!pool) return res.status(503).json({ error: 'DB unavailable' })
@@ -25,8 +24,7 @@ router.get('/buy-dates', async (req, res) => {
 
 // POST /api/holdings/buy-date  body: { symbol, buyDate }
 router.post('/buy-date', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  if (!userId) return res.status(400).json({ error: 'X-User-Id header required' })
+  const userId = req.userId
   const { symbol, buyDate } = req.body
   if (!symbol || !buyDate) return res.status(400).json({ error: 'symbol and buyDate required' })
   try {
@@ -53,8 +51,7 @@ router.post('/buy-date', async (req, res) => {
 
 // DELETE /api/holdings/buy-date/:symbol
 router.delete('/buy-date/:symbol', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  if (!userId) return res.status(400).json({ error: 'X-User-Id header required' })
+  const userId = req.userId
   const { symbol } = req.params
   try {
     const pool = await poolPromise
