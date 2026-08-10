@@ -112,11 +112,15 @@ export function StocksPage() {
         </div>
       </div>
 
-      {/* ── Chat Bot popup (left-side drawer) ── */}
+      {/* ── Chat Bot popup (centered modal) ── */}
       {chatbotOpen && (
-        <div className="fixed inset-0 z-50 flex">
-          <div className="w-[320px] bg-[#0a1628] border-r border-[#1e3a5f] flex flex-col shadow-2xl">
-            <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#1e293b] bg-[#060d1a] shrink-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setChatbotOpen(false)}>
+          <div
+            className="bg-[#0a1628] border border-[#1e3a5f] rounded-xl w-[380px] max-w-[95vw] flex flex-col shadow-2xl"
+            style={{ height: '75vh' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#1e293b] bg-[#060d1a] rounded-t-xl shrink-0">
               <div className="flex items-center gap-2">
                 <Sparkles size={11} className="text-[#a78bfa]" />
                 <span className="text-white text-[11px] font-bold">Stock Assistant</span>
@@ -127,8 +131,6 @@ export function StocksPage() {
             </div>
             <StockChatbot onPicks={setChatbotPicks} />
           </div>
-          {/* Backdrop */}
-          <div className="flex-1 bg-black/40" onClick={() => setChatbotOpen(false)} />
         </div>
       )}
 
