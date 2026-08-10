@@ -209,12 +209,18 @@ export function HoldingsBucket() {
     retry: false,
   })
 
-  // Auto-infer buy dates from today's trades and T+1 settlement quantity
+  // Auto-infer buy dates from today's trades and T+1 settlement quantity.
+  // Also re-checks any stock whose stored date is today — if not confirmed by
+  // today's CNC trades or t1_quantity, the date is stale and gets cleared.
   const tradesFetchedRef = useRef(false)
   useEffect(() => {
     if (!rawHoldings?.length || tradesFetchedRef.current) return
-    const missing = rawHoldings.filter(h => !buyDates[h.tradingsymbol])
-    if (!missing.length) return
+    const today = new Date().toISOString().slice(0, 10)
+    const candidates = rawHoldings.filter(h => {
+      const stored = buyDates[h.tradingsymbol]
+      return !stored || stored === today   // unset OR suspicious "today" date
+    })
+    if (!candidates.length) return
 
     tradesFetchedRef.current = true
     fetchTodayTrades().then(trades => {
@@ -226,15 +232,19 @@ export function HoldingsBucket() {
       }
       let changed = false
       const next = { ...buyDates }
-      for (const h of missing) {
+      for (const h of candidates) {
+        const hadTodayDate = next[h.tradingsymbol] === today
         if (todayBuys.has(h.tradingsymbol)) {
-          next[h.tradingsymbol] = todayBuys.get(h.tradingsymbol)!
+          next[h.tradingsymbol] = todayBuys.get(h.tradingsymbol)!   // confirmed today buy
           changed = true
         } else if ((h.t1_quantity ?? 0) > 0) {
-          next[h.tradingsymbol] = prevTradingDay()
+          next[h.tradingsymbol] = prevTradingDay()                   // T+1 → bought yesterday
+          changed = true
+        } else if (hadTodayDate) {
+          delete next[h.tradingsymbol]                               // stale auto-stamp — clear
           changed = true
         }
-        // Older holdings: leave unset — user picks via inline date input
+        // No date, no evidence: leave unset — date picker shows in Age column
       }
       if (changed) { saveBuyDates(next); setBuyDates(next) }
     })
