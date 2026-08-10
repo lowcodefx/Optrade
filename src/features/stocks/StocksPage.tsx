@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ArrowLeft, BarChart2, Bot, BookOpen, X, Sparkles, MessageCircle } from 'lucide-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StocksHeader } from './components/StocksHeader'
@@ -10,6 +10,7 @@ import { GeneralChatbot } from './components/GeneralChatbot'
 import { EventsCalendar } from './components/EventsCalendar'
 import { LogEntryModal, TradeLogPanel } from './components/TradeLog'
 import type { TradeLogEntry } from './components/TradeLog'
+import { API_BASE, dbHeaders } from '@/core/services/apiClient'
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } })
 
@@ -20,17 +21,26 @@ export function StocksPage() {
   const [chatbotPicks, setChatbotPicks] = useState<ScoredStock[]>([])
   const [pendingLog, setPendingLog]     = useState<{ symbol: string; price: number; action: 'buy' | 'watchlist' } | null>(null)
   const [tradeLogKey, setTradeLogKey]   = useState(0)
-  const [watchlist, setWatchlist]       = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('sw_watchlist') ?? '[]') } catch { return [] }
-  })
+  const [watchlist, setWatchlist]       = useState<string[]>([])
+
+  // Load watchlist from DB on mount
+  useEffect(() => {
+    fetch(`${API_BASE}/api/watchlist`, { headers: dbHeaders() })
+      .then(r => r.ok ? r.json() : [])
+      .then(setWatchlist)
+      .catch(() => {})
+  }, [])
 
   function addToWatchlist(symbol: string, price?: number) {
     setWatchlist(prev => {
       if (prev.includes(symbol)) return prev
-      const next = [...prev, symbol]
-      localStorage.setItem('sw_watchlist', JSON.stringify(next))
+      fetch(`${API_BASE}/api/watchlist`, {
+        method: 'POST',
+        headers: dbHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ symbol, price: price ?? null }),
+      }).catch(() => {})
       setPendingLog({ symbol, price: price ?? 0, action: 'watchlist' })
-      return next
+      return [...prev, symbol]
     })
   }
 

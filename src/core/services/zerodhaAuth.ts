@@ -52,17 +52,20 @@ export async function fetchUserMargins(): Promise<{ available: number; used: num
   }
 }
 
-export async function fetchUserProfile(): Promise<string> {
+export async function fetchUserProfile(): Promise<{ name: string; userId: string }> {
   const { apiKey, accessToken } = useSettingsStore.getState()
-  if (!apiKey || !accessToken) return ''
+  if (!apiKey || !accessToken) return { name: '', userId: '' }
   try {
     const res = await fetch(`${API_BASE}/api/kite?kite_path=user/profile`, {
       headers: kiteAuthHeaders(),
     })
-    if (!res.ok) return ''
+    if (!res.ok) return { name: '', userId: '' }
     const json = await res.json()
-    return json.data?.user_name ?? json.data?.user_id ?? ''
+    const name   = json.data?.user_name ?? json.data?.user_id ?? ''
+    const userId = json.data?.user_id ?? ''
+    if (userId) useSettingsStore.getState().setUserId(userId)
+    return { name, userId }
   } catch {
-    return ''
+    return { name: '', userId: '' }
   }
 }

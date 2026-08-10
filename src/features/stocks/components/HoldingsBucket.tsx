@@ -1,17 +1,35 @@
 ﻿import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { kiteAuthHeaders, API_BASE } from '@/core/services/apiClient'
+import { kiteAuthHeaders, dbHeaders, API_BASE } from '@/core/services/apiClient'
 import { RefreshCw, ChevronDown, ChevronUp, ChevronsUpDown, CalendarDays } from 'lucide-react'
 
 // â”€â”€ Aging helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const BUY_DATES_KEY = 'sw_buy_dates'
-
-function loadBuyDates(): Record<string, string> {
-  try { return JSON.parse(localStorage.getItem(BUY_DATES_KEY) ?? '{}') } catch { return {} }
+async function apiFetchBuyDates(): Promise<Record<string, string>> {
+  try {
+    const res = await fetch(`${API_BASE}/api/holdings/buy-dates`, { headers: dbHeaders() })
+    if (!res.ok) return {}
+    return await res.json()
+  } catch { return {} }
 }
-function saveBuyDates(d: Record<string, string>) {
-  localStorage.setItem(BUY_DATES_KEY, JSON.stringify(d))
+
+async function apiSaveBuyDate(symbol: string, buyDate: string): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/api/holdings/buy-date`, {
+      method: 'POST',
+      headers: dbHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ symbol, buyDate }),
+    })
+  } catch {}
+}
+
+async function apiDeleteBuyDate(symbol: string): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/api/holdings/buy-date/${encodeURIComponent(symbol)}`, {
+      method: 'DELETE',
+      headers: dbHeaders(),
+    })
+  } catch {}
 }
 
 function daysHeld(symbol: string, buyDates: Record<string, string>): number | null {
@@ -200,7 +218,10 @@ export function HoldingsBucket() {
   const [bucket,  setBucket]  = useState<BucketFilter>('any')
   const [sortKey, setSortKey] = useState<SortKey>('pnl')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
-  const [buyDates, setBuyDates] = useState<Record<string, string>>(loadBuyDates)
+  const [buyDates, setBuyDates] = useState<Record<string, string>>({})
+
+  // Load buy dates from DB on mount
+  useEffect(() => { apiFetchBuyDates().then(setBuyDates) }, [])
 
   const { data: rawHoldings, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['stockHoldings'],
@@ -230,23 +251,24 @@ export function HoldingsBucket() {
           todayBuys.set(t.tradingsymbol, t.order_timestamp.slice(0, 10))
         }
       }
-      let changed = false
       const next = { ...buyDates }
+      const saves: Promise<void>[] = []
       for (const h of candidates) {
         const hadTodayDate = next[h.tradingsymbol] === today
         if (todayBuys.has(h.tradingsymbol)) {
-          next[h.tradingsymbol] = todayBuys.get(h.tradingsymbol)!   // confirmed today buy
-          changed = true
+          const d = todayBuys.get(h.tradingsymbol)!
+          next[h.tradingsymbol] = d
+          saves.push(apiSaveBuyDate(h.tradingsymbol, d))
         } else if ((h.t1_quantity ?? 0) > 0) {
-          next[h.tradingsymbol] = prevTradingDay()                   // T+1 → bought yesterday
-          changed = true
+          const d = prevTradingDay()
+          next[h.tradingsymbol] = d
+          saves.push(apiSaveBuyDate(h.tradingsymbol, d))
         } else if (hadTodayDate) {
-          delete next[h.tradingsymbol]                               // stale auto-stamp — clear
-          changed = true
+          delete next[h.tradingsymbol]
+          saves.push(apiDeleteBuyDate(h.tradingsymbol))
         }
-        // No date, no evidence: leave unset — date picker shows in Age column
       }
-      if (changed) { saveBuyDates(next); setBuyDates(next) }
+      if (saves.length) { Promise.all(saves).catch(() => {}); setBuyDates(next) }
     })
   }, [rawHoldings]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -460,7 +482,8 @@ export function HoldingsBucket() {
                                   onClick={() => {
                                     const next = { ...buyDates }
                                     delete next[sym]
-                                    setBuyDates(next); saveBuyDates(next)
+                                    setBuyDates(next)
+                                    apiDeleteBuyDate(sym)
                                   }}
                                   className="opacity-0 group-hover:opacity-100 text-[#334155] hover:text-[#ef4444] transition-all"
                                 >
@@ -478,7 +501,8 @@ export function HoldingsBucket() {
                                 onChange={e => {
                                   if (!e.target.value) return
                                   const next = { ...buyDates, [sym]: e.target.value }
-                                  setBuyDates(next); saveBuyDates(next)
+                                  setBuyDates(next)
+                                  apiSaveBuyDate(sym, e.target.value)
                                 }}
                               />
                             </label>

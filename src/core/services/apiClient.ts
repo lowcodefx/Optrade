@@ -24,3 +24,9 @@ export function kiteAuthHeaders(): Record<string, string> {
     'X-Kite-Version': '3',
   })
 }
+
+// Returns headers for DB-backed routes (holdings, watchlist, tradelog)
+export function dbHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const { userId } = useSettingsStore.getState()
+  return vmHeaders({ ...extra, ...(userId ? { 'X-User-Id': userId } : {}) })
+}

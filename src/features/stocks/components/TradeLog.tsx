@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from 'react'
 import { BookOpen, X } from 'lucide-react'
+import { API_BASE, dbHeaders } from '@/core/services/apiClient'
 
 export interface TradeLogEntry {
   id: string
@@ -11,18 +12,20 @@ export interface TradeLogEntry {
   note: string
 }
 
-const LOG_KEY = 'sw_trade_log'
-
-export function loadTradeLog(): TradeLogEntry[] {
-  try { return JSON.parse(localStorage.getItem(LOG_KEY) ?? '[]') } catch { return [] }
-}
-
-export function appendTradeLog(e: Omit<TradeLogEntry, 'id' | 'timestamp'>): TradeLogEntry {
-  const entry: TradeLogEntry = { ...e, id: Date.now().toString(), timestamp: Date.now() }
-  const entries = loadTradeLog()
-  entries.unshift(entry)
-  localStorage.setItem(LOG_KEY, JSON.stringify(entries.slice(0, 100)))  // keep last 100
-  return entry
+export async function appendTradeLog(e: Omit<TradeLogEntry, 'id' | 'timestamp'>): Promise<TradeLogEntry> {
+  try {
+    const res = await fetch(`${API_BASE}/api/tradelog`, {
+      method: 'POST',
+      headers: dbHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ symbol: e.symbol, action: e.action, price: e.price, signal: e.signal, note: e.note }),
+    })
+    if (res.ok) {
+      const { id, created_at } = await res.json()
+      return { ...e, id: String(id), timestamp: new Date(created_at).getTime() }
+    }
+  } catch {}
+  // Fallback: return a local-only entry (won't persist across sessions)
+  return { ...e, id: Date.now().toString(), timestamp: Date.now() }
 }
 
 const SIGNALS = ['Volume Spike', 'EMA Bounce', 'Breakout', 'RS Strength', 'Pattern Signal', 'News Catalyst', 'Other']
@@ -40,8 +43,7 @@ export function LogEntryModal({ symbol, price, action, onSave, onCancel }: LogEn
   const [note, setNote] = useState('')
 
   function save() {
-    const entry = appendTradeLog({ symbol, price, action, signal, note })
-    onSave(entry)
+    appendTradeLog({ symbol, price, action, signal, note }).then(entry => onSave(entry))
   }
 
   const actionLabel = action === 'buy' ? 'CNC Buy' : 'Watchlist'
@@ -86,14 +88,30 @@ export function LogEntryModal({ symbol, price, action, onSave, onCancel }: LogEn
 }
 
 export function TradeLogPanel({ refreshKey }: { refreshKey: number }) {
-  const [entries, setEntries] = useState<TradeLogEntry[]>(loadTradeLog)
+  const [entries, setEntries] = useState<TradeLogEntry[]>([])
 
-  useEffect(() => { setEntries(loadTradeLog()) }, [refreshKey])
+  function loadFromDB() {
+    fetch(`${API_BASE}/api/tradelog`, { headers: dbHeaders() })
+      .then(r => r.ok ? r.json() : [])
+      .then((rows: { id: number; symbol: string; action: string; price: number; signal: string; note: string; created_at: string }[]) => {
+        setEntries(rows.map(r => ({
+          id: String(r.id),
+          symbol: r.symbol,
+          action: r.action as 'buy' | 'watchlist',
+          price: r.price,
+          signal: r.signal,
+          note: r.note,
+          timestamp: new Date(r.created_at).getTime(),
+        })))
+      })
+      .catch(() => {})
+  }
+
+  useEffect(() => { loadFromDB() }, [refreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function remove(id: string) {
-    const next = entries.filter(e => e.id !== id)
-    setEntries(next)
-    localStorage.setItem(LOG_KEY, JSON.stringify(next))
+    setEntries(prev => prev.filter(e => e.id !== id))
+    fetch(`${API_BASE}/api/tradelog/${id}`, { method: 'DELETE', headers: dbHeaders() }).catch(() => {})
   }
 
   return (

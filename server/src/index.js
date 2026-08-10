@@ -14,7 +14,7 @@ app.use(cors({
     if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true)
     cb(new Error(`CORS: origin ${origin} not allowed`))
   },
-  allowedHeaders: ['Content-Type', 'X-Kite-Auth', 'X-Kite-Version', 'X-Backend-Key', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'X-Kite-Auth', 'X-Kite-Version', 'X-Backend-Key', 'X-Requested-With', 'X-User-Id'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 }))
 
@@ -47,6 +47,9 @@ app.use('/api/stock-history',      require('./routes/stockHistory'))
 app.use('/api/stock-news',         require('./routes/stockNews'))
 app.use('/api/nifty-trend',        require('./routes/niftyTrend'))
 app.use('/api/chat',               require('./routes/chat'))
+app.use('/api/holdings',           require('./routes/holdings'))
+app.use('/api/watchlist',          require('./routes/watchlist'))
+app.use('/api/tradelog',           require('./routes/tradelog'))
 
 if (require.main === module) {
   app.listen(PORT, () => console.log(`optrade-api listening on ${PORT}`))
