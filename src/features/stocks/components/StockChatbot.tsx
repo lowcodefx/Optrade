@@ -155,7 +155,7 @@ function ChatStockCard({ s }: { s: ScoredStock }) {
         </div>
         <div className="flex items-center gap-1.5 mt-0.5">
           {s.last_price != null && (
-            <span className="text-[9px] text-[#e2e8f0] font-semibold">â‚¹{s.last_price.toLocaleString('en-IN')}</span>
+            <span className="text-[9px] text-[#e2e8f0] font-semibold">Rs.{s.last_price.toLocaleString('en-IN')}</span>
           )}
           {s.pct_change != null && (
             <span className={`text-[8px] font-semibold ${pctPos ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>

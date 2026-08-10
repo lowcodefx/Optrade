@@ -252,7 +252,7 @@ function ChartModal({ stock, onClose }: { stock: StockScore; onClose: () => void
             <SignalBadge signal={stock.signal} />
             {stock.last_price && (
               <span className="text-white text-xs font-semibold">
-                â‚¹{stock.last_price.toLocaleString('en-IN')}
+                Rs.{stock.last_price.toLocaleString('en-IN')}
               </span>
             )}
           </div>
@@ -281,8 +281,8 @@ function ChartModal({ stock, onClose }: { stock: StockScore; onClose: () => void
         {/* Stats row */}
         {(hi10d || lo10d) && (
           <div className="flex gap-4 text-[10px]">
-            <span className="text-[#475569]">10d Hi <span className="text-[#22c55e] font-semibold">â‚¹{hi10d}</span></span>
-            <span className="text-[#475569]">10d Lo <span className="text-[#ef4444] font-semibold">â‚¹{lo10d}</span></span>
+            <span className="text-[#475569]">10d Hi <span className="text-[#22c55e] font-semibold">Rs.{hi10d}</span></span>
+            <span className="text-[#475569]">10d Lo <span className="text-[#ef4444] font-semibold">Rs.{lo10d}</span></span>
             {stock.rs1d != null && (
               <span className="text-[#475569]">vs NIFTY <span className={`font-semibold ${stock.rs1d >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>{stock.rs1d >= 0 ? '+' : ''}{stock.rs1d}%</span></span>
             )}
@@ -435,7 +435,7 @@ function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist, onBuy }:
           <div className="flex items-center gap-2 mt-0.5">
             {stock.last_price != null ? (
               <>
-                <span className="text-[#e2e8f0] text-[10px] font-semibold">â‚¹{stock.last_price.toLocaleString('en-IN')}</span>
+                <span className="text-[#e2e8f0] text-[10px] font-semibold">Rs.{stock.last_price.toLocaleString('en-IN')}</span>
                 {stock.pct_change != null && (
                   <span className={`text-[9px] font-semibold ${pctPos ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
                     {pctPos ? '+' : ''}{stock.pct_change}%
@@ -782,7 +782,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
             <div className="space-y-2 mb-4">
               <div className="flex justify-between text-[10px]">
                 <span className="text-[#475569]">Limit Price</span>
-                <span className="text-white font-semibold">â‚¹{buyStock.price.toFixed(2)}</span>
+                <span className="text-white font-semibold">Rs.{buyStock.price.toFixed(2)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-[#475569]">Quantity</span>
@@ -794,7 +794,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
               </div>
               <div className="flex justify-between text-[10px]">
                 <span className="text-[#475569]">Order Value</span>
-                <span className="text-white font-semibold">â‚¹{(buyStock.price * (parseInt(buyQty, 10) || 1)).toLocaleString('en-IN')}</span>
+                <span className="text-white font-semibold">Rs.{(buyStock.price * (parseInt(buyQty, 10) || 1)).toLocaleString('en-IN')}</span>
               </div>
             </div>
             {buyError && <p className="text-[9px] text-[#ef4444] mb-2">{buyError}</p>}

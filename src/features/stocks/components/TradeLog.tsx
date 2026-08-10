@@ -56,7 +56,7 @@ export function LogEntryModal({ symbol, price, action, onSave, onCancel }: LogEn
         <div className="space-y-3 mb-4">
           <div className="flex justify-between text-[9px]">
             <span className="text-[#475569]">{actionLabel}</span>
-            <span className="text-white font-semibold">{symbol} @ â‚¹{price.toFixed(2)}</span>
+            <span className="text-white font-semibold">{symbol} @ Rs.{price.toFixed(2)}</span>
           </div>
           <div>
             <label className="text-[8px] text-[#475569] uppercase tracking-wider block mb-1">Signal that triggered entry</label>
@@ -124,7 +124,7 @@ export function TradeLogPanel({ refreshKey }: { refreshKey: number }) {
             </div>
             <div className="flex justify-between text-[8px]">
               <span className="text-[#f59e0b]">{e.signal}</span>
-              <span className="text-[#475569]">â‚¹{e.price.toFixed(0)}</span>
+              <span className="text-[#475569]">Rs.{e.price.toFixed(0)}</span>
             </div>
             {e.note && <p className="text-[7px] text-[#64748b] mt-0.5 leading-tight">{e.note}</p>}
             <p className="text-[7px] text-[#1e293b] mt-0.5">{new Date(e.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>

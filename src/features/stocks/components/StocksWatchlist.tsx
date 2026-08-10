@@ -75,7 +75,7 @@ function AlertEditor({ symbol, alert, onSave, onClose }: {
         <div className="text-white text-xs font-bold">{symbol} Alerts</div>
         <div className="space-y-2">
           <div>
-            <label className="text-[#94a3b8] text-[9px] uppercase tracking-widest">Target (â‚¹)</label>
+            <label className="text-[#94a3b8] text-[9px] uppercase tracking-widest">Target (Rs.)</label>
             <input
               value={target}
               onChange={e => setTarget(e.target.value)}
@@ -84,7 +84,7 @@ function AlertEditor({ symbol, alert, onSave, onClose }: {
             />
           </div>
           <div>
-            <label className="text-[#94a3b8] text-[9px] uppercase tracking-widest">Stop-Loss (â‚¹)</label>
+            <label className="text-[#94a3b8] text-[9px] uppercase tracking-widest">Stop-Loss (Rs.)</label>
             <input
               value={sl}
               onChange={e => setSl(e.target.value)}
@@ -257,7 +257,7 @@ export function StocksWatchlist({ watchlist, onRemove, onAdd }: {
                   </div>
                   {q ? (
                     <div className={`text-[9px] font-semibold ${pos ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                      â‚¹{q.last_price.toFixed(1)} <span className="text-[8px]">{chg !== null ? `${pos ? '+' : ''}${chg.toFixed(2)}%` : ''}</span>
+                      Rs.{q.last_price.toFixed(1)} <span className="text-[8px]">{chg !== null ? `${pos ? '+' : ''}${chg.toFixed(2)}%` : ''}</span>
                     </div>
                   ) : (
                     <div className="text-[#64748b] text-[9px]">â€”</div>

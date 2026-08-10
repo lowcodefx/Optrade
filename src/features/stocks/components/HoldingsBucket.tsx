@@ -440,26 +440,44 @@ export function HoldingsBucket() {
                         {(() => {
                           const d = daysHeld(r.h.tradingsymbol, buyDates)
                           if (d !== null) {
-                            return <span className={`font-semibold ${agingColor(d)}`}>{d}d</span>
+                            return (
+                              <span
+                                className={`font-semibold cursor-pointer ${agingColor(d)}`}
+                                title="Click to change buy date"
+                                onClick={() => {
+                                  const inp = document.createElement('input')
+                                  inp.type = 'date'
+                                  inp.max = new Date().toISOString().split('T')[0]
+                                  inp.value = buyDates[r.h.tradingsymbol] ?? ''
+                                  inp.onchange = () => {
+                                    if (!inp.value) return
+                                    const next = { ...buyDates, [r.h.tradingsymbol]: inp.value }
+                                    setBuyDates(next); saveBuyDates(next)
+                                  }
+                                  inp.click()
+                                }}
+                              >
+                                {d}d
+                              </span>
+                            )
                           }
                           return (
                             <button
-                              title="Set buy date"
                               onClick={() => {
-                                const input = document.createElement('input')
-                                input.type = 'date'
-                                input.max = new Date().toISOString().split('T')[0]
-                                input.onchange = () => {
-                                  if (!input.value) return
-                                  const next = { ...buyDates, [r.h.tradingsymbol]: input.value }
-                                  setBuyDates(next)
-                                  saveBuyDates(next)
+                                const inp = document.createElement('input')
+                                inp.type = 'date'
+                                inp.max = new Date().toISOString().split('T')[0]
+                                inp.onchange = () => {
+                                  if (!inp.value) return
+                                  const next = { ...buyDates, [r.h.tradingsymbol]: inp.value }
+                                  setBuyDates(next); saveBuyDates(next)
                                 }
-                                input.click()
+                                inp.click()
                               }}
-                              className="text-[#64748b] hover:text-[#38bdf8] transition-colors"
+                              className="flex items-center gap-1 text-[#38bdf8] hover:text-[#7dd3fc] transition-colors"
                             >
                               <CalendarDays size={9} />
+                              <span className="text-[9px] font-semibold underline underline-offset-2">Set date</span>
                             </button>
                           )
                         })()}
