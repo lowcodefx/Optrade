@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { kiteAuthHeaders, API_BASE } from '@/core/services/apiClient'
 import { RefreshCw, ChevronDown, ChevronUp, ChevronsUpDown, CalendarDays } from 'lucide-react'
@@ -35,12 +35,20 @@ interface KiteHolding {
   tradingsymbol: string
   exchange: string
   quantity: number
+  t1_quantity: number   // shares in T+1 settlement (bought today or yesterday)
   average_price: number
   last_price: number
   pnl: number
   day_change: number
   day_change_percentage: number
   close_price: number
+}
+
+interface KiteTrade {
+  tradingsymbol: string
+  transaction_type: 'BUY' | 'SELL'
+  product: string
+  order_timestamp: string // e.g. "2026-08-10 10:35:00"
 }
 
 // â”€â”€ Fetch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -50,6 +58,22 @@ async function fetchHoldings(): Promise<KiteHolding[]> {
   if (!res.ok) throw new Error(`${res.status}`)
   const json = await res.json()
   return (json.data ?? []) as KiteHolding[]
+}
+
+async function fetchTodayTrades(): Promise<KiteTrade[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/kite?kite_path=trades`, { headers: kiteAuthHeaders() })
+    if (!res.ok) return []
+    const json = await res.json()
+    return (json.data ?? []) as KiteTrade[]
+  } catch { return [] }
+}
+
+function prevTradingDay(): string {
+  const d = new Date()
+  d.setDate(d.getDate() - 1)
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1)
+  return d.toISOString().slice(0, 10)
 }
 
 // â”€â”€ Cap profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -184,6 +208,37 @@ export function HoldingsBucket() {
     refetchInterval: 60000,
     retry: false,
   })
+
+  // Auto-infer buy dates from today's trades and T+1 settlement quantity
+  const tradesFetchedRef = useRef(false)
+  useEffect(() => {
+    if (!rawHoldings?.length || tradesFetchedRef.current) return
+    const missing = rawHoldings.filter(h => !buyDates[h.tradingsymbol])
+    if (!missing.length) return
+
+    tradesFetchedRef.current = true
+    fetchTodayTrades().then(trades => {
+      const todayBuys = new Map<string, string>()
+      for (const t of trades) {
+        if (t.transaction_type === 'BUY' && t.product === 'CNC') {
+          todayBuys.set(t.tradingsymbol, t.order_timestamp.slice(0, 10))
+        }
+      }
+      let changed = false
+      const next = { ...buyDates }
+      for (const h of missing) {
+        if (todayBuys.has(h.tradingsymbol)) {
+          next[h.tradingsymbol] = todayBuys.get(h.tradingsymbol)!
+          changed = true
+        } else if ((h.t1_quantity ?? 0) > 0) {
+          // T+1 means bought on the previous trading day
+          next[h.tradingsymbol] = prevTradingDay()
+          changed = true
+        }
+      }
+      if (changed) { saveBuyDates(next); setBuyDates(next) }
+    })
+  }, [rawHoldings]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const holdings = (rawHoldings ?? []).map(compute)
 

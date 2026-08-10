@@ -1,6 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+// Access token lives in sessionStorage — cleared automatically when browser/tab closes
+const SESSION_TOKEN_KEY = 'kite_session_token'
+function getSessionToken(): string {
+  try { return sessionStorage.getItem(SESSION_TOKEN_KEY) ?? '' } catch { return '' }
+}
+function setSessionToken(v: string) {
+  try { if (v) sessionStorage.setItem(SESSION_TOKEN_KEY, v); else sessionStorage.removeItem(SESSION_TOKEN_KEY) } catch {}
+}
+
 interface SettingsState {
   capital: number
   riskPerTrade: number
@@ -43,7 +52,7 @@ export const useSettingsStore = create<SettingsState>()(
       maxConsecutiveLosses: 2,
       apiKey: '',
       apiSecret: '',
-      accessToken: '',
+      accessToken: getSessionToken(), // reads from sessionStorage on init
       minTradeScore: 60,
       enableEmailAlerts: false,
       emailAlertOnOpportunity: true,
@@ -57,13 +66,17 @@ export const useSettingsStore = create<SettingsState>()(
       setMaxConsecutiveLosses: (maxConsecutiveLosses) => set({ maxConsecutiveLosses }),
       setApiKey: (apiKey) => set({ apiKey }),
       setApiSecret: (apiSecret) => set({ apiSecret }),
-      setAccessToken: (accessToken) => set({ accessToken }),
+      setAccessToken: (accessToken) => { setSessionToken(accessToken); set({ accessToken }) },
       setMinTradeScore: (minTradeScore) => set({ minTradeScore }),
       setEnableEmailAlerts: (enableEmailAlerts) => set({ enableEmailAlerts }),
       setEmailAlertOnOpportunity: (emailAlertOnOpportunity) => set({ emailAlertOnOpportunity }),
       setEmailAlertOnSLHit: (emailAlertOnSLHit) => set({ emailAlertOnSLHit }),
       setEmailAlertOnProfit: (emailAlertOnProfit) => set({ emailAlertOnProfit }),
     }),
-    { name: 'optrade-settings' }
+    {
+      name: 'optrade-settings',
+      // accessToken is in sessionStorage (auto-cleared on close), never in localStorage
+      partialize: ({ accessToken: _omit, ...rest }) => rest,
+    }
   )
 )

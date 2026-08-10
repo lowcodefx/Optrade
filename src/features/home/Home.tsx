@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useSettingsStore } from '@/core/store'
-import { exchangeRequestToken, getLoginURL } from '@/core/services/zerodhaAuth'
+import { exchangeRequestToken, getLoginURL, fetchUserProfile } from '@/core/services/zerodhaAuth'
 import { activateLiveService, useLiveModeStore } from '@/core/services/tradingService'
 import { API_BASE, vmHeaders } from '@/core/services/apiClient'
-import { TrendingUp, BarChart2, ArrowRight, Loader2 } from 'lucide-react'
+import { TrendingUp, BarChart2, ArrowRight, Loader2, LogOut, User } from 'lucide-react'
 
 function navigate(path: string) {
   window.location.href = path
@@ -43,8 +43,22 @@ function useOAuthCallback() {
 
 export function Home() {
   const exchanging = useOAuthCallback()
-  const { apiKey } = useSettingsStore()
+  const { apiKey, accessToken, setAccessToken } = useSettingsStore()
   const live = useLiveModeStore(s => s.isLive)
+  const [userName, setUserName] = useState('')
+
+  useEffect(() => {
+    if (accessToken) {
+      fetchUserProfile().then(name => setUserName(name))
+    } else {
+      setUserName('')
+    }
+  }, [accessToken])
+
+  function disconnect() {
+    setAccessToken('')
+    setUserName('')
+  }
 
   if (exchanging) {
     return (
@@ -60,13 +74,29 @@ export function Home() {
   return (
     <div className="min-h-screen bg-[#060d1a] flex flex-col items-center justify-center p-6 relative">
 
-      {/* Top-right: Live status or Sign In */}
-      <div className="absolute top-5 right-6">
+      {/* Top-right: Zerodha login status */}
+      <div className="absolute top-5 right-6 flex items-center gap-2">
         {live ? (
-          <div className="inline-flex items-center gap-1.5 bg-[#22c55e]/10 border border-[#22c55e]/30 rounded-full px-3 py-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />
-            <span className="text-[#22c55e] text-xs font-semibold">Live</span>
-          </div>
+          <>
+            <div className="flex items-center gap-1.5 bg-[#22c55e]/10 border border-[#22c55e]/30 rounded-full px-3 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />
+              <span className="text-[#22c55e] text-xs font-semibold">Zerodha Live</span>
+            </div>
+            {userName && (
+              <div className="flex items-center gap-1.5 bg-[#0a1628] border border-[#1e3a5f] rounded-full px-3 py-1">
+                <User size={11} className="text-[#64748b]" />
+                <span className="text-[#94a3b8] text-xs font-semibold">{userName}</span>
+              </div>
+            )}
+            <button
+              onClick={disconnect}
+              title="Disconnect Zerodha"
+              className="flex items-center gap-1.5 bg-[#ef4444]/10 border border-[#ef4444]/30 hover:bg-[#ef4444]/20 rounded-full px-3 py-1 transition-colors"
+            >
+              <LogOut size={11} className="text-[#ef4444]" />
+              <span className="text-[#ef4444] text-xs font-semibold">Disconnect</span>
+            </button>
+          </>
         ) : (
           <button
             onClick={() => apiKey ? window.location.href = getLoginURL() : navigate('/settings')}
@@ -85,9 +115,45 @@ export function Home() {
         <img src="/favicon.svg" alt="Optrade" className="h-10 w-auto" />
         <span className="text-white font-bold text-3xl tracking-tight">Optrade</span>
       </div>
-      <p className="text-[#475569] text-sm mb-14 text-center max-w-xs">
+      <p className="text-[#475569] text-sm mb-8 text-center max-w-xs">
         Your personal trading and investment platform
       </p>
+
+      {/* Zerodha connection status */}
+      {live ? (
+        <div className="flex items-center gap-3 mb-8 bg-[#0a1628] border border-[#22c55e]/25 rounded-xl px-5 py-3">
+          <div className="w-8 h-8 rounded-full bg-[#22c55e]/10 border border-[#22c55e]/30 flex items-center justify-center shrink-0">
+            <User size={14} className="text-[#22c55e]" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[#22c55e] text-xs font-bold">{userName || 'Zerodha Account'}</p>
+            <p className="text-[#64748b] text-[10px]">Connected · Session active</p>
+          </div>
+          <button
+            onClick={disconnect}
+            className="flex items-center gap-1.5 text-[#ef4444] hover:text-[#f87171] transition-colors text-[10px] font-semibold"
+          >
+            <LogOut size={12} />
+            Disconnect
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 mb-8 bg-[#0a1628] border border-[#f59e0b]/25 rounded-xl px-5 py-3">
+          <div className="w-8 h-8 rounded-full bg-[#f59e0b]/10 border border-[#f59e0b]/30 flex items-center justify-center shrink-0">
+            <User size={14} className="text-[#f59e0b]" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[#f59e0b] text-xs font-bold">Not Connected</p>
+            <p className="text-[#64748b] text-[10px]">Login required for live data and trading</p>
+          </div>
+          <button
+            onClick={() => apiKey ? window.location.href = getLoginURL() : navigate('/settings')}
+            className="flex items-center gap-1.5 bg-[#f59e0b] hover:bg-[#fbbf24] text-black px-3 py-1.5 rounded-lg transition-colors text-[10px] font-bold"
+          >
+            {apiKey ? 'Login with Zerodha' : 'Set up API'}
+          </button>
+        </div>
+      )}
 
       {/* Navigation cards */}
       <div className="flex flex-col sm:flex-row gap-5 w-full max-w-2xl">
