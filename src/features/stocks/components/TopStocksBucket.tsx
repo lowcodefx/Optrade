@@ -497,6 +497,11 @@ function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter, on
           <span className="text-[9px] text-[#94a3b8]">Sector: <span className="text-[#38bdf8] font-bold">{sectorFilter}</span></span>
         </div>
       )}
+      <div className="px-3 py-1.5 bg-[#060d1a] border-b border-[#0f1f35] flex flex-wrap gap-x-2 gap-y-0.5">
+        {['Fundamentals', 'Sentiment', 'Growth', 'Price action', 'Not in holdings'].map(tag => (
+          <span key={tag} className="text-[7px] text-[#334155] font-medium">{tag}</span>
+        ))}
+      </div>
       <div className="flex items-center px-3 py-1.5 border-b border-[#0f1f35] bg-[#060d1a]">
         <span className="text-[8px] text-[#64748b] flex-1">Symbol &middot; Price &middot; RS</span>
         <span className="text-[8px] text-[#64748b]">Score  Chart  Save  Info</span>
@@ -647,7 +652,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
               tab === 'top10' ? 'border-[#22c55e] text-[#22c55e]' : 'border-transparent text-[#475569] hover:text-[#94a3b8]'
             }`}
           >
-            <Flame size={10} />Top 10 Today
+            <Flame size={10} />15-Day Picks
           </button>
           <button
             onClick={() => setTab('all')}
