@@ -2,7 +2,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { API_BASE, kiteAuthHeaders } from '@/core/services/apiClient'
 import { useSettingsStore } from '@/core/store'
-import { ChevronDown, ChevronRight, Info, RefreshCw, Bookmark, BookmarkCheck, Flame, Newspaper, LineChart, ShoppingCart, Bot } from 'lucide-react'
+import { Info, RefreshCw, Bookmark, BookmarkCheck, Flame, Newspaper, LineChart, ShoppingCart, Bot } from 'lucide-react'
 import { SECTOR_STOCKS, SECTOR_COLORS } from '../stockSectors'
 import type { ScoredStock as ChatbotStock } from './StockChatbot'
 
@@ -474,7 +474,7 @@ function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist, onBuy }:
 
 // â”€â”€ Top 10 view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-function applyPriceFilter(stocks: StockScore[], range: string): StockScore[] {
+function applyPriceFilter<T extends StockScore>(stocks: T[], range: string): T[] {
   if (range === 'all') return stocks
   return stocks.filter(s => {
     const p = s.last_price ?? 0
@@ -529,51 +529,6 @@ function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter, pr
           stock={s}
           rank={i + 1}
           cap={s.cap}
-          onInfo={() => setInfoStock(s)}
-          onWatchlist={() => onWatchlist(s.symbol, s.last_price ?? 0)}
-          inWatchlist={watchlist.includes(s.symbol)}
-          onBuy={onBuy}
-        />
-      ))}
-      {infoStock && <InfoModal stock={infoStock} onClose={() => setInfoStock(null)} />}
-    </div>
-  )
-}
-
-// â”€â”€ By-category accordion view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-function AccordionSection({ title, stocks, defaultOpen, onWatchlist, watchlist, sectorFilter, onBuy }: {
-  title: string
-  stocks: StockScore[]
-  defaultOpen?: boolean
-  onWatchlist: (s: string, price?: number) => void
-  watchlist: string[]
-  sectorFilter: string | null
-  onBuy: (symbol: string, price: number) => void
-}) {
-  const [open, setOpen] = useState(defaultOpen ?? false)
-  const [infoStock, setInfoStock] = useState<StockScore | null>(null)
-
-  const visible = sectorFilter && SECTOR_STOCKS[sectorFilter]
-    ? stocks.filter(s => SECTOR_STOCKS[sectorFilter].includes(s.symbol))
-    : stocks
-
-  return (
-    <div className="border-b border-[#1e293b]">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[#0a1628] transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          {open ? <ChevronDown size={12} className="text-[#475569]" /> : <ChevronRight size={12} className="text-[#475569]" />}
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[#94a3b8]">{title}</span>
-          <span className="text-[8px] text-[#64748b]">{visible.length} stocks</span>
-        </div>
-      </button>
-      {open && visible.map(s => (
-        <StockRow
-          key={s.symbol}
-          stock={s}
           onInfo={() => setInfoStock(s)}
           onWatchlist={() => onWatchlist(s.symbol, s.last_price ?? 0)}
           inWatchlist={watchlist.includes(s.symbol)}
