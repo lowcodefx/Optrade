@@ -474,12 +474,25 @@ function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist, onBuy }:
 
 // â”€â”€ Top 10 view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter, onBuy }: {
+function applyPriceFilter(stocks: StockScore[], range: string): StockScore[] {
+  if (range === 'all') return stocks
+  return stocks.filter(s => {
+    const p = s.last_price ?? 0
+    if (range === '<100')     return p < 100
+    if (range === '100-500')  return p >= 100  && p < 500
+    if (range === '500-2000') return p >= 500  && p < 2000
+    if (range === '2000+')    return p >= 2000
+    return true
+  })
+}
+
+function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter, priceRange, onBuy }: {
   data: AnalysisResult
   onWatchlist: (s: string, price?: number) => void
   watchlist: string[]
   heldSymbols: string[]
   sectorFilter: string | null
+  priceRange: string
   onBuy: (symbol: string, price: number) => void
 }) {
   const [infoStock, setInfoStock] = useState<StockScore | null>(null)
@@ -488,6 +501,7 @@ function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter, on
   if (sectorFilter && SECTOR_STOCKS[sectorFilter]) {
     all = all.filter(s => SECTOR_STOCKS[sectorFilter].includes(s.symbol))
   }
+  all = applyPriceFilter(all, priceRange)
   const top10 = all.slice(0, 10)
 
   return (
@@ -573,7 +587,7 @@ function AccordionSection({ title, stocks, defaultOpen, onWatchlist, watchlist, 
 
 // â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-type Tab = 'top10' | 'all' | 'chatbot'
+type Tab = 'top10' | 'chatbot'
 
 export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatbotPicks = [] }: {
   onAddToWatchlist: (s: string, price?: number) => void
@@ -584,6 +598,7 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
   const { maxPerStock } = useSettingsStore()
   const [tab, setTab]                   = useState<Tab>('top10')
   const [selectedSector, setSelectedSector] = useState<string | null>(null)
+  const [priceRange, setPriceRange]     = useState<string>('all')
   const [buyStock, setBuyStock]         = useState<{ symbol: string; price: number } | null>(null)
   const [buyQty, setBuyQty]             = useState('1')
   const [buyError, setBuyError]         = useState<string | null>(null)
@@ -655,14 +670,6 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
             <Flame size={10} />15-Day Picks
           </button>
           <button
-            onClick={() => setTab('all')}
-            className={`px-3 py-1.5 text-[10px] font-bold border-b-2 transition-colors ${
-              tab === 'all' ? 'border-[#38bdf8] text-[#38bdf8]' : 'border-transparent text-[#475569] hover:text-[#94a3b8]'
-            }`}
-          >
-            All Stocks
-          </button>
-          <button
             onClick={() => setTab('chatbot')}
             className={`flex items-center gap-1 px-3 py-1.5 text-[10px] font-bold border-b-2 transition-colors ${
               tab === 'chatbot' ? 'border-[#a78bfa] text-[#a78bfa]' : 'border-transparent text-[#475569] hover:text-[#94a3b8]'
@@ -673,8 +680,29 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
           </button>
         </div>
 
-        {/* Sector filter pills */}
+        {/* Price range + Sector filter pills */}
         <div className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-none">
+          {/* Price range */}
+          {[
+            { key: 'all',   label: 'All prices' },
+            { key: '<100',  label: '<₹100' },
+            { key: '100-500',  label: '₹100-500' },
+            { key: '500-2000', label: '₹500-2K' },
+            { key: '2000+', label: '₹2K+' },
+          ].map(r => (
+            <button
+              key={r.key}
+              onClick={() => setPriceRange(r.key === priceRange ? 'all' : r.key)}
+              className={`shrink-0 rounded px-2 py-0.5 text-[8px] font-bold transition-colors ${
+                priceRange === r.key && r.key !== 'all'
+                  ? 'bg-[#f59e0b]/20 text-[#f59e0b] ring-1 ring-[#f59e0b]/50'
+                  : r.key === 'all' && priceRange === 'all'
+                    ? 'bg-[#1e293b] text-[#64748b]'
+                    : 'bg-[#1e293b]/50 text-[#475569] hover:text-[#94a3b8]'
+              }`}
+            >{r.label}</button>
+          ))}
+          <span className="text-[#1e293b] mx-0.5">|</span>
           {Object.keys(SECTOR_STOCKS).map(name => {
             const c      = SECTOR_COLORS[name]
             const active = selectedSector === name
@@ -733,17 +761,11 @@ export function TopStocksBucket({ onAddToWatchlist, watchlist, onLogEntry, chatb
           watchlist={watchlist}
           heldSymbols={heldSymbols}
           sectorFilter={selectedSector}
+          priceRange={priceRange}
           onBuy={handleBuy}
         />
       )}
 
-      {data && tab === 'all' && (
-        <>
-          <AccordionSection title="Large Cap" stocks={data.largeCap} defaultOpen onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} onBuy={handleBuy} />
-          <AccordionSection title="Mid Cap"   stocks={data.midCap}             onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} onBuy={handleBuy} />
-          <AccordionSection title="Small Cap" stocks={data.smallCap}           onWatchlist={onAddToWatchlist} watchlist={watchlist} sectorFilter={selectedSector} onBuy={handleBuy} />
-        </>
-      )}
 
       {tab === 'chatbot' && (
         chatbotPicks.length === 0 ? (
