@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { API_BASE, kiteAuthHeaders } from '@/core/services/apiClient'
 import { useSettingsStore } from '@/core/store'
 import { Info, RefreshCw, Bookmark, BookmarkCheck, Flame, Newspaper, LineChart, ShoppingCart, Bot } from 'lucide-react'
-import { SECTOR_STOCKS, SECTOR_COLORS } from '../stockSectors'
+import { SECTOR_STOCKS, SECTOR_COLORS, BROAD_SECTOR_STOCKS } from '../stockSectors'
 import type { ScoredStock as ChatbotStock } from './StockChatbot'
 
 // â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -21,6 +21,7 @@ interface StockScore {
   last_price?: number | null
   pct_change?: number | null
   instrument_token?: number | null
+  isBroadFill?: boolean
 }
 
 interface CandleData { t: string; o: number; h: number; l: number; c: number; v: number }
@@ -431,7 +432,10 @@ function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist, onBuy }:
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-white text-[10px] font-semibold">{stock.symbol}</span>
             {cap && <span className={`text-[7px] font-bold ${capColor}`}>{cap === 'L' ? 'LG' : cap === 'M' ? 'MD' : 'SM'}</span>}
-            <SignalBadge signal={stock.signal} />
+            {stock.isBroadFill
+              ? <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-[#f59e0b]/15 text-[#f59e0b] border border-[#f59e0b]/30">LIVE</span>
+              : <SignalBadge signal={stock.signal} />
+            }
           </div>
           <div className="flex items-center gap-2 mt-0.5">
             {stock.last_price != null ? (
@@ -449,14 +453,17 @@ function StockRow({ stock, rank, cap, onInfo, onWatchlist, inWatchlist, onBuy }:
             {stock.rs1d != null && <RSBadge rs={stock.rs1d} />}
           </div>
         </div>
-        <span className={`text-sm font-bold w-8 text-right shrink-0 ${scoreColor}`}>{stock.totalScore}</span>
+        {stock.isBroadFill
+          ? <span className="text-[10px] text-[#475569] w-8 text-right shrink-0">–</span>
+          : <span className={`text-sm font-bold w-8 text-right shrink-0 ${scoreColor}`}>{stock.totalScore}</span>
+        }
         <button onClick={() => setShowChart(true)} className="text-[#64748b] hover:text-[#38bdf8] shrink-0 transition-colors" title="Price chart">
           <LineChart size={12} />
         </button>
         <button onClick={onWatchlist} className={`shrink-0 transition-colors ${inWatchlist ? 'text-[#38bdf8]' : 'text-[#64748b] hover:text-[#64748b]'}`}>
           {inWatchlist ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
         </button>
-        <button onClick={onInfo} className="text-[#64748b] hover:text-[#64748b] shrink-0 transition-colors" title="Score details + news">
+        <button onClick={onInfo} disabled={!!stock.isBroadFill} className={`shrink-0 transition-colors ${stock.isBroadFill ? 'text-[#1e293b] cursor-default' : 'text-[#64748b] hover:text-[#64748b]'}`} title="Score details + news">
           <Info size={12} />
         </button>
         <button
@@ -495,20 +502,68 @@ function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter, pr
   priceRange: string
   onBuy: (symbol: string, price: number) => void
 }) {
-  const [infoStock, setInfoStock] = useState<StockScore | null>(null)
+  const [infoStock, setInfoStock]   = useState<StockScore | null>(null)
+  const [broadStocks, setBroadStocks] = useState<(StockScore & { cap: string })[]>([])
+  const [broadLoading, setBroadLoading] = useState(false)
 
-  let all = allStocksSorted(data).filter(s => !heldSymbols.includes(s.symbol))
+  let scored = allStocksSorted(data).filter(s => !heldSymbols.includes(s.symbol))
   if (sectorFilter && SECTOR_STOCKS[sectorFilter]) {
-    all = all.filter(s => SECTOR_STOCKS[sectorFilter].includes(s.symbol))
+    scored = scored.filter(s => SECTOR_STOCKS[sectorFilter].includes(s.symbol))
   }
-  all = applyPriceFilter(all, priceRange)
-  const top10 = all.slice(0, 10)
+  scored = applyPriceFilter(scored, priceRange)
+  const scoredTop = scored.slice(0, 10)
+
+  // Fetch broad stocks from Kite to fill up to 10 when AI-scored list is short
+  useEffect(() => {
+    if (!sectorFilter || scoredTop.length >= 10) {
+      setBroadStocks([])
+      return
+    }
+    const broadList = BROAD_SECTOR_STOCKS[sectorFilter] ?? []
+    const scoredSymSet = new Set(scored.map(s => s.symbol))
+    const missing = broadList.filter(sym => !scoredSymSet.has(sym) && !heldSymbols.includes(sym))
+    if (missing.length === 0) { setBroadStocks([]); return }
+
+    setBroadLoading(true)
+    const params = missing.slice(0, 25).map(s => `i=NSE:${encodeURIComponent(s)}`).join('&')
+    fetch(`${API_BASE}/api/kite?kite_path=quote&${params}`, { headers: kiteAuthHeaders() })
+      .then(r => r.ok ? r.json() : { data: {} })
+      .then(json => {
+        const qdata = json.data ?? {}
+        const quotes: (StockScore & { cap: string })[] = missing
+          .filter(sym => qdata[`NSE:${sym}`])
+          .map(sym => {
+            const q = qdata[`NSE:${sym}`]
+            const prevClose = q.ohlc?.close ?? q.last_price
+            const pct = prevClose > 0 ? parseFloat(((q.last_price - prevClose) / prevClose * 100).toFixed(2)) : 0
+            return {
+              symbol: sym, totalScore: 0, signal: 'WATCH' as const, cap: 'LG',
+              last_price: q.last_price, pct_change: pct, rs1d: null,
+              technical: 0, fundamental: 0, sentiment: 0, growth: 0,
+              summary: '', isBroadFill: true,
+            }
+          })
+        // Apply price filter then sort by pct_change desc (best movers first among live stocks)
+        const filtered = applyPriceFilter(quotes, priceRange).sort((a, b) => (b.pct_change ?? 0) - (a.pct_change ?? 0))
+        setBroadStocks(filtered)
+      })
+      .catch(() => setBroadStocks([]))
+      .finally(() => setBroadLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sectorFilter, priceRange, data])
+
+  const needed = Math.max(0, 10 - scoredTop.length)
+  const top10 = [...scoredTop, ...broadStocks.slice(0, needed)]
 
   return (
     <div>
       {sectorFilter && (
-        <div className="px-3 py-1.5 bg-[#0a1628] border-b border-[#1e293b]">
+        <div className="px-3 py-1.5 bg-[#0a1628] border-b border-[#1e293b] flex items-center gap-2">
           <span className="text-[9px] text-[#94a3b8]">Sector: <span className="text-[#38bdf8] font-bold">{sectorFilter}</span></span>
+          {broadLoading && <RefreshCw size={8} className="animate-spin text-[#475569]" />}
+          {!broadLoading && top10.length > scoredTop.length && (
+            <span className="text-[8px] text-[#475569]">+{top10.length - scoredTop.length} live-filled</span>
+          )}
         </div>
       )}
       <div className="px-3 py-1.5 bg-[#060d1a] border-b border-[#0f1f35] flex flex-wrap gap-x-2 gap-y-0.5">
@@ -520,8 +575,8 @@ function Top10View({ data, onWatchlist, watchlist, heldSymbols, sectorFilter, pr
         <span className="text-[8px] text-[#64748b] flex-1">Symbol &middot; Price &middot; RS</span>
         <span className="text-[8px] text-[#64748b]">Score  Chart  Save  Info</span>
       </div>
-      {top10.length === 0 && (
-        <div className="py-8 text-center text-[#64748b] text-[10px]">No stocks in this sector</div>
+      {top10.length === 0 && !broadLoading && (
+        <div className="py-8 text-center text-[#64748b] text-[10px]">No stocks match this filter</div>
       )}
       {top10.map((s, i) => (
         <StockRow
