@@ -334,15 +334,17 @@ export function HoldingsBucket() {
       {/* Slicers */}
       {!isLoading && holdings.length > 0 && (
         <div className="px-3 py-1.5 border-b border-[#1e293b] bg-[#060d1a] space-y-1 shrink-0">
-          <div className="flex gap-1">
+          <div className="flex bg-[#0a0f1a] border border-[#1e293b] rounded-lg p-0.5 gap-0.5">
             {([
-              { key: 'all'    as PrimaryFilter, label: `All (${holdings.length})`,   ac: 'bg-[#1e3a5f] text-[#38bdf8] border-[#38bdf8]/40',   in: 'text-[#475569] border-[#1e293b] hover:text-[#94a3b8]' },
-              { key: 'profit' as PrimaryFilter, label: `Profit (${gainers.length})`, ac: 'bg-[#22c55e]/15 text-[#22c55e] border-[#22c55e]/40', in: 'text-[#475569] border-[#1e293b] hover:text-[#22c55e]'  },
-              { key: 'loss'   as PrimaryFilter, label: `Loss (${losers.length})`,    ac: 'bg-[#ef4444]/15 text-[#ef4444] border-[#ef4444]/40', in: 'text-[#475569] border-[#1e293b] hover:text-[#ef4444]'   },
-            ]).map(({ key, label, ac, in: inactive }) => (
+              { key: 'all'    as PrimaryFilter, label: 'All',    count: holdings.length, ac: 'bg-[#1e3a5f] text-[#38bdf8]',  dot: 'bg-[#38bdf8]'  },
+              { key: 'profit' as PrimaryFilter, label: 'Profit', count: gainers.length,  ac: 'bg-[#22c55e]/20 text-[#22c55e]', dot: 'bg-[#22c55e]' },
+              { key: 'loss'   as PrimaryFilter, label: 'Loss',   count: losers.length,   ac: 'bg-[#ef4444]/20 text-[#ef4444]', dot: 'bg-[#ef4444]'  },
+            ]).map(({ key, label, count, ac, dot }) => (
               <button key={key} onClick={() => pickPrimary(key)}
-                className={`flex-1 text-[8px] font-bold py-0.5 rounded border transition-colors ${primary === key ? ac : inactive}`}>
+                className={`flex-1 flex items-center justify-center gap-1 py-1 rounded-md text-[8px] font-bold transition-all ${primary === key ? ac : 'text-[#475569] hover:text-[#64748b]'}`}>
+                {primary === key && <span className={`w-1 h-1 rounded-full ${dot}`} />}
                 {label}
+                <span className={`text-[7px] ${primary === key ? 'opacity-80' : 'opacity-50'}`}>({count})</span>
               </button>
             ))}
           </div>
