@@ -216,6 +216,11 @@ export default function App() {
   const [showPlaybook, setShowPlaybook] = useState(false)
   const [showWizard, setShowWizard] = useState(false)
 
+  const theme = useSettingsStore(s => s.theme)
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
+
   const path = window.location.pathname
 
   if (path === '/login') {

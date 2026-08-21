@@ -1,5 +1,5 @@
 import { useSettingsStore, useMarketStore } from '@/core/store'
-import { X, Wallet } from 'lucide-react'
+import { X, Wallet, Moon, Sun } from 'lucide-react'
 
 interface Props { onClose: () => void }
 
@@ -128,6 +128,30 @@ export function Settings({ onClose }: Props) {
                   </div>
                 </>
               )}
+            </div>
+          </section>
+
+          {/* Appearance */}
+          <section>
+            <h3 className="text-[#64748b] text-[10px] uppercase tracking-widest mb-3">Appearance</h3>
+            <div className="flex gap-2">
+              {([
+                { value: 'dark',  label: 'Dark',  Icon: Moon  },
+                { value: 'light', label: 'Light', Icon: Sun   },
+              ] as const).map(({ value, label, Icon }) => (
+                <button
+                  key={value}
+                  onClick={() => s.setTheme(value)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-[11px] font-semibold transition-all ${
+                    s.theme === value
+                      ? 'border-[#38bdf8] bg-[#38bdf8]/10 text-[#38bdf8]'
+                      : 'border-[#1e293b] text-[#475569] hover:border-[#334155] hover:text-[#94a3b8]'
+                  }`}
+                >
+                  <Icon size={13} />
+                  {label}
+                </button>
+              ))}
             </div>
           </section>
 

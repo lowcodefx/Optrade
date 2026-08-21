@@ -21,6 +21,7 @@ interface SettingsState {
   accessToken: string
   minTradeScore: number
   maxPerStock: number
+  theme: 'dark' | 'light'
 
   // Email alert settings (credentials stored in Azure App Settings, not here)
   enableEmailAlerts: boolean
@@ -38,6 +39,7 @@ interface SettingsState {
   setAccessToken: (v: string) => void
   setMinTradeScore: (v: number) => void
   setMaxPerStock: (v: number) => void
+  setTheme: (v: 'dark' | 'light') => void
   setEnableEmailAlerts: (v: boolean) => void
   setEmailAlertOnOpportunity: (v: boolean) => void
   setEmailAlertOnSLHit: (v: boolean) => void
@@ -57,6 +59,7 @@ export const useSettingsStore = create<SettingsState>()(
       accessToken: getSessionToken(), // reads from sessionStorage on init
       minTradeScore: 60,
       maxPerStock: 25000,
+      theme: 'dark',
       enableEmailAlerts: false,
       emailAlertOnOpportunity: true,
       emailAlertOnSLHit: true,
@@ -72,6 +75,7 @@ export const useSettingsStore = create<SettingsState>()(
       setAccessToken: (accessToken) => { setSessionToken(accessToken); set({ accessToken }) },
       setMinTradeScore: (minTradeScore) => set({ minTradeScore }),
       setMaxPerStock: (maxPerStock) => set({ maxPerStock }),
+      setTheme: (theme) => set({ theme }),
       setEnableEmailAlerts: (enableEmailAlerts) => set({ enableEmailAlerts }),
       setEmailAlertOnOpportunity: (emailAlertOnOpportunity) => set({ emailAlertOnOpportunity }),
       setEmailAlertOnSLHit: (emailAlertOnSLHit) => set({ emailAlertOnSLHit }),

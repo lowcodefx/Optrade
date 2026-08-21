@@ -52,3 +52,13 @@ html, body, #root {
 .animate-live {
   animation: pulse-live 1.5s ease-in-out infinite;
 }
+
+/* Light theme — invert+hue-rotate preserves green/red signal colors */
+html[data-theme="light"] body {
+  filter: invert(1) hue-rotate(180deg);
+  background: #060d1a;
+}
+/* Re-invert any real images so they don't look inverted */
+html[data-theme="light"] img:not([data-no-reinvert]) {
+  filter: invert(1) hue-rotate(180deg);
+}
