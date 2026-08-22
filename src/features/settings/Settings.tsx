@@ -136,20 +136,21 @@ export function Settings({ onClose }: Props) {
             <h3 className="text-[#64748b] text-[10px] uppercase tracking-widest mb-3">Appearance</h3>
             <div className="flex gap-2">
               {([
-                { value: 'dark',  label: 'Dark',  Icon: Moon  },
-                { value: 'light', label: 'Light', Icon: Sun   },
-              ] as const).map(({ value, label, Icon }) => (
+                { value: 'dark',  label: 'Dark',  Icon: Moon, desc: 'Kite dark'  },
+                { value: 'light', label: 'Light', Icon: Sun,  desc: 'Kite light' },
+              ] as const).map(({ value, label, Icon, desc }) => (
                 <button
                   key={value}
                   onClick={() => s.setTheme(value)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-[11px] font-semibold transition-all ${
+                  className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-lg border text-[11px] font-semibold transition-all ${
                     s.theme === value
                       ? 'border-[#38bdf8] bg-[#38bdf8]/10 text-[#38bdf8]'
                       : 'border-[#1e293b] text-[#475569] hover:border-[#334155] hover:text-[#94a3b8]'
                   }`}
                 >
-                  <Icon size={13} />
-                  {label}
+                  <Icon size={16} />
+                  <span>{label}</span>
+                  <span className="text-[8px] opacity-60 font-normal">{desc}</span>
                 </button>
               ))}
             </div>

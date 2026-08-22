@@ -8,6 +8,15 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Optrade</title>
+    <!-- Apply saved theme before first paint to avoid flash -->
+    <script>
+      try {
+        var t = JSON.parse(localStorage.getItem('optrade-settings') || '{}');
+        document.documentElement.setAttribute('data-theme', t.state?.theme || 'dark');
+      } catch(e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
